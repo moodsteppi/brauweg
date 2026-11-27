@@ -10,6 +10,7 @@ import { imUmfang } from '../umfang';
 import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykiste/einzelspiele';
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
+import './spielraster.css';
 import { BRO_SPIELE } from '../broremote/spiele';
 import { bannerFuer } from './StartNeu';
 
@@ -40,6 +41,7 @@ interface Kategorie {
 }
 
 const KATEGORIEN: readonly Kategorie[] = [
+  { id: 'wuerfel', titel: 'Würfelspiele', einzahl: 'Würfelspiel', spiele: ['wuerfelglanz'], icon: <><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="8" cy="8" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="16" cy="16" r="1" /></> },
   {
     id: 'karten',
     titel: 'spielwahl.kategorie.karten',
@@ -110,7 +112,7 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
  */
 export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
   const belegt = KATEGORIEN.filter((k) => k.id === 'denken' || spielbar.some((id) => k.spiele.includes(id)));
-  const chips = [{ id: 'broremote', titel: 'BroRemote' }, ...belegt.map((k) => ({ id: k.id, titel: t(k.titel) }))];
+  const chips = [{ id: 'broremote', titel: 'BroRemote' }, ...belegt.map((k) => ({ id: k.id, titel: k.id === 'trink' ? 'Partykiste' : t(k.titel) }))];
   return app ? [...chips, { id: 'bald', titel: t('spielwahl.kategorie.bald') }] : chips;
 }
 
@@ -216,7 +218,7 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-  const chips = chipsFuer(spielbar.map((g) => g.id), inApp);
+
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
   // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
@@ -235,6 +237,8 @@ export function SpieleNeu({
   // dort erst mit der Hüllen-Aufgabe.
   const mitFlyingbro = imUmfang('flyingbro') && !inApp;
   const mitProSubway = imUmfang('prosubway');
+  const soloDa = mitManufaktur || mitFlyingbro || mitBrowort || (!inApp && mitProSubway);
+  const chips = [...chipsFuer(spielbar.map((g) => g.id), inApp), ...(soloDa ? [{id:'solo',titel:t('spielwahl.allein')}] : [])];
   // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
   const mitAbstimmung = imUmfang('abstimmung');
 
@@ -286,10 +290,11 @@ export function SpieleNeu({
   );
 
   return (
-    <div className="hb-spiele">
+    <div className="hb-spiele hb-einheitlich">
       <header className="hb-kopfzeile">
         <h1 className="hb-titel">{t('spielwahl.titel')}</h1>
       </header>
+
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
@@ -319,50 +324,11 @@ export function SpieleNeu({
           if ((liste.length === 0 && k.id !== 'denken') || !zeige(k.id)) return null;
           if (k.id === 'trink') {
             const party = liste[0]!;
-            return (
-              <section className="hb-blk" key={k.id}>
-                <h2 className="hb-ab">
-                  <Symbol>{k.icon}</Symbol>
-                  {t(k.titel)}
-                  <span className="hb-ab-zusatz">{1 + EINZELSPIELE.length}</span>
-                </h2>
-                <button
-                  type="button"
-                  className="hb-held hb-party"
-                  style={{ backgroundImage: `url(${bannerFuer(party.id)})` }}
-                  onClick={() => onOeffne(party.id)}
-                >
-                  <span className="hb-held-unten hb-held-zeile">
-                    <span>
-                      <strong className="hb-held-titel">{t(party.nameKey)}</strong>
-                      <span>{tf('spielwahl.party.unter', { spanne: sitzSpanne(party.seatCounts) })}</span>
-                    </span>
-                    <span className="hb-kn is-gold">{t('spielwahl.ansehen')}</span>
-                  </span>
-                </button>
-                {/*
-                 * Die Minispiele einzeln (Robin, 27.09.2026). Kein eigenes Spiel im
-                 * Server, sondern die Kiste mit einem Minispiel — deshalb ohne
-                 * Spielseite (Trophäen und Rangliste zählen bei der Partykiste)
-                 * direkt in den Einstieg.
-                 */}
-                <div className={`hb-reihe${filter === k.id ? ' is-raster' : ''}`} aria-label={t('spielwahl.trinkEinzeln')}>
-                  {EINZELSPIELE.map((m) => (
-                    <button
-                      type="button"
-                      className="hb-sk"
-                      key={m}
-                      data-pk-einzel={m}
-                      onClick={() => onPick(einzelKennung(m))}
-                    >
-                      <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(einzelKennung(m))})` }} />
-                      <strong>{einzelName(m)}</strong>
-                      <small>{tf('spielwahl.spieler', { spanne: sitzSpanne(party.seatCounts) })}</small>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
+            return <section className="hb-blk" key={k.id}><h2 className="hb-ab"><Symbol>{k.icon}</Symbol>Partykiste</h2>
+              {filter === 'trink' && <button className="hb-chip" onClick={() => setFilter('alle')}>‹ Alle Spiele</button>}
+              <div className="hb-reihe"><button className="hb-sk" onClick={() => filter === 'trink' ? onPick(party.id) : setFilter('trink')}><span className="hb-sk-bild" style={{backgroundImage:`url(${bannerFuer(party.id)})`}}/><strong>{t(party.nameKey)}</strong><small>{filter === 'trink' ? 'Gemischte Runde' : `${EINZELSPIELE.length} Minispiele`}</small></button>
+              {filter === 'trink' && EINZELSPIELE.map(m => <button className="hb-sk" key={m} data-pk-einzel={m} onClick={() => onPick(einzelKennung(m))}><span className="hb-sk-bild" style={{backgroundImage:`url(${bannerFuer(einzelKennung(m))})`}}/><strong>{einzelName(m)}</strong><small>{tf('spielwahl.spieler',{spanne:sitzSpanne(party.seatCounts)})}</small></button>)}
+              </div></section>;
           }
           return (
             <section className="hb-blk" key={k.id}>
@@ -385,75 +351,13 @@ export function SpieleNeu({
           </section>
         )}
 
-        {/* Die Solo-Spiele (Emile, 23.10.2026; seit demselben Tag auch auf der
-            Webseite, vorher nur `inApp`). Die Manufaktur hat ihr Bild
-            (docs/ASSETS-KARTENMANUFAKTUR.md), Browort bis zu einer Bestellung
-            ein gezeichnetes Feld statt eines fehlenden Bildes. Pro-Subway steht
-            im selben Abschnitt — zwei Überschriften „Allein" untereinander
-            sähen nach einem Fehler aus. */}
-        {filter === 'alle' && (mitManufaktur || mitFlyingbro || mitBrowort || (!inApp && mitProSubway)) && (
-          <section className="hb-blk">
-            <h2 className="hb-ab">
-              <Symbol>
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-              </Symbol>
-              {t('spielwahl.allein')}
-            </h2>
-            {/* In der App kommt Pro-Subway erst später (Robin, 23.09.2026) —
-                dort steht es unter „Kommt bald". */}
-            {!inApp && mitProSubway && (
-              <button
-                type="button"
-                className="hb-quer"
-                style={{ backgroundImage: 'url(/hub/banner-prosubway.webp)' }}
-                onClick={() => onSolo('prosubway')}
-              >
-                <span className="hb-quer-text">
-                  <strong>{t('modus.prosubway')}</strong>
-                  <span>{t('spielwahl.prosubway.unter')}</span>
-                </span>
-                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
-              </button>
-            )}
-            {mitManufaktur && (
-              <button type="button" className="hb-quer hb-quer-manufaktur" onClick={() => onSolo('kartenmanufaktur')}>
-                <img className="hb-manufaktur-bild" src="/manufaktur/werkstatt-hero.webp" alt="" />
-                <span className="hb-manufaktur-inhalt">
-                  <span className="hb-manufaktur-marke">{t('spielwahl.manufaktur.marke')}</span>
-                  <span className="hb-quer-text">
-                    <strong>Kartenmanufaktur</strong>
-                    <span>{t('spielwahl.manufaktur.text')}</span>
-                  </span>
-                  <span className="hb-manufaktur-fuss">
-                    <span className="hb-manufaktur-hinweis">{t('spielwahl.manufaktur.hinweis')}</span>
-                    <span className="hb-kn is-gold">{t('spielwahl.manufaktur.oeffnen')} <span aria-hidden="true">→</span></span>
-                  </span>
-                </span>
-              </button>
-            )}
-            {mitFlyingbro && (
-              <button type="button" className="hb-quer hb-quer-flyingbro" onClick={() => onSolo('flyingbro')}>
-                <img className="hb-flyingbro-bro" src="/flyingbro/bro-pelle-flug.webp" alt="" />
-                <span className="hb-quer-text">
-                  <strong>Flying Bro</strong>
-                  <span>{t('spielwahl.flyingbro.unter')}</span>
-                </span>
-                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
-              </button>
-            )}
-            {mitBrowort && (
-              <button type="button" className="hb-quer hb-quer-browort" onClick={() => onSolo('browort')}>
-                <img className="hb-browort-bild" src="/hub/browort-hero.webp" alt="" />
-                <span className="hb-quer-text">
-                  <strong>Browort</strong>
-                  <span>{t('spielwahl.browort.unter')}</span>
-                </span>
-                <span className="hb-kn is-gold">{t('spielwahl.los')}</span>
-              </button>
-            )}
-          </section>
-        )}
+        {zeige('echtzeit') && <section className="hb-blk"><h2 className="hb-ab">Online-Arena</h2><div className="hb-reihe"><a className="hb-sk" href="/ice-clash"><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 Spieler</small></a></div></section>}
+        {zeige('solo') && soloDa && <section className="hb-blk"><h2 className="hb-ab">{t('spielwahl.allein')}</h2><div className="hb-reihe">
+          {!inApp && mitProSubway && <button className="hb-sk" onClick={() => onSolo('prosubway')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/banner-prosubway.webp)'}}/><strong>{t('modus.prosubway')}</strong><small>Solo</small></button>}
+          {mitManufaktur && <button className="hb-sk" onClick={() => onSolo('kartenmanufaktur')}><span className="hb-sk-bild" style={{backgroundImage:'url(/manufaktur/werkstatt-hero.webp)'}}/><strong>Kartenmanufaktur</strong><small>Solo</small></button>}
+          {mitFlyingbro && <button className="hb-sk" onClick={() => onSolo('flyingbro')}><span className="hb-sk-bild" style={{backgroundImage:'url(/flyingbro/bro-pelle-flug.webp)',backgroundSize:'contain',backgroundRepeat:'no-repeat'}}/><strong>Flying Bro</strong><small>Solo</small></button>}
+          {mitBrowort && <button className="hb-sk" onClick={() => onSolo('browort')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/browort-icon.webp)'}}/><strong>Browort</strong><small>Solo</small></button>}
+        </div></section>}
 
         {filter === 'alle' && !inApp && (
           <>
@@ -474,14 +378,10 @@ export function SpieleNeu({
               </h2>
               <button
                 type="button"
-                className="hb-quer"
-                style={{ backgroundImage: 'url(/hub/banner-mehrkampf.webp)' }}
+                className="hb-sk"
                 onClick={() => onBald(t('modus.mehrkampf'))}
               >
-                <span className="hb-quer-text">
-                  <strong>{t('modus.mehrkampf')}</strong>
-                  <span>{t('spielwahl.mehrkampf.unter')}</span>
-                </span>
+                <span className="hb-sk-bild" style={{backgroundImage:'url(/hub/banner-mehrkampf.webp)'}}/><strong>{t('modus.mehrkampf')}</strong>
                 <span className="hb-bald-marke">{t('spielwahl.bald')}</span>
               </button>
             </section>

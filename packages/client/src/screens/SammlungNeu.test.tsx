@@ -72,7 +72,6 @@ it("öffnet Bereiche getrennt, wählt Besitz aus und führt für fremde Designs 
     <SammlungNeu
       me={probeKonto()}
       onThemeChange={thema}
-      onSchrank={vi.fn()}
       onShop={zumShop}
       spiel="doppelkopf"
     />,
@@ -93,7 +92,6 @@ it("sperrt den BroChess-Pinguinsatz und zeigt den regulären Preis", async () =>
     <SammlungNeu
       me={probeKonto()}
       onThemeChange={thema}
-      onSchrank={vi.fn()}
       onShop={vi.fn()}
       spiel="brochess"
     />,
@@ -211,7 +209,6 @@ it("öffnet Rückseiten separat und speichert ausschließlich cardBack", async (
     <SammlungNeu
       me={probeKonto()}
       onThemeChange={thema}
-      onSchrank={vi.fn()}
       spiel="doppelkopf"
     />,
   );
@@ -245,7 +242,6 @@ it("verwendet im Zauberer eine vorhandene Zahlenkarte statt einer fehlenden Dame
     <SammlungNeu
       me={me}
       onThemeChange={vi.fn()}
-      onSchrank={vi.fn()}
       spiel="wizard"
     />,
   );

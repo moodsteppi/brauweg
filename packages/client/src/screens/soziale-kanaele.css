@@ -1,0 +1,8 @@
+.hb-social{margin:18px 0 8px;color:#f2f3df}
+.hb-social h2{margin:0 0 10px;font-family:'Lilita One',sans-serif;font-size:18px;font-weight:400}
+.hb-social-links{display:flex;gap:12px}
+.hb-social-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:88px;aspect-ratio:1;border:1px solid #607a52;border-radius:18px;background:linear-gradient(145deg,#2c4936,#13291f);color:inherit;text-decoration:none;box-shadow:0 3px 8px #05130c40}
+.hb-social-link:hover{background:#34543d;border-color:#ffd36b}
+.hb-social-link:focus-visible{outline:3px solid #ffd36b;outline-offset:3px}
+.hb-social-link .hb-social-logo{width:48px;height:48px}
+.hb-social-link strong{font-size:12px;line-height:1.2}

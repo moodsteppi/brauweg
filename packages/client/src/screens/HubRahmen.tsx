@@ -9,6 +9,7 @@ import { tf, tn } from '../i18n/einsetzen';
 const kopfZahl = (n: number): string => (n < 10000 ? zahl(n) : kompakteZahl(n));
 import { Pinguin } from '../pinguin';
 import { spiele } from '../klang';
+import { HubBildIcon, type HubMotiv } from './HubBildIcon';
 
 /**
  * Der Rahmen des neuen Hubs: Kopf, Online-Zeile, Inhalt, Reiterleiste.
@@ -20,39 +21,13 @@ import { spiele } from '../klang';
 
 type Reiter = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
 
-// Nur Symbole: Die Beschriftung kommt beim Zeichnen aus `rahmen.reiter.<reiter>`,
-// sonst bliebe sie in der Sprache stehen, in der das Modul geladen wurde.
-const REITER: Record<Reiter, { icon: React.JSX.Element }> = {
-  shop: { icon: <path d="M5 8h14l-1 12H6z M9 8a3 3 0 0 1 6 0" /> },
-  spiele: {
-    icon: (
-      <>
-        <rect x="4" y="4" width="7" height="7" rx="2" />
-        <rect x="13" y="4" width="7" height="7" rx="2" />
-        <rect x="4" y="13" width="7" height="7" rx="2" />
-        <rect x="13" y="13" width="7" height="7" rx="2" />
-      </>
-    ),
-  },
-  spielen: { icon: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /> },
-  blatt: { icon: <path d="M5 7l7-3 7 3v10l-7 3-7-3z M5 7l7 3 7-3M12 10v10" /> },
-  clan: { icon: <path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" /> },
-  profil: {
-    icon: (
-      <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-      </>
-    ),
-  },
+/** Alle Reiter verwenden dieselbe grün-goldene Bildfamilie. */
+const REITER_BILD: Record<Reiter, HubMotiv> = {
+  shop: 'shop', spiele: 'games', spielen: 'home', blatt: 'collection', clan: 'clan', profil: 'menu',
 };
 
-function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {children}
-    </svg>
-  );
+function ReiterBild({ reiter }: { reiter: Reiter }): React.JSX.Element {
+  return <HubBildIcon motiv={REITER_BILD[reiter]} className="hb-nav-bild" />;
 }
 
 export function NeuerRahmen<T extends Reiter>({
@@ -183,7 +158,6 @@ export function NeuerRahmen<T extends Reiter>({
 
       <nav className="hb-tabs" aria-label={t('rahmen.bereiche')}>
         {tabFolge.map((r) => {
-          const { icon } = REITER[r];
           const label = t(`rahmen.reiter.${r}`);
           const haupt = r === 'spielen';
           // Punkt am Profil: Geburtstagsgeschenk. Punkt am Start: unter „Heute"
@@ -211,10 +185,10 @@ export function NeuerRahmen<T extends Reiter>({
             >
               {haupt ? (
                 <span className="hb-tab-rund">
-                  <Symbol>{icon}</Symbol>
+                  <ReiterBild reiter={r} />
                 </span>
               ) : (
-                <Symbol>{icon}</Symbol>
+                <ReiterBild reiter={r} />
               )}
               <span>{label}</span>
               {punkt && <span className="hb-tab-punkt" aria-hidden="true" />}

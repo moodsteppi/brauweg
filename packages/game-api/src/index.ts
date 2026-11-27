@@ -175,7 +175,8 @@ export type GameId =
    * `legalActions` zaehlt jeden legalen Zug einzeln auf, auch jede
    * Umwandlung. Der Bildschirm hebt daraus die Zielfelder hervor.
    */
-  | 'brochess';
+  | 'brochess'
+  | 'wuerfelglanz';
 
 /**
  * Zustand eines Spiels im Produkt. Vorschau-Spiele werden in der Lobby
@@ -184,6 +185,8 @@ export type GameId =
 export type GameAvailability = 'playable' | 'preview';
 
 export interface GameMeta {
+  /** Produktfreigabe ausschließlich für die iOS-Hülle. */
+  readonly nurIos?: boolean;
   readonly id: GameId;
   /** Anzeigename, laeuft ueber die Uebersetzungsschluessel des Clients. */
   readonly nameKey: string;

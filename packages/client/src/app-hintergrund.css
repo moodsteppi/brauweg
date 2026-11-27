@@ -1,0 +1,30 @@
+/* Gemeinsame Spielstube: eine komprimierte Grafik für die gesamte App-Hülle.
+   Auf dem festen Bildschirmrahmen bleibt sie beim Rollen ruhig stehen. */
+:root { --app-spielstube:linear-gradient(#09191659,#09191680),url('/hintergruende/spielstube.webp'); }
+.hb.hb,.spe.spe,.anmeldung.anmeldung,.start-logo.start-logo,.start-laden.start-laden,
+.br-seite.br-ordnung:not(.br-spielt),.ice-app:not(.ice-im-spiel) {
+  background-color:#142522;
+  background-image:var(--app-spielstube);
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+/* Die Leseflächen bleiben geschlossen; das Motiv rahmt die Menüs ein. */
+.hb.hb,.spe.spe {
+  --hb-grund:#172925;
+  --hb-grund-tief:#10201e;
+  --hb-nacht:#0c1716;
+  --hb-karte:#233934;
+  --hb-karte-hoch:#304b43;
+  --hb-kontur:#536c5c;
+  --hb-leise:#bdcec4;
+}
+.anmeldung.anmeldung {
+  --anm-grund:#142522;
+  --anm-flaeche:#203731;
+  --anm-linie:#526951;
+  --anm-leise:#bdcec4;
+}
+/* Ohne zusätzliche Filter oder Blur: auch ältere iPhones zeichnen nur ein Bild. */
+.hb.hb .hb-kopfzeile,.hb.hb .hb-ab { text-shadow:0 2px 5px #07120fe6; }
+.hb.hb .hb-chips { background:transparent; border-radius:0; box-shadow:none; }

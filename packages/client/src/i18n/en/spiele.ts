@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Englische Texte, Bereich „spiele" — Gegenstück zu `de/spiele.ts`. */
 export default {
+  'ruleset.invalid': 'Würfelglanz requires 1 to 6 players, exactly one round and no additional rules.',
   'blatt.schach-pinguin': 'Penguin Pieces',
 
   // Eigene Namen bleiben vorerst deutsch, bis der Auftraggeber entscheidet.
@@ -31,6 +32,7 @@ export default {
   'game.phase10': 'Stufenrommé',
   // Pinguine einsauen, 2 bis 5 Spieler. Der Name kommt wie bei BroChess vom
   // Auftraggeber (04.11.2026) und loest die Vorschau „Drecksau“ ab.
+  'game.wuerfelglanz': 'Würfelglanz',
   'game.dreckbro': 'DreckBro',
   'modus.mehrkampf': 'Brauweg-Bock',
   'modus.prosubway': 'Pro-Subway',

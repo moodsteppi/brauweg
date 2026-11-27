@@ -268,9 +268,9 @@ describe('Neues Hub', () => {
     expect(screen.getByRole('button', { name: /^Browort\./ })).toBeInTheDocument();
     fireEvent.click(within(reiter()).getByRole('button', { name: 'Spiele' }));
     await act(async () => {});
-    expect(screen.getAllByText('Allein')).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: /^Allein/ })).toHaveLength(1);
     expect(screen.getByRole('button', { name: /Kartenmanufaktur/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Jeden Tag ein Wort/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Browort/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Pro-Subway/ })).toBeInTheDocument();
   });
 

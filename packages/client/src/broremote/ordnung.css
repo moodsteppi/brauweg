@@ -709,3 +709,5 @@
   .br-ordnung:not(.br-spielt) .br-raumtitel h1 { font-size:30px; }
   .br-ordnung .br-lobby>.br-panel { padding:22px; }
 }
+
+.br-ordnung .bt-inventar .bt-arsenal-schliessen { grid-column:1/-1; min-height:44px; color:#ffe09a; }

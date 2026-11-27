@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „spiele". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
 export default {
+  'ruleset.invalid': 'Würfelglanz benötigt 1 bis 6 Spieler, genau eine Runde und keine zusätzlichen Regeln.',
   'blatt.schach-pinguin': 'Pinguin-Figuren',
 
   'game.doppelkopf': 'Doppelkopf',
@@ -60,6 +61,7 @@ export default {
   'game.phase10': 'Stufenrommé',
   // Pinguine einsauen, 2 bis 5 Spieler. Der Name kommt wie bei BroChess vom
   // Auftraggeber (04.11.2026) und loest die Vorschau „Drecksau“ ab.
+  'game.wuerfelglanz': 'Würfelglanz',
   'game.dreckbro': 'DreckBro',
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
   // deshalb steht er nicht in der Registrierung.

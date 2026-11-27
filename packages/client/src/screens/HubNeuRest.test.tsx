@@ -186,12 +186,13 @@ describe('Neues Hub: die restlichen Ansichten', () => {
     await act(async () => {});
     // Nur der Titel, nicht der Zusatz rechts daneben („3 von 6 Plätzen").
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.childNodes[0]?.textContent)).toEqual([
-      'Deine Figur',
+      'Dein Pinguin',
       'Deine Sachen',
       'Trophäen',
       // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
       'Browort',
       'Freunde',
+      'Community & Social Media',
       'Geburtstag',
       'Konto',
     ]);
@@ -210,12 +211,13 @@ describe('Neues Hub: die restlichen Ansichten', () => {
     await act(async () => {});
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.childNodes[0]?.textContent)).toEqual([
       'Geburtstag',
-      'Deine Figur',
+      'Dein Pinguin',
       'Deine Sachen',
       'Trophäen',
       // Seit dem 23.10.2026 auch auf der Webseite (vorher nur in der App).
       'Browort',
       'Freunde',
+      'Community & Social Media',
       'Konto',
     ]);
     expect(screen.getByRole('button', { name: 'Belohnung holen' })).toBeInTheDocument();

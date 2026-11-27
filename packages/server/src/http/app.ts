@@ -271,7 +271,7 @@ export function istAppHerkunft(origin: string | undefined): boolean {
  * der Webseite, die ohnehin jeder oeffnen kann.
  */
 export function plattformVon(request: FastifyRequest): Plattform {
-  return istAppHerkunft(request.headers.origin) ? 'app' : 'web';
+  return request.headers.origin === APP_ORIGIN_ANDROID ? 'android' : request.headers.origin === APP_ORIGIN ? 'app' : 'web';
 }
 
 /**
@@ -489,7 +489,7 @@ const createTableSchema = z.object({
    * auf 8, weil es kein Spiel mit mehr Sitzen gab, nicht weil die 8 irgendwo
    * eine Bedeutung haette.
    */
-  seats: z.number().int().min(2).max(12),
+  seats: z.number().int().min(1).max(12),
   rounds: z.number().int().min(1).max(100),
   visibility: z.enum(['public', 'on_request', 'club_only']).optional(),
   clubId: z.string().uuid().optional(),
@@ -1513,7 +1513,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
    * mit demselben Fehler wie ein nicht freigegebenes Spiel.
    */
   const runnerNurImWeb = (request: FastifyRequest): void => {
-    if (plattformVon(request) === 'app') throw notFound('gameNotPlayable');
+    if (istAppHerkunft(request.headers.origin)) throw notFound('gameNotPlayable');
   };
 
   /** Wie viele Hub-Muenzen heute noch aus dem Runner kommen koennen. */
@@ -1619,7 +1619,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       // nicht mit ihnen bezahlt — auf beiden Plattformen. Muenzen gehen
       // weiter: Der Tages-Shop kauft ueber genau diese Route.
       if (waehrung === 'gems' && !imUmfang(umfang, 'shop')) throw notFound('nichtImUmfang');
-      if (waehrung === 'gems' && plattformVon(request) === 'app') throw forbidden('nurMuenzenInApp');
+      if (waehrung === 'gems' && istAppHerkunft(request.headers.origin)) throw forbidden('nurMuenzenInApp');
       // Klanghalle, Wappen und eigenständige Spielinhalte behalten ihren bisherigen Kaufweg.
       const ware = wareMit(itemId);
       if (ware && !['blatt', 'ruecken', 'szene'].includes(ware.art)) return reply.send(await kaufen(deps.db, accountId, itemId, waehrung));
@@ -2121,6 +2121,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/games/:gameId/defaults', async (request, reply) => {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     const module = requireModule(gameId as GameId);
+    if (module.meta.nurIos) requireSpielbar(gameId, plattformVon(request), umfang);
     const seatCounts = module.meta.seatCounts;
 
     return reply.send({
@@ -2400,7 +2401,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     gameId: GameId,
     tableId: string,
   ): Promise<void> => {
-    if (plattformVon(request) !== 'app' || appInhalt === APP_INHALT_WIE_WEB) return;
+    if (!istAppHerkunft(request.headers.origin) || appInhalt === APP_INHALT_WIE_WEB) return;
     if (!taugtFuerApp(gameId, await tableRules(deps.db, tableId), appInhalt)) {
       throw conflict('tischNichtInDerApp');
     }
@@ -2432,7 +2433,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const accountId = await requireAccount(request);
     const body = createTableSchema.parse(request.body);
     requireSpielbar(body.gameId, plattformVon(request), umfang);
-    if (plattformVon(request) === 'app') {
+    if (istAppHerkunft(request.headers.origin)) {
       body.config = appRegeln(body.gameId, body.config, appInhalt);
     }
     // Clantisch ohne clubId: den ersten (und in der Beta einzigen) Clan nehmen.

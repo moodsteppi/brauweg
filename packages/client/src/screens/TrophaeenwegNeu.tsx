@@ -51,12 +51,19 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
   const hoehe = stationen.length * LAND_HOEHE + zusatz;
   const stationY = (i: number): number => hoehe - LAND_HOEHE * i - LAND_HOEHE / 2;
   const punktY = (wert: number): number => {
-    if (wert > 1000) return zusatz - 100 - (wert - 1250) / 250 * 180;
+    if (wert > 1000) {
+      const sternenstart = stationY(stationen.length - 1);
+      const ersterZusatz = zusatz - 100;
+      return wert <= 1250
+        ? sternenstart + (ersterZusatz - sternenstart) * (wert - 1000) / 250
+        : ersterZusatz - (wert - 1250) / 250 * 180;
+    }
     const i = Math.max(0, stationen.length - 1 - [...stationen].reverse().findIndex(s => s.ab <= wert));
     const danach = stationen[i + 1];
     return stationY(i) - (danach ? (wert - stationen[i]!.ab) / (danach.ab - stationen[i]!.ab) * LAND_HOEHE : 0);
   };
-  const punktX = (y: number): number => 175 + Math.sin((hoehe - y) / LAND_HOEHE * Math.PI) * 15;
+  // Landschaft, Weg und Avatar teilen dieselbe Achse, auch bei schmalen Displays.
+  const punktX = (_y: number): number => 175;
   const ichY = Math.max(100, punktY(stand));
   const naechste = weg?.stufen.find(s => s.schwelle > stand) ?? null;
   const ziel = naechste?.schwelle ?? stand;
@@ -74,10 +81,7 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
     anfang.current = true;
     zuMir(false);
   }, [weg]);
-  const linie = Array.from({ length: Math.ceil(hoehe / 30) + 1 }, (_, i) => {
-    const y = Math.min(hoehe, i * 30);
-    return `${i === 0 ? 'M' : 'L'}${punktX(y)},${y}`;
-  }).join(' ');
+  const linie = `M175,0 L175,${hoehe}`;
 
   const belohnung = (stufe: WegStufe, name: string): React.JSX.Element => {
     const bereit = holbar(stufe);
@@ -115,9 +119,11 @@ export function TrophaeenwegNeu({ trophies, getragen, onClose, onGuthaben }: {
     {!weg && !fehler && <p className="reise-laden" role="status">{t('trophaeenweg.laden')}</p>}
     <div ref={rolle} className="reise-scroll" tabIndex={0} aria-label={t('trophaeenweg.scrollen.aria')}>
       <div className="reise-karte" style={{ height: hoehe }}>
+        <div className="reise-panorama" aria-hidden="true">
+          <img className="reise-panorama-unten" src="/hub/trophaeenreise/reise-heimat-strand.webp" alt="" draggable={false} />
+          <img className="reise-panorama-oben" src="/hub/trophaeenreise/reise-feuer-sterne.webp" alt="" draggable={false} />
+        </div>
         {stationen.map((s, i) => <section key={s.name} className={`reise-land${stand < s.ab ? ' ist-voraus' : ''}`} style={{ top: hoehe - LAND_HOEHE * (i + 1), height: LAND_HOEHE }}>
-          <img className="reise-landschaft" src={`/hub/${s.biom}.webp`} alt="" loading="lazy" draggable={false} />
-          <div className="reise-landschaft-schatten" />
           <div className="reise-ortschild"><small>{tf('trophaeenweg.region', { nr: String(i + 1).padStart(2, '0') })}</small><h2>{s.name}</h2><span>{tf('trophaeenweg.trophaeen', { n: zahl(s.ab) })}</span></div>
         </section>)}
         {zusatz > 0 && <div className="reise-sterne" style={{ height: zusatz }} aria-hidden="true" />}

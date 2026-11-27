@@ -296,3 +296,9 @@
     height: 78px;
   }
 }
+
+.hb .start-social { margin: 0; }
+.hb .start-social .hb-social-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.hb .start-social .hb-social-link { flex-direction: row; aspect-ratio: auto; min-height: 70px; padding: 9px; gap: 7px; }
+.hb .start-social .hb-social-logo { width: 38px; height: 38px; flex: none; }
+.hb .start-social strong { font: 400 clamp(15px, 4vw, 18px)/1 var(--hb-anz); }

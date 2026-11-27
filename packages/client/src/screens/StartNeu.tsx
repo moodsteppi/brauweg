@@ -1,3 +1,4 @@
+import { SozialeKanaele } from './SozialeKanaele';
 import type { ActiveTable, Me } from '../api';
 import { t, zahl } from '../i18n';
 import { tf } from '../i18n/einsetzen';
@@ -169,7 +170,9 @@ export function StartNeu({
         </button>
       </section>
 
-      {activeTable && (
+      <SozialeKanaele kompakt />
+
+      {activeTable && inAppSichtbar(activeTable.gameId) && (
         <button
           type="button"
           className="hb-weiter"

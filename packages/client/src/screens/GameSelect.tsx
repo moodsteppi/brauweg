@@ -1,3 +1,4 @@
+import { SozialeKanaele } from './SozialeKanaele';
 import {
   Suspense,
   lazy,
@@ -67,26 +68,6 @@ import { Kleiderschrank } from './Kleiderschrank';
 import { KontoSichern } from './KontoSichern';
 import { BrowortImProfil } from '../browort/BrowortImProfil';
 import { Klanghalle } from './Klanghalle';
-import { LEERE_BEMALUNG } from '../bemalung';
-
-/**
- * Die 3D-Figur wird nachgeladen: `three` und `drei` wiegen rund 900 kB. Bis
- * sie da ist, steht der gemalte Pinguin als Rueckfall — siehe die Stelle im
- * Profil-Tab.
- */
-const Avatar3D = lazy(() => import('../Avatar3D'));
-
-/**
- * Die Werkstatt wird nachgeladen — genau wie in `main.tsx`, die sie fuer
- * `?dev=werkstatt` schon per `lazy` holt. Solange sie hier statisch stand,
- * zog der statische Import gegen den dynamischen: Vite meldete bei jedem Bau
- * "dynamically imported by main.tsx but also statically imported by
- * GameSelect.tsx" und liess sie im Hauptbuendel liegen, obwohl die
- * allermeisten Besucher sie nie oeffnen.
- */
-const Avatarwerkstatt = lazy(() =>
-  import('./Avatarwerkstatt').then((m) => ({ default: m.Avatarwerkstatt })),
-);
 /** „Doppelkopf lernen" — nur in der App und erst beim Oeffnen nachgeladen. */
 const Lernpfad = lazy(() => import('../lernen/Lernpfad').then((m) => ({ default: m.Lernpfad })));
 const Browort = lazy(() => import('../browort/Browort').then((m) => ({ default: m.Browort })));
@@ -204,7 +185,6 @@ export function GameSelect({
   const [aufgabenOffen, setAufgabenOffen] = useState(anfangsHeute ?? false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
-  const [werkstattOffen, setWerkstattOffen] = useState(false);
   /** Doppelkopf lernen: Lernpfad als Vollbild. */
   const [lernenOffen, setLernenOffen] = useState(false);
   // Allein der Umfang der Ausgabe entscheidet (umfang.ts): Fehlt der Teil
@@ -272,7 +252,7 @@ export function GameSelect({
   const renderTab = (tt: Tab): React.JSX.Element | null => {
     switch (tt) {
       case 'shop':
-        return <TagesShop me={me} ziel={shopZiel} onGuthaben={onAvatarChange} onSammlung={spiel => { setSammlungSpiel(['alle', 'allgemein'].includes(spiel) ? 'pinguin' : spiel); setTab('blatt'); }} />;
+        return <TagesShop me={me} ziel={shopZiel} onGuthaben={onAvatarChange} onSammlung={spiel => { if (['alle', 'allgemein', 'pinguin'].includes(spiel)) { setTab('profil'); setSchrankOffen(true); } else { setSammlungSpiel(spiel); setTab('blatt'); } }} />;
       case 'clan':
         return (
           <Clan
@@ -328,11 +308,6 @@ export function GameSelect({
             onShop={zumTagesShop}
             onThemeChange={onThemeChange}
             onGekauft={onAvatarChange}
-            onSchrank={() => setSchrankOffen(true)}
-            onWerkstatt={() => {
-              spiele('blatt-auf');
-              setWerkstattOffen(true);
-            }}
 
           />
         );
@@ -350,10 +325,6 @@ export function GameSelect({
             onKlanghalle={() => {
               spiele('blatt-auf');
               setKlanghalleOffen(true);
-            }}
-            onWerkstatt={() => {
-              spiele('blatt-auf');
-              setWerkstattOffen(true);
             }}
             onAufgaben={() => { setHeuteBereich('aufgaben'); setAufgabenOffen(true); }}
             onBald={setBald}
@@ -393,28 +364,6 @@ export function GameSelect({
           />
         )}
         {klanghalleOffen && <Klanghalle neu onClose={() => setKlanghalleOffen(false)} />}
-        {werkstattOffen && (
-          // Der Rueckfall traegt dieselbe Blatthuelle wie die Werkstatt selbst:
-          // Der Tipp verdunkelt sofort den Hintergrund, statt bis zum
-          // nachgeladenen Stueck so auszusehen, als sei nichts passiert.
-          <Suspense
-            fallback={
-              <div className="doko-sheet doko-sheet--mitte">
-                <Ladekreis text={t('hubgeruest.werkstattLaedt')} />
-              </div>
-            }
-          >
-            <Avatarwerkstatt
-              neu
-              bemalung={me.figur ?? null}
-              getragen={me.avatar}
-              onClose={() => setWerkstattOffen(false)}
-              // Neu laden, damit die Figur im Profil sofort so aussieht wie
-              // gerade gespeichert.
-              onGespeichert={() => onAvatarChange()}
-            />
-          </Suspense>
-        )}
         {lernenOffen && (
           <Suspense
             fallback={
@@ -543,7 +492,6 @@ function ProfilTab({
   onStufen,
   onSchrank,
   onKlanghalle,
-  onWerkstatt,
   onAufgaben,
   onBald,
   onShowProfile,
@@ -563,8 +511,6 @@ function ProfilTab({
   onSchrank: () => void;
   /** Oeffnet die Klanghalle — Musik und Klangpakete auswaehlen. */
   onKlanghalle: () => void;
-  /** Oeffnet die Avatar-Werkstatt: drehen, anmalen, Muetze. */
-  onWerkstatt: () => void;
   /** Oeffnet Tagesaufgaben und Truhen. */
   onAufgaben: () => void;
   onBald: (name: string) => void;
@@ -643,7 +589,6 @@ function ProfilTab({
     </section>
   );
   const einstiege = [
-    { icon: '/hub/icon-kleiderschrank.webp', name: t('profil.kleiderschrank'), punkt: null, onClick: onSchrank },
     { icon: '/hub/icon-klanghalle.webp', name: t('profil.klanghalle'), punkt: null, onClick: onKlanghalle },
     { icon: '/hub/icon-aufgaben.webp', name: t('profil.aufgaben'), punkt: bereit > 0 ? tf('profil.bereit', { n: bereit }) : null, onClick: onAufgaben },
   ];
@@ -677,30 +622,13 @@ function ProfilTab({
 
         {mitGeburtstag && me.birthdayRewardClaimable && geburtstag}
 
-        {/* In der App ohne 3D-Figur: Für die erste Fassung gibt es dort den
-            Kleiderschrank (Emile, 22.10.2026). Auf der Webseite hängt sie
-            am Umfang (`figur`). */}
-        {!inApp && imUmfang('figur') && (
         <section className="hb-blk">
-          <h2 className="hb-ab">
-            {t('profil.figur.titel')}
-            <span className="hb-ab-zusatz">{me.figur?.design === 'bemalt' ? t('profil.figur.bemalt') : t('profil.figur.antippen')}</span>
-          </h2>
-          {/* Über die volle Breite, aus demselben Grund wie im alten
-              Profil: Ein WebGL-Bereich hat keine eigene Höhe. */}
-          <button type="button" className="hb-figur" onClick={onWerkstatt} aria-label={t('profil.figur.bearbeiten')}>
-            <Suspense fallback={<Pinguin getragen={me.avatar} groesse={9} titel={t('profil.figur.titel')} />}>
-              <Avatar3D getragen={me.avatar} bemalung={me.figur ?? LEERE_BEMALUNG} drehbar={false} />
-            </Suspense>
-            <span className="hb-figur-stift" aria-hidden="true">
-              <HbSymbol>
-                <path d="M14 4l6 6-8 8H6v-6z M12 6l6 6" />
-              </HbSymbol>
-            </span>
+          <h2 className="hb-ab">{t('sammlung.pinguin.titel')}</h2>
+          <button type="button" className="hb-profil-schrank" onClick={onSchrank} aria-label={t('profil.kleiderschrank')}>
+            <Pinguin getragen={me.avatar} groesse={8} titel={t('sammlung.pinguin.titel')} />
+            <span><strong>{t('profil.kleiderschrank')}</strong><small>{t('sammlung.pinguin.text')}</small><span className="hb-kn is-gold">{t('sammlung.pinguin.schrank')} ›</span></span>
           </button>
-          <p className="hb-klein hb-ohne-rand">{t('profil.figur.hinweis')}</p>
         </section>
-        )}
 
         <section className="hb-blk">
           <h2 className="hb-ab">
@@ -792,6 +720,7 @@ function ProfilTab({
         )}
 
         <Freunde neu onShowProfile={onShowProfile} />
+        <SozialeKanaele profil />
 
         {mitGeburtstag && !me.birthdayRewardClaimable && geburtstag}
 
