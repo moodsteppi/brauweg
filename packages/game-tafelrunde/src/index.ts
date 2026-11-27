@@ -185,5 +185,6 @@ export {
   MANA_JE_ANGRIFF,
   MANA_JE_TREFFER,
   WIRKUNG,
+  FAEHIGKEIT_WERT,
   faehigkeitVon,
 } from './faehigkeiten.js';

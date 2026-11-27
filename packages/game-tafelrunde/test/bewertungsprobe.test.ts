@@ -106,7 +106,8 @@ describe('Bewertungsprobe', () => {
    * Seit den Faehigkeiten (faehigkeiten.ts) liegen die Rollen im Turnier
    * enger beieinander (Wachen 33 statt 13 %, Schuetzen 60 statt 82 %), und
    * damit sagt `staerke` die Rangfolge auch OHNE Deckung vorher: gemessen
-   * +0,60 mit, +0,59 ohne. Der Bot bleibt trotzdem, wie er ist — er wurde in
+   * +0,51 mit, +0,30 ohne, nachdem der Bot einen Schaetzwert je Faehigkeit
+   * bekam (`FAEHIGKEIT_WERT`). Der Bot bleibt sonst, wie er ist — er wurde in
    * echten Partien abgestimmt, nicht am Turnier. Geprueft wird jetzt nur noch,
    * dass die Deckung nicht SCHADET.
    */

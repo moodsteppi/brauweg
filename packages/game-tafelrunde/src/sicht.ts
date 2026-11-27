@@ -24,6 +24,7 @@
 
 import { type Seite, ARENA_REIHEN } from './arena.js';
 import type { Einheit, EinheitId, Grundwerte, Stufe } from './katalog.js';
+import { type Faehigkeit, FAEHIGKEITEN } from './faehigkeiten.js';
 import {
   KATALOG,
   MAX_STUFE,
@@ -414,6 +415,13 @@ export interface TafelrundeSicht {
    * Ausliefern, aus demselben Grund (siehe `Stufenwerte`).
    */
   readonly stufenwerte?: Readonly<Record<EinheitId, readonly Stufenwerte[]>>;
+  /**
+   * Je Einheit ihre Faehigkeit oder null (seit dem 27.11.2026). Geht mit dem
+   * Katalog heraus und faellt unter dieselbe Zusage (nur bei `seit === 0`):
+   * Sie haengt an nichts als am Katalog. Volles Mana steht hier, damit der
+   * Manabalken nicht im Client eine zweite Zahl braucht.
+   */
+  readonly faehigkeiten?: Readonly<Record<EinheitId, Faehigkeit | null>>;
 }
 
 /**
@@ -479,7 +487,7 @@ function grundsicht(
     zeitraffer: (partie.regler ?? STANDARD_REGLER).zeitraffer,
     schrittMs: schrittdauer(partie.regler ?? STANDARD_REGLER),
     ...(seit === 0
-      ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE }
+      ? { katalog: KATALOG, synergieTabelle: SYNERGIEN, stufenwerte: STUFENWERTE, faehigkeiten: FAEHIGKEITEN }
       : {}),
   };
 }

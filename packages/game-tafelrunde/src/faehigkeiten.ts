@@ -91,7 +91,7 @@ export const FAEHIGKEITEN: Readonly<Record<EinheitId, Faehigkeit | null>> = {
   // --- 2 Gold ---------------------------------------------------------------
   hainwaechterin: aktiv('speerstoss', 'Speerstoß', 60, 'Durchbohrt das Ziel und trifft auch den Gegner dahinter.'),
   grimmbart: aktiv('axtwirbel', 'Axtwirbel', 70, 'Wirbelt die Axt und trifft alle Gegner ringsum.'),
-  bogenmeisterin: aktiv('doppelpfeil', 'Doppelpfeil', 50, 'Schießt zwei Pfeile auf zwei verschiedene Ziele.'),
+  bogenmeisterin: aktiv('doppelpfeil', 'Doppelpfeil', 70, 'Schießt zwei Pfeile auf zwei verschiedene Ziele.'),
   nachtpfeil: aktiv('zielschuss', 'Zielschuss', 70, 'Trifft den schwächsten Gegner auf dem Feld, egal wie weit weg.'),
   frostweberin: aktiv('frostring', 'Frostring', 70, 'Trifft das Ziel und verlangsamt alle Gegner drumherum.'),
   schattenklinge: aktiv('schattensprung', 'Schattensprung', 60, 'Springt zum hintersten Gegner und greift ihn an.'),
@@ -129,7 +129,7 @@ export const WIRKUNG = {
   speerstossZiel: 1.3,
   speerstossDahinter: 0.9,
   axtwirbel: 1.0,
-  doppelpfeil: 1.0,
+  doppelpfeil: 0.8,
   zielschuss: 1.8,
   frostringZiel: 1.2,
   frostringLangsamProzent: 30,
@@ -147,3 +147,35 @@ export const WIRKUNG = {
   klingentanzHiebe: 3,
   lichtsegenHeilung: 1.5,
 } as const;
+
+/**
+ * WAS EINE FAEHIGKEIT DEM BOT WERT IST, als Aufschlag auf seine Leistung
+ * (`leistung` in bot.ts). Der Bot simuliert keinen Kampf; ohne diese Zahl
+ * saehe er die Faehigkeiten gar nicht, und seine Staerke sagte die
+ * Kampfmessung schlechter vorher (Bewertungsprobe: 0,48 statt 0,60).
+ *
+ * Grob nach Wirkung gestuft, nicht eingepasst: Flaechenschaden und
+ * Betaeubung am meisten, reine Selbstschutz-Faehigkeiten am wenigsten.
+ */
+export const FAEHIGKEIT_WERT: Readonly<Record<FaehigkeitId, number>> = {
+  schildwall: 0.1,
+  panzer: 0.1,
+  jederVierte: 0.15,
+  kopfnuss: 0.15,
+  funkenwurf: 0.2,
+  kraeuterwolke: 0.2,
+  speerstoss: 0.2,
+  axtwirbel: 0.25,
+  doppelpfeil: 0.2,
+  zielschuss: 0.2,
+  frostring: 0.2,
+  schattensprung: 0.2,
+  ersterTreffer: 0.1,
+  runenschild: 0.2,
+  stampfer: 0.3,
+  feuerstrahl: 0.25,
+  kettenblitz: 0.3,
+  seelenraub: 0.2,
+  klingentanz: 0.3,
+  lichtsegen: 0.25,
+};
