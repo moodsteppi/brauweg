@@ -5,7 +5,6 @@ import { SZENEN } from "../szenen";
 import { t, zahl } from "../i18n";
 import { tf } from "../i18n/einsetzen";
 import { FIGURENSAETZE } from "../minispiele/brochess/figurensatz";
-import { Pinguin } from "../pinguin";
 import { useRueckfrage } from "./HbBlatt";
 import { marktName } from "./MarktBild";
 import { bannerFuer } from "./StartNeu";
@@ -22,7 +21,6 @@ type Offen = { spiel: string; art: SammelBereich };
 export function SammlungNeu({
   me,
   onThemeChange,
-  onSchrank,
   onShop,
   spiel = "alle",
   onSpiel,
@@ -32,16 +30,14 @@ export function SammlungNeu({
     gameId: string,
     teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
   ) => void;
-  onSchrank: () => void;
   onShop?: (spiel: string, artikel?: string) => void;
   spiel?: string;
   onSpiel?: (spiel: string) => void;
   onGekauft?: () => void;
-  onWerkstatt?: () => void;
   details?: (gameId: string, zurueck: () => void) => React.ReactNode;
 }) {
   const [shop, setShop] = useState<Shop | null>(null);
-  const [filter, setFilter] = useState(spiel);
+  const [filter, setFilter] = useState(spiel === "pinguin" ? "alle" : spiel);
   const [offen, setOffen] = useState<Offen | null>(null);
   const [spiele, setSpiele] = useState<string[]>([
     "doppelkopf",
@@ -63,7 +59,7 @@ export function SammlungNeu({
   };
   useEffect(laden, [me.coins]);
   useEffect(() => {
-    setFilter(spiel);
+    setFilter(spiel === "pinguin" ? "alle" : spiel);
     setOffen(null);
   }, [spiel]);
   useEffect(() => {
@@ -199,7 +195,7 @@ export function SammlungNeu({
         role="tablist"
         aria-label={t("sammlung.chips")}
       >
-        {["alle", ...spiele, "pinguin"].map((id) => (
+        {["alle", ...spiele].map((id) => (
           <button
             key={id}
             role="tab"
@@ -279,21 +275,7 @@ export function SammlungNeu({
                     </div>
                   </section>
                 ))}
-            {(filter === "alle" || filter === "pinguin") && (
-              <section className="sam-pinguin">
-                <Pinguin getragen={me.avatar} groesse={6} />
-                <div>
-                  <h2>
-                    <SammelIcon art="pinguin" />
-                    {t("sammlung.pinguin.titel")}
-                  </h2>
-                  <p>{t("sammlung.pinguin.text")}</p>
-                  <button className="markt-knopf" onClick={onSchrank}>
-                    {t("sammlung.pinguin.schrank")}
-                  </button>
-                </div>
-              </section>
-            )}
+
           </>
         )}
         {offen && shop && (
