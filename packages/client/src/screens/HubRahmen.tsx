@@ -9,6 +9,7 @@ import { tf } from '../i18n/einsetzen';
 const kopfZahl = (n: number): string => (n < 10000 ? zahl(n) : kompakteZahl(n));
 import { Pinguin } from '../pinguin';
 import { spiele } from '../klang';
+import { HubBildIcon, type HubMotiv } from './HubBildIcon';
 
 /**
  * Der Rahmen des neuen Hubs: Kopf, Online-Zeile, Inhalt, Reiterleiste.
@@ -20,14 +21,13 @@ import { spiele } from '../klang';
 
 type Reiter = 'shop' | 'clan' | 'spielen' | 'blatt' | 'profil' | 'spiele';
 
-/** Kleine, eigenständige Vektorgrafiken im Gold-/Eis-Stil des Hubs. */
-const REITER_BILD: Record<Reiter, string> = {
-  shop: 'shop', spiele: 'games', spielen: 'home', blatt: 'collection', clan: 'clan', profil: 'clan',
+/** Alle Reiter verwenden dieselbe grün-goldene Bildfamilie. */
+const REITER_BILD: Record<Reiter, HubMotiv> = {
+  shop: 'shop', spiele: 'games', spielen: 'home', blatt: 'collection', clan: 'clan', profil: 'menu',
 };
 
 function ReiterBild({ reiter }: { reiter: Reiter }): React.JSX.Element {
-  if (reiter === 'profil') return <svg className="hb-nav-bild" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="4"><circle cx="32" cy="22" r="11"/><path d="M12 56c0-24 40-24 40 0"/></svg>;
-  return <img className="hb-nav-bild" src={`/hub/navigation/${REITER_BILD[reiter]}.svg`} alt="" aria-hidden="true" draggable={false} />;
+  return <HubBildIcon motiv={REITER_BILD[reiter]} className="hb-nav-bild" />;
 }
 
 export function NeuerRahmen<T extends Reiter>({

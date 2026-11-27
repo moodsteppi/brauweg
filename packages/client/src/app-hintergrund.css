@@ -27,4 +27,4 @@
 }
 /* Ohne zusätzliche Filter oder Blur: auch ältere iPhones zeichnen nur ein Bild. */
 .hb.hb .hb-kopfzeile,.hb.hb .hb-ab { text-shadow:0 2px 5px #07120fe6; }
-.hb.hb .hb-chips { background:linear-gradient(#10201eee,#10201eaa); border-radius:14px; }
+.hb.hb .hb-chips { background:transparent; border-radius:0; box-shadow:none; }

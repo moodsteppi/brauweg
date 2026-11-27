@@ -1,14 +1,14 @@
 .hb-startkacheln{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.hb-startkacheln .hb-startkachel{position:relative;isolation:isolate;display:block;width:100%;min-width:0;aspect-ratio:1;padding:0;overflow:hidden;border:1px solid #a68846;border-radius:22px;background:#102140;color:#fff;text-align:left;cursor:pointer;box-shadow:0 5px 14px #040c2633}
+.hb-startkacheln .hb-startkachel{position:relative;isolation:isolate;display:block;width:100%;min-width:0;aspect-ratio:1;padding:0;overflow:hidden;border:1px solid #a68846;border-radius:22px;background:#19372b;color:#fff;text-align:left;cursor:pointer;box-shadow:0 5px 14px #06190e33}
 .hb-startkachel>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
-.hb-startkachel::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(transparent 43%,#091a37bb 70%,#091a37 100%)}
+.hb-startkachel::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(transparent 43%,#10281ebb 70%,#10281e 100%)}
 .hb-startkachel-inhalt{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:5px}
 .hb-startkachel-inhalt strong{font:400 clamp(16px,4.3vw,23px)/1.08 var(--hb-anz,'Lilita One',sans-serif);text-shadow:0 2px 4px #0008}
-.hb-startkachel-inhalt>span:not(.ln-startkarte-punkte){font-size:12px;line-height:1.2;color:#e2e9f8}
+.hb-startkachel-inhalt>span:not(.ln-startkarte-punkte){font-size:12px;line-height:1.2;color:#e5eddc}
 .hb-startkachel .ln-startkarte-punkte{gap:3px}
-.hb-startkachel .ln-startkarte-punkte i{flex:1;max-width:18px;height:4px;background:#50617d}
+.hb-startkachel .ln-startkarte-punkte i{flex:1;max-width:18px;height:4px;background:#58705e}
 .hb-startkachel .ln-startkarte-punkte i.is-voll{background:#ffd267}
-.hb-startkacheln .is-browort{border-color:#4fa99e}
+.hb-startkacheln .is-browort{border-color:#749b70}
 .hb-startkachel:focus-visible{outline:3px solid #ffcf65;outline-offset:3px}
 .hb-startkachel:active{filter:brightness(.9)}
 @media(max-width:360px){.hb-startkacheln{gap:10px}.hb-startkachel-inhalt{left:9px;right:9px;bottom:9px;gap:4px}.hb-startkachel-inhalt>span:not(.ln-startkarte-punkte){font-size:11px}}

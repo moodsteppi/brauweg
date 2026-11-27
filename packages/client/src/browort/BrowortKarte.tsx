@@ -23,7 +23,7 @@ export function BrowortKarte({ stand, onOeffnen, quadratisch = false }: { quadra
       : t('startkarte.browort.einladung');
   if (quadratisch) return (
     <button type="button" className="hb-startkachel is-browort" onClick={onOeffnen} aria-label={tn('startkarte.browort.aria', serie, { schnitt: schnittText(stand?.schnitt ?? null), unter })}>
-      <img src="/hub/startkacheln/browort.webp" alt="" />
+      <img src="/hub/browort-icon.webp" alt="" />
       <span className="hb-startkachel-inhalt">
         <strong>{t('startkarte.browort.label').split(' · ')[0]}</strong>
         <span>{heute ? t('startkarte.browort.gespielt') + ' ✓' : serie > 0 ? tn('startkarte.serie', serie) : t('startkarte.browort.raten')}</span>
