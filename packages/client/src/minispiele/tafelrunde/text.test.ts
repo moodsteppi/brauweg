@@ -19,7 +19,7 @@ describe('Tafelrunde: Namen aus dem Modul oder aus dem Wörterbuch', () => {
 
   it('auf Englisch übersetzt, und eine unbekannte Einheit heißt wie in der Sicht', () => {
     setzeSprachwahl('en');
-    expect(einheitName({ id: 'dorfwache', name: 'Dorfwache' })).toBe('Village Guard');
+    expect(einheitName({ id: 'dorfwache', name: 'Dorfwache' })).toBe('Penguin Guard');
     expect(einheitName({ id: 'neuling', name: 'Neuling' })).toBe('Neuling');
   });
 });

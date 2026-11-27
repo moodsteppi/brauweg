@@ -16,6 +16,8 @@ import { horcheAufAntippen } from './mitteilung-antippen';
 import { Startbildschirm } from './screens/Startbildschirm';
 import { Ladevorhang } from './minispiele/tafelrunde/Ladevorhang';
 import { TISCH_PARAMETER } from './minispiele/tafelrunde/tischlink';
+import { Ladebild as LadebildNeu } from './minispiele/tafelrunde/neu/Ladebild';
+import { tafelrundeNeu } from './tafelrundeNeu';
 import {
   fehlschlagMerken,
   vorgemerkterCode,
@@ -44,9 +46,19 @@ const KontoLink = lazy(() =>
  * importiert, hebt die Aufteilung fuer ihn auf — Vite meldet das beim Bau
  * ("dynamic import will not move module into another chunk").
  */
-const Tafelrunde = lazy(() =>
+const TafelrundeAlt = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
 );
+/*
+ * Die neue Oberflaeche von Tafelrunde, hinter dem Schalter `?tafelrunde=neu`
+ * (tafelrundeNeu.ts, gebaut wie der Hub-Schalter #277). Bis zu Robins Abnahme
+ * bleibt das alte Tafelrunde der Standard. Ein eigenes Stueck: Wer den
+ * Schalter nicht setzt, laedt die neue Oberflaeche nie.
+ */
+const TafelrundeNeu = lazy(() =>
+  import('./screens/TafelrundeNeu').then((m) => ({ default: m.TafelrundeNeu })),
+);
+const Tafelrunde = tafelrundeNeu ? TafelrundeNeu : TafelrundeAlt;
 const DreckBroTable = lazy(() =>
   import('./screens/DreckBroTable').then((m) => ({ default: m.DreckBroTable })),
 );
@@ -718,7 +730,18 @@ export function App(): React.JSX.Element {
      */
     if (screen.name === 'tafelrunde') {
       return (
-        <Suspense fallback={<Ladevorhang onAbbrechen={zurueckZuDenSpielen} />}>
+        <Suspense
+          fallback={
+            /* Der Vorhang des alten Tafelrunde liest dessen Ladelauf mit (und
+               startet ihn, samt altem Bildschirmpaket); die neue Oberflaeche
+               hat ihr eigenes, schlankes Ladebild. */
+            tafelrundeNeu ? (
+              <LadebildNeu onAbbrechen={zurueckZuDenSpielen} />
+            ) : (
+              <Ladevorhang onAbbrechen={zurueckZuDenSpielen} />
+            )
+          }
+        >
           <Tafelrunde startTisch={screen.tisch ?? null} onBack={zurueckZuDenSpielen} />
         </Suspense>
       );
@@ -728,7 +751,18 @@ export function App(): React.JSX.Element {
       screen.gameId === 'tafelrunde'
     ) {
       return (
-        <Suspense fallback={<Ladevorhang onAbbrechen={zurueckZuDenSpielen} />}>
+        <Suspense
+          fallback={
+            /* Der Vorhang des alten Tafelrunde liest dessen Ladelauf mit (und
+               startet ihn, samt altem Bildschirmpaket); die neue Oberflaeche
+               hat ihr eigenes, schlankes Ladebild. */
+            tafelrundeNeu ? (
+              <LadebildNeu onAbbrechen={zurueckZuDenSpielen} />
+            ) : (
+              <Ladevorhang onAbbrechen={zurueckZuDenSpielen} />
+            )
+          }
+        >
           <Tafelrunde
             startTisch={screen.name === 'table' ? screen.tableId : null}
             onBack={zurueckZuDenSpielen}

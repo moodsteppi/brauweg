@@ -99,6 +99,17 @@ export interface Suchstand {
   restMs: number;
   /** Gesetzt heisst: Die Suche ist vorbei, dorthin geht es ohne Rueckfrage. */
   tischId: string | null;
+  /**
+   * Wer schon in derselben Schlange wartet, in der Reihenfolge des Eintreffens
+   * und man selbst mitgezaehlt (seit dem 27.11.2026, `mitWartenden` in
+   * server/src/http/app.ts). TafelrundeNeu zeigt sie, wie sie einlaufen.
+   *
+   * `bildUrl` ist null, wenn jemand kein Profilbild hat — der Bildschirm
+   * zeichnet dann ein Zeichen statt eines `<img>` (CLAUDE.md). Wer die Antwort
+   * liest, rechnet trotzdem mit einem fehlenden Feld (`?? []`): Ein Server aus
+   * der Zeit davor schickt es nicht, und `suchende` zaehlt dann weiter allein.
+   */
+  wartende: { id: string; name: string; bildUrl: string | null }[];
 }
 
 export interface ActiveTable {

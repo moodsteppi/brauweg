@@ -188,4 +188,35 @@ export interface TafelrundeSicht {
    * Werte einer angetippten Einheit nennen koennte.
    */
   stufenwerte?: Record<string, Stufenwerte[]>;
+  /**
+   * Je Einheit ihre Faehigkeit oder null (seit dem 27.11.2026, faehigkeiten.ts
+   * im Modul). Wie der Katalog nur in der ERSTEN Sicht (`seit === 0`) und aus
+   * demselben Grund: Sie aendert sich nie. Wer sie nicht festhaelt, hat ab dem
+   * zweiten Rundruf keinen Manabalken mehr — volles Mana steht nur hier, und
+   * der Bildschirm soll keine zweite Zahl dafuer kennen.
+   *
+   * Wahlfrei, weil ein Tisch aus der Zeit davor das Feld nicht schickt. Das
+   * alte Tafelrunde liest es nicht; es steht hier, weil der Vertrag jedes Feld
+   * der Modulsicht kennen will, das der Client liest (TafelrundeNeu).
+   */
+  faehigkeiten?: Record<string, Faehigkeit | null>;
+}
+
+/**
+ * Eine Faehigkeit, wie die Sicht sie liefert (faehigkeiten.ts im Modul).
+ *
+ * `id` ist eine Zeichenkette und kein Vereinigungstyp, aus demselben Grund wie
+ * die Marke in Synergien.tsx: Eine neue Faehigkeit im Modul soll am Bildschirm
+ * mit dem deutschen Namen aus der Sicht erscheinen und nicht den Bau brechen.
+ */
+export interface Faehigkeit {
+  id: string;
+  /** Deutscher Name — Inhalt des Spiels, uebersetzt wird ueber `id` (text.ts). */
+  name: string;
+  /** Ein Satz fuer das Einheitenblatt. */
+  text: string;
+  /** Passiv wirkt immer und braucht kein Mana; dann gibt es keinen Balken. */
+  art: 'aktiv' | 'passiv';
+  /** Volles Mana. Bei passiven 0. */
+  mana: number;
 }

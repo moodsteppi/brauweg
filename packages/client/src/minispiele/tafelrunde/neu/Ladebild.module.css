@@ -1,0 +1,87 @@
+/*
+ * Das Ladebild von TafelrundeNeu. Eigene Datei, weil es auch der Rueckfall
+ * des <Suspense> in App.tsx ist und damit im Hauptpaket steht (siehe
+ * Ladebild.tsx). Farben wie neu.module.css: Nachtblau mit dem Gruen des
+ * Spiels (DESIGN.md, „Gruen bleibt die Farbe von Tafelrunde").
+ */
+
+.ladebild {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(72, 168, 106, 0.35), transparent 60%),
+    linear-gradient(180deg, #0e1a3d 0%, #07132f 100%);
+  color: #f3f5ff;
+  font-family: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+  z-index: 30;
+}
+
+.titel {
+  margin: 0;
+  font-family: 'Lilita One', system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.balken {
+  width: min(280px, 80vw);
+  height: 12px;
+  border-radius: 999px;
+  background: #182b5c;
+  border: 1px solid #35518c;
+  overflow: hidden;
+}
+
+.balken > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3f9a5c, #5fd07f);
+  transition: width 0.3s ease;
+}
+
+.balken[data-unbestimmt] > i {
+  width: 40%;
+  animation: schimmer 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes schimmer {
+  from {
+    transform: translateX(-60%);
+  }
+  to {
+    transform: translateX(210%);
+  }
+}
+
+.zeile {
+  margin: 0;
+  font-size: 13px;
+  color: #a3b3dd;
+}
+
+.abbrechen {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid #35518c;
+  background: transparent;
+  color: #f3f5ff;
+  font: inherit;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balken[data-unbestimmt] > i {
+    animation: none;
+  }
+}

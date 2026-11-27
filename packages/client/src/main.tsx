@@ -84,6 +84,10 @@ function isDevFlag(name: string): boolean {
  *   man das Brett ansehen kann, ohne zwei Konten an einen Tisch zu setzen.
  * - /probe/dreckbro?fall=… — der echte DreckBro-Tisch mit festen Staenden
  *   (Anfang, Schneeball zielen, Robbenklau, Ende, fuenf Spieler), ohne Server.
+ * - /probe/tafelrunde-neu?fall=… — die neue Oberflaeche von Tafelrunde
+ *   (hinter `?tafelrunde=neu`) mit Sichten aus einer echten Bot-Partie:
+ *   einstieg, suche, wartesaal, ladebild, ruesten, marke, blatt, regeln,
+ *   kampf, ende. Fuer die Sichtprobe bei drei Handygroessen.
  *
  * `/probe/arena-3d` (Probe B, dieselbe Szene live mit Three.js) gab es bis zum
  * 06.09.2026. Robin hat am 05.09.2026 gegen sie entschieden: Die Figuren sollen
@@ -105,6 +109,7 @@ const probeBroChess = istProbe('brochess');
 const probeDreckBro = istProbe('dreckbro');
 const probeManufaktur = istProbe('manufaktur');
 const probeFlyingbro = istProbe('flyingbro');
+const probeTafelrundeNeu = istProbe('tafelrunde-neu');
 
 const devAvatar = isDevFlag('avatar');
 const devChest = isDevFlag('chest');
@@ -200,6 +205,11 @@ const ProbeDreckBro = lazy(() =>
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
+/* `lazy` wie die anderen Proben: Szene (rund 60 kB JSON) und Bausteine der
+   neuen Tafelrunde gehoeren nicht in das Stueck, das jeder Spieler laedt. */
+const ProbeTafelrundeNeu = lazy(() =>
+  import('./proben/tafelrunde-neu/ProbeTafelrundeNeu').then((m) => ({ default: m.ProbeTafelrundeNeu })),
+);
 const IceClash = lazy(() => import('./ice-clash/IceClash'));
 const BroRemote = lazy(() => import('./broremote/BroRemote').then(m => ({ default: m.BroRemote })));
 
@@ -213,6 +223,8 @@ const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
   <ProbeKampf />
 ) : probeRuestkammer ? (
   <ProbeRuestkammer />
+) : probeTafelrundeNeu ? (
+  <ProbeTafelrundeNeu />
 ) : probeBroChess ? (
   <ProbeBroChess />
 ) : probeDreckBro ? (

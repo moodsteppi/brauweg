@@ -78,6 +78,32 @@ export function markeWirkung(marke: string, rueckfall: string): string {
   return nachschlagen(`tafelrunde.marke.${marke}.wirkung`, rueckfall);
 }
 
+/**
+ * Name einer Fähigkeit (seit dem 27.11.2026). Wie bei den Einheiten gilt der
+ * deutsche Name aus der Sicht (`faehigkeiten` im Modul); übersetzt wird über
+ * die Kennung der Fähigkeit.
+ */
+export function faehigkeitName(faehigkeit: { id: string; name: string }): string {
+  return nachschlagen(`tafelrunde.faehigkeit.${faehigkeit.id}`, faehigkeit.name);
+}
+
+/** Der Satz einer Fähigkeit fürs Einheitenblatt, Rückfall wie oben. */
+export function faehigkeitText(faehigkeit: { id: string; text: string }): string {
+  return nachschlagen(`tafelrunde.faehigkeit.${faehigkeit.id}.text`, faehigkeit.text);
+}
+
+/**
+ * Der Satz einer Markenstufe für das Pop-up („+5 Rüstung, unter halbem Leben
+ * +20 % Angriff"). Er kommt aus der Sicht (`text` an der Stufe in
+ * synergien.ts) und wird über Marke und Schwelle übersetzt — die Zahlen darin
+ * stehen deshalb in der englischen Datei noch einmal. Ändert das Modul eine
+ * Zahl, zieht Deutsch von selbst mit, Englisch erst mit dem Wörterbuch; das
+ * ist derselbe Preis wie bei `markeWirkung`.
+ */
+export function markeStufeText(marke: string, schwelle: number, rueckfall: string): string {
+  return nachschlagen(`tafelrunde.marke.${marke}.stufe${schwelle}`, rueckfall);
+}
+
 /** Name einer Rolle (Wache, Schütze, …) — beim Zeichnen nachgeschlagen. */
 export function rollenName(rolle: Rolle): string {
   return tz(`rolle.${rolle}`);

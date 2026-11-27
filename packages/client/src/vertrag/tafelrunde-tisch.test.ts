@@ -1,6 +1,7 @@
 import { SEAT_COUNTS } from '@brauweg/game-tafelrunde';
 import { describe, expect, it } from 'vitest';
 
+import { BOT_SITZE, SITZ_WAHL as SITZ_WAHL_NEU } from '../minispiele/tafelrunde/neu/useLobby';
 import { SITZE, SITZ_WAHL } from '../screens/Tafelrunde';
 
 /*
@@ -37,5 +38,18 @@ describe('Vertrag: Tafelrunde macht nur Tische auf, die das Modul kennt', () => 
 
   it('macht den Bot-Tisch mit einer Sitzzahl auf, die es gibt', () => {
     expect(SEAT_COUNTS).toContain(SITZE);
+  });
+
+  /*
+   * TafelrundeNeu (hinter `?tafelrunde=neu`) fuehrt dieselben Zahlen als
+   * eigene Konstanten (neu/useLobby.ts) — bis das alte Tafelrunde nach der
+   * Abnahme entfernt wird. Dieselbe Aufsicht fuer beide, sonst liefe die
+   * neue Oberflaeche an diesem Vertrag vorbei.
+   */
+  it('TafelrundeNeu: dieselbe Aufsicht ueber Sitzwahl und Bot-Tisch', () => {
+    for (const zahl of SITZ_WAHL_NEU) {
+      expect(SEAT_COUNTS).toContain(zahl);
+    }
+    expect(SEAT_COUNTS).toContain(BOT_SITZE);
   });
 });
