@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Englische Texte, Bereich „spiele" — Gegenstück zu `de/spiele.ts`. */
 export default {
+  'ruleset.invalid': 'Würfelglanz requires 1 to 6 players, exactly one round and no additional rules.',
   'blatt.schach-pinguin': 'Penguin Pieces',
 
   // Eigene Namen bleiben vorerst deutsch, bis der Auftraggeber entscheidet.
