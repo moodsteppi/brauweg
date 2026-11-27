@@ -57,7 +57,7 @@ describe('Chips im Reiter „Spiele"', () => {
     expect(titel(chipsFuer(OHNE_UMFANG, false))).toEqual([
       'BroRemote',
       'Kartenspiele',
-      'Trinkspiele',
+      'Partykiste',
       'Echtzeit',
       'Denken & Strategie',
     ]);
@@ -68,7 +68,7 @@ describe('Chips im Reiter „Spiele"', () => {
     expect(titel(chipsFuer(['doppelkopf', 'skat', 'partykiste', 'filler', 'brochess'], true))).toEqual([
       'BroRemote',
       'Kartenspiele',
-      'Trinkspiele',
+      'Partykiste',
       'Denken & Strategie',
       'Kommt bald',
     ]);
@@ -89,7 +89,7 @@ describe('Chips im Reiter „Spiele"', () => {
     );
     const leiste = await screen.findByRole('tablist', { name: 'Kategorien' });
     const chips = within(leiste).getAllByRole('tab');
-    expect(chips.map((c) => c.textContent)).toEqual(['Alle', 'BroRemote', 'Kartenspiele', 'Denken']);
+    expect(chips.map((c) => c.textContent)).toEqual(['Alle', 'BroRemote', 'Kartenspiele', 'Denken', 'Allein']);
     fireEvent.click(within(leiste).getByRole('tab', { name: 'BroRemote' }));
     expect(screen.getByRole('link', { name: /Bro Building Battle/ })).toHaveAttribute('href', '/broremote?spiel=building');
     expect(screen.getByRole('link', { name: /BroTanks/ })).toHaveAttribute('href', '/broremote?spiel=brotanks');

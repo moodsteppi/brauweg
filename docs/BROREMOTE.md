@@ -299,3 +299,9 @@ erreichbar. Native iPhones erlauben Querformat auf `/broremote` und `/ice-clash`
 iPads laufen als eigene Gerätefamilie mit allen Orientierungen. Dafür ist ein
 neuer nativer App-Build erforderlich; die Webansicht allein hebt die alte
 Orientierungssperre einer installierten App nicht auf.
+
+Die Games-Übersicht verwendet für alle Einträge ein gemeinsames quadratisches
+Bildformat, einschließlich Solo-Spielen, Ice Clash, Partykiste und Vorschauen.
+„Allein“ besitzt einen eigenen Filter. Partykiste ist eine Sammlung: In der
+Hauptansicht steht nur ihre Kachel, der Partykiste-Filter öffnet die einzelnen
+Minispiele und die gemischte Runde. Abstimmungen bleiben je Vorschaukachel erhalten.
