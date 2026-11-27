@@ -4,7 +4,7 @@ Erzeugt mit dem integrierten Imagegen-Werkzeug. Original: `packages/client/art/h
 
 ## Aufbau und Abnahme
 
-Quadratische transparente Textur. Nur Holzrand, goldene Innenkante und goldene Eckbeschläge. Mitte und Außenraum durchsichtig; kein eingebrannter Text, kein Schachbrett, keine Motive. CSS `border-image` schneidet bei 13 %: vier feste Ecken, vier flexible Kanten, keine gefüllte Mitte. Ecken 19 px für Karten, 15 px für Social-Kacheln, 9 px für Navigationssymbole. Keine geräteabhängigen Bildkopien. Dekoration fängt keine Zeigerereignisse ab; Fokus und ausgewähltes Design bleiben sichtbar.
+Quadratische transparente Textur. Nur Holzrand, goldene Innenkante und goldene Eckbeschläge. Mitte und Außenraum durchsichtig; kein eingebrannter Text, kein Schachbrett, keine Motive. CSS `border-image` schneidet bei 13 %: vier feste Ecken, vier flexible Kanten, keine gefüllte Mitte. Ecken 19 px für Karten, 15 px für Social-Kacheln. Die unteren Navigationssymbole bleiben ohne Rahmen. Keine geräteabhängigen Bildkopien. Dekoration fängt keine Zeigerereignisse ab; Fokus und ausgewähltes Design bleiben sichtbar.
 
 Gilt für Spielekarten, quadratische Startkacheln, Social-Links, Sammlung, Shop und breite Spielbanner. Der Trophäenpfad bleibt unverändert. Bei der Sichtprüfung kleine Mobilbreite und große Kachelbreite vergleichen; Text und Klickflächen dürfen nicht verdeckt werden.
 
