@@ -81,6 +81,11 @@ export default {
 
   'einstieg.zurueck': 'Back',
 
+  'sammlung.uebersichtText': 'Everything in its place. Open a category to change your style.',
+  'sammlung.deinStil': 'Your equipped designs',
+  'sammlung.aktuell': 'EQUIPPED',
+  'sammlung.zurUebersicht': 'Back to overview',
+  'sammlung.auswahlText': 'Choose a design from your collection. Find more designs in the shop.',
   'sammlung.titel': 'Collection',
   'sammlung.zumShop': 'Shop ›',
   'sammlung.chips': 'Games in your collection',

@@ -131,6 +131,8 @@ describe('Neues Hub: die restlichen Ansichten', () => {
 
   it('führt bei fremden Designs aus der Sammlung zum Shop und kauft dort nicht ungefragt', async () => {
     const { onThemeChange } = await zeige(probeKonto(), 'blatt');
+    fireEvent.click(screen.getByRole('tab', { name: 'Doppelkopf' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Blätter/ }));
     const rubin = screen.getByRole('button', { name: /Rubin/ });
     fireEvent.click(rubin);
     expect(screen.getByRole('dialog', { name: 'Rubin' })).toBeInTheDocument();

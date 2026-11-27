@@ -218,80 +218,6 @@
   color: #ffda86;
   letter-spacing: 4px;
 }
-.ice-steuerung {
-  position: absolute;
-  inset: auto 32px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  pointer-events: none;
-}
-.ice-steuerung > * {
-  pointer-events: auto;
-}
-.ice-stick {
-  width: 110px;
-  height: 110px;
-  border: 2px solid #d1faff77;
-  background: #10395288;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  touch-action: none;
-}
-.ice-stick i {
-  display: block;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: radial-gradient(at 30% 20%, #defcff, #5ca6bb);
-  box-shadow: 0 4px 0 #153a50;
-}
-.ice-rechts {
-  display: flex;
-  gap: 16px;
-  align-items: end;
-}
-.ice-app .ice-schubs {
-  width: 108px;
-  height: 108px;
-  border-radius: 50%;
-  background: linear-gradient(#ffe7a2, #ffc448);
-  color: #152a3e;
-  font-size: 40px;
-  touch-action: none;
-  border: 3px solid #ffedbf;
-}
-.ice-schubs small {
-  display: block;
-  font-size: 12px;
-}
-.ice-item {
-  width: 86px;
-  height: 86px;
-  display: grid;
-  justify-items: center;
-  padding: 5px !important;
-}
-.ice-item small {
-  font-size: 10px;
-}
-.ice-symbol {
-  width: 42px;
-  height: 42px;
-}
-.ice-meldung {
-  position: absolute;
-  top: 112px;
-  left: 20%;
-  right: 20%;
-  text-align: center;
-  pointer-events: none;
-  color: #fff2c7;
-  text-shadow: 0 2px 4px #000;
-  font-weight: 900;
-  z-index: 3;
-}
 .ice-ende,
 .ice-warten {
   text-align: center;
@@ -337,9 +263,6 @@
   padding: 8px;
   margin: 0;
 }
-.ice-drehen {
-  display: none;
-}
 .ice-riss {
   animation: ice-riss 0.65s alternate infinite;
 }
@@ -351,40 +274,6 @@
 @keyframes ice-jubel {
   50% {
     transform: translateY(-8px) rotate(5deg);
-  }
-}
-@media (orientation: portrait) {
-  .ice-drehen {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    background: radial-gradient(#225777, #071a32);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 35px;
-  }
-  .ice-telefon {
-    font-size: 110px;
-    color: #8ae9ed;
-    animation: ice-dreh 2s infinite;
-  }
-  .ice-drehen h2 {
-    font-size: 32px;
-  }
-  .ice-drehen p {
-    color: #b8deed;
-  }
-  .ice-drehen small {
-    color: #81a9be;
-  }
-  @keyframes ice-dreh {
-    60%,
-    100% {
-      transform: rotate(90deg);
-    }
   }
 }
 @media (max-height: 500px) {
@@ -436,13 +325,7 @@
   .ice-arena {
     inset: 85px 0 0;
   }
-  .ice-meldung {
-    top: 94px;
-    font-size: 13px;
-  }
-  .ice-steuerung {
-    bottom: 15px;
-  }
+
   .ice-ende > img {
     width: 80px;
   }
@@ -495,11 +378,6 @@
 }
 .ice-im-spiel .ice-kopf {
   background: linear-gradient(#081c36ee, #123c55aa);
-}
-.ice-steuerung {
-  left: max(18px, env(safe-area-inset-left));
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
 }
 .ice-platsch circle {
   transform-box: fill-box;
@@ -557,9 +435,6 @@
 .ice-im-spiel {
   background: radial-gradient(ellipse at 50% 60%, #185568, #081b33 80%);
 }
-.ice-drehen button {
-  margin-top: 25px;
-}
 .ice-regeln {
   max-height: 75dvh;
 }
@@ -568,4 +443,253 @@
     linear-gradient(#0b263ce6, #0b263cf7),
     url("/ice-clash/titel.webp") center/cover;
   border-radius: 24px;
+}
+/* Hochkant: Die Arena reicht bis an alle Bildschirmränder. Bedienelemente liegen darüber. */
+.ice-im-spiel {
+  padding: 0;
+  isolation: isolate;
+}
+.ice-im-spiel .ice-kopf {
+  position: absolute;
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  height: 56px;
+  padding: 8px 12px;
+  gap: 10px;
+  background: linear-gradient(#061b30dd, #061b3033);
+}
+.ice-im-spiel .ice-kopf strong {
+  font-size: 19px;
+}
+.ice-im-spiel .ice-kopf button {
+  padding: 7px 13px;
+  min-width: 40px;
+}
+.ice-arena {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.ice-arena svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  touch-action: none;
+  user-select: none;
+}
+.ice-punkte {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 58px);
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  gap: 5px;
+  padding: 0;
+  pointer-events: none;
+}
+.ice-punkte span {
+  flex: 1;
+  min-width: 0;
+  max-width: 150px;
+  text-align: center;
+  padding: 5px 3px;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ice-punkte b {
+  letter-spacing: 2px;
+  font-size: 13px;
+}
+.ice-punkte small {
+  display: block;
+  font-size: 10px;
+  color: #a3e8e8;
+}
+.ice-planleiste {
+  position: absolute;
+  z-index: 3;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
+  max-width: 480px;
+  margin: auto;
+  padding: 12px 15px;
+  background: linear-gradient(#092d46e8, #061a32f5);
+  border: 1px solid #91e8ed66;
+  box-shadow: 0 10px 40px #00132177;
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+}
+.ice-zugkopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ice-zugkopf span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #9adce8;
+}
+.ice-zugkopf b {
+  font-size: 22px;
+  color: #ffe098;
+}
+.ice-planleiste p {
+  font-size: 12px;
+  margin: 6px 0 10px;
+  color: #d1f5fb;
+}
+.ice-planleiste h2 {
+  font-size: 21px;
+  margin: 8px 0;
+}
+.ice-planleiste .ice-gold {
+  width: 100%;
+  padding: 11px 8px;
+}
+.ice-planleiste .ice-gold:disabled {
+  opacity: 1;
+  background: #164650;
+  color: #a8ebe4;
+  box-shadow: none;
+}
+.ice-planleiste .ice-itemwahl {
+  font-size: 11px;
+  padding: 6px 10px;
+  margin-bottom: 9px;
+  width: 100%;
+}
+.ice-itemwahl[aria-pressed="true"] {
+  border-color: #ffdb7e;
+  background: #65502a;
+}
+.ice-eiswarnung {
+  display: block;
+  color: #ffcd98;
+  text-align: center;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.ice-zoom {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  top: calc(env(safe-area-inset-top) + 140px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ice-zoom button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 23px;
+  background: #08283abb;
+}
+.ice-emotes {
+  position: absolute;
+  z-index: 4;
+  right: 10px;
+  top: calc(env(safe-area-inset-top) + 140px);
+  display: flex;
+  align-items: start;
+  gap: 6px;
+}
+.ice-app .ice-emoteoeffner {
+  padding: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+.ice-emoteoeffner img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+.ice-emotewahl {
+  display: grid;
+  grid-template-columns: repeat(2, 72px);
+  padding: 8px;
+  gap: 6px;
+  border: 1px solid #78d8e9;
+  border-radius: 18px;
+  background: #08283aee;
+}
+.ice-emotewahl button {
+  padding: 3px;
+}
+.ice-emotewahl img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+}
+.ice-emotewahl small {
+  display: block;
+  font-size: 10px;
+}
+.ice-emoteblase {
+  filter: drop-shadow(0 3px 3px #041b3766);
+}
+@media (max-width: 650px) {
+  .ice-start {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+    gap: 18px;
+    margin: 16px auto;
+  }
+  .ice-titelbild {
+    min-height: 250px;
+  }
+  .ice-kopf {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .ice-kopf strong {
+    font-size: 20px;
+  }
+  .ice-kopf span {
+    font-size: 9px;
+  }
+  .ice-lobby {
+    padding: 18px 12px;
+    margin: 12px;
+  }
+  .ice-lobby h1 {
+    font-size: 29px;
+  }
+  .ice-sitze {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .ice-sitze article {
+    padding: 10px;
+  }
+  .ice-sitze h3 {
+    font-size: 20px;
+  }
+  .ice-regeln {
+    inset: 10% 16px;
+  }
+}
+@media (max-height: 550px) {
+  .ice-planleiste {
+    left: auto;
+    width: 250px;
+    padding: 8px;
+  }
+  .ice-punkte {
+    right: 270px;
+  }
+  .ice-emotes {
+    top: 70px;
+  }
+  .ice-planleiste p {
+    font-size: 10px;
+  }
 }

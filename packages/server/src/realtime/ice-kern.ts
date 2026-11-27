@@ -1,4 +1,5 @@
-/** Serverautorität, feste 40-ms-Schritte: keine Treffer oder Siege vom Gerät übernehmen. */
+/** Gleichzeitige Planungszüge: nur der Server löst Bewegung, Kollisionen und Siege auf. */
+export type EisPlan = { x: number; y: number; fest: boolean; item: boolean };
 export type EisSpieler = {
   id: string;
   name: string;
@@ -10,40 +11,24 @@ export type EisSpieler = {
   winkel: number;
   lebt: boolean;
   siege: number;
-  laden: number;
-  pause: number;
   anker: number;
   item: string;
   bereit: boolean;
   verbunden: boolean;
+  geplant: boolean;
+  emote: string;
+  emoteZeit: number;
 };
 export class EisPartie {
   spieler: EisSpieler[] = [];
   phase = "lobby";
   zeit = 0;
   runde = 0;
+  zug = 0;
   radius = 260;
   warnung = false;
   gewinner = "";
-  effekte: {
-    x: number;
-    y: number;
-    art: string;
-    bis: number;
-  }[] = [];
-  fund: {
-    x: number;
-    y: number;
-    art: string;
-  } | null = null;
-  private zustand: number;
-  constructor(seed = 1) {
-    this.zustand = seed >>> 0;
-  }
-  private zufall() {
-    this.zustand = (Math.imul(this.zustand, 1664525) + 1013904223) >>> 0;
-    return this.zustand / 4294967296;
-  }
+  effekte: { x: number; y: number; art: string; bis: number }[] = [];
   geschosse: {
     x: number;
     y: number;
@@ -52,20 +37,20 @@ export class EisPartie {
     von: string;
     rest: number;
   }[] = [];
-  private eingaben = new Map<
-    string,
-    {
-      x: number;
-      y: number;
-      laden: boolean;
-      item: boolean;
-      alter: number;
-    }
-  >();
-  private ablauf = 0;
-  private naechsterFund = 10;
+  fund: { x: number; y: number; art: string } | null = null;
+  private plaene = new Map<string, EisPlan>();
+  private zustand: number;
+  private uhr = 0;
+  private rundenzug = 0;
+  constructor(seed = 1) {
+    this.zustand = seed >>> 0;
+  }
+  private zufall() {
+    this.zustand = (Math.imul(this.zustand, 1664525) + 1013904223) >>> 0;
+    return this.zustand / 4294967296;
+  }
   hinzufuegen(id: string, name: string, bot = false) {
-    if (this.spieler.length >= 4 || this.phase !== "lobby") return false;
+    if (this.phase !== "lobby" || this.spieler.length >= 4) return false;
     this.spieler.push({
       id,
       name,
@@ -77,19 +62,50 @@ export class EisPartie {
       winkel: 0,
       lebt: true,
       siege: 0,
-      laden: 0,
-      pause: 0,
       anker: 0,
       item: "",
       bereit: bot,
       verbunden: true,
+      geplant: false,
+      emote: "",
+      emoteZeit: 0,
     });
     return true;
   }
-  eingabe(id: string, x: number, y: number, laden: boolean, item: boolean) {
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  planen(
+    id: string,
+    zug: number,
+    x: number,
+    y: number,
+    fest: boolean,
+    item = false,
+  ) {
+    const p = this.spieler.find((p) => p.id === id);
+    if (
+      this.phase !== "planung" ||
+      zug !== this.zug ||
+      !p?.lebt ||
+      this.plaene.get(id)?.fest ||
+      !Number.isFinite(x) ||
+      !Number.isFinite(y)
+    )
+      return false;
     const l = Math.max(1, Math.hypot(x, y));
-    this.eingaben.set(id, { x: x / l, y: y / l, laden, item, alter: 0 });
+    this.plaene.set(id, { x: x / l, y: y / l, fest, item: !!p.item && item });
+    p.geplant = fest;
+    return true;
+  }
+  emote(id: string, art: string) {
+    const p = this.spieler.find((p) => p.id === id);
+    if (
+      !p ||
+      p.emoteZeit > 1 ||
+      !["hallo", "haha", "ups", "jubel"].includes(art)
+    )
+      return false;
+    p.emote = art;
+    p.emoteZeit = 3;
+    return true;
   }
   starten() {
     if (
@@ -103,161 +119,153 @@ export class EisPartie {
   }
   private neueRunde() {
     this.runde++;
-    this.phase = "countdown";
-    this.zeit = 3;
     this.radius = 260;
-    this.ablauf = 0;
-    this.naechsterFund = 10;
-    this.warnung = false;
+    this.rundenzug = 0;
     this.fund = null;
+    this.effekte = [];
     this.geschosse = [];
     this.gewinner = "";
-    this.effekte = [];
-    this.eingaben.clear();
+    const a = this.zufall() * Math.PI * 2;
     this.spieler.forEach((p, i) =>
       Object.assign(p, {
-        x: Math.cos((i * Math.PI * 2) / this.spieler.length) * 160,
-        y: Math.sin((i * Math.PI * 2) / this.spieler.length) * 160,
+        x: Math.cos(a + (i * Math.PI * 2) / this.spieler.length) * 155,
+        y: Math.sin(a + (i * Math.PI * 2) / this.spieler.length) * 155,
         vx: 0,
         vy: 0,
-        winkel: (i * Math.PI * 2) / this.spieler.length + Math.PI,
+        winkel: a + (i * Math.PI * 2) / this.spieler.length + Math.PI,
         lebt: true,
-        laden: 0,
-        pause: 0,
         anker: 0,
         item: "",
       }),
     );
+    this.planungsphase();
+  }
+  private botPlan(p: EisSpieler): EisPlan {
+    const ziel = this.spieler
+      .filter((q) => q.id !== p.id && q.lebt)
+      .sort(
+        (a, b) =>
+          Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y),
+      )[0];
+    const rand = Math.hypot(p.x, p.y) > this.radius * 0.5;
+    const dx = rand ? -p.x : (ziel?.x ?? 0) - p.x,
+      dy = rand ? -p.y : (ziel?.y ?? 0) - p.y;
+    const l = Math.max(1, Math.hypot(dx, dy));
+    const kraft = Math.min(0.9, Math.max(0.35, l / 220));
+    return {
+      x: (dx / l) * kraft,
+      y: (dy / l) * kraft,
+      fest: true,
+      item: !!p.item,
+    };
+  }
+  private planungsphase() {
+    this.phase = "planung";
+    this.zeit = 15;
+    this.zug++;
+    this.rundenzug++;
+    this.warnung = this.rundenzug % 2 === 0;
+    this.plaene.clear();
+    this.geschosse = [];
+    for (const p of this.spieler) {
+      p.vx = 0;
+      p.vy = 0;
+      p.geplant = false;
+      if (p.lebt && (p.bot || !p.verbunden)) {
+        this.plaene.set(p.id, this.botPlan(p));
+        p.geplant = true;
+      }
+    }
+    if (!this.fund) {
+      const a = this.zufall() * Math.PI * 2;
+      this.fund = {
+        x: Math.cos(a) * this.radius * 0.45,
+        y: Math.sin(a) * this.radius * 0.45,
+        art: ["anker", "schneeball", "wind"][Math.floor(this.zufall() * 3)],
+      };
+    }
+  }
+  private ausfuehren() {
+    this.phase = "gleiten";
+    this.zeit = 4;
+    // Zuerst alle Impulse setzen, danach Fähigkeiten. Sonst überschreibt ein späterer Spieler Treffer.
+    for (const p of this.spieler) {
+      if (!p.lebt) continue;
+      const plan =
+        this.plaene.get(p.id) ??
+        (p.bot || !p.verbunden
+          ? this.botPlan(p)
+          : { x: 0, y: 0, fest: true, item: false });
+      this.plaene.set(p.id, { ...plan, fest: true });
+      p.geplant = true;
+      p.vx = plan.x * 240;
+      p.vy = plan.y * 240;
+      if (Math.hypot(plan.x, plan.y) > 0.01)
+        p.winkel = Math.atan2(plan.y, plan.x);
+      if (plan.item && p.item === "anker") p.anker = 4;
+    }
+    for (const p of this.spieler) {
+      if (!p.lebt || !this.plaene.get(p.id)?.item || !p.item) continue;
+      if (p.item === "schneeball")
+        this.geschosse.push({
+          x: p.x,
+          y: p.y,
+          vx: Math.cos(p.winkel) * 370,
+          vy: Math.sin(p.winkel) * 370,
+          von: p.id,
+          rest: 1.3,
+        });
+      if (p.item === "wind")
+        for (const q of this.spieler) {
+          const dx = q.x - p.x,
+            dy = q.y - p.y,
+            d = Math.hypot(dx, dy);
+          if (
+            q.id !== p.id &&
+            q.lebt &&
+            d < 130 &&
+            (dx * Math.cos(p.winkel) + dy * Math.sin(p.winkel)) /
+              Math.max(1, d) >
+              0.35
+          ) {
+            q.vx += Math.cos(p.winkel) * 160 * (q.anker ? 0.2 : 1);
+            q.vy += Math.sin(p.winkel) * 160 * (q.anker ? 0.2 : 1);
+          }
+        }
+      this.effekte.push({ x: p.x, y: p.y, art: "schnee", bis: this.uhr + 0.5 });
+      p.item = "";
+    }
   }
   schritt() {
     const dt = 0.04;
+    this.uhr += dt;
+    for (const p of this.spieler) {
+      p.emoteZeit = Math.max(0, p.emoteZeit - dt);
+      if (!p.emoteZeit) p.emote = "";
+    }
+    this.effekte = this.effekte.filter((e) => e.bis > this.uhr);
     if (this.phase === "lobby" || this.phase === "ende") return;
-    this.zeit -= dt;
-    if (this.phase === "countdown") {
-      if (this.zeit <= 0) {
-        this.phase = "spiel";
-        this.zeit = 0;
-      }
+    this.zeit = Math.max(0, this.zeit - dt);
+    if (this.phase === "planung") {
+      if (this.zeit === 0) this.ausfuehren();
       return;
     }
     if (this.phase === "pause") {
-      if (this.zeit <= 0) {
+      if (this.zeit === 0) {
         if (this.spieler.some((p) => p.siege >= 3)) this.phase = "ende";
         else this.neueRunde();
       }
       return;
     }
-    this.ablauf += dt;
-    this.effekte = this.effekte.filter((e) => e.bis > this.ablauf);
-    const stufe = Math.floor(this.ablauf / 9);
-    this.radius = Math.max(0, 260 - stufe * 27);
-    this.warnung = this.ablauf % 9 > 6;
-    if (this.fund && Math.hypot(this.fund.x, this.fund.y) > this.radius - 20)
-      this.fund = null;
-    if (!this.fund && this.ablauf >= this.naechsterFund) {
-      this.naechsterFund = this.ablauf + 10;
-      const a = this.zufall() * Math.PI * 2;
-      this.fund = {
-        x: Math.cos(a) * this.radius * 0.65,
-        y: Math.sin(a) * this.radius * 0.65,
-        art: ["anker", "schneeball", "wind"][Math.floor(this.zufall() * 3)],
-      };
-    }
+    if (this.phase !== "gleiten") return;
     for (const p of this.spieler) {
       if (!p.lebt) continue;
-      const gespeichert = this.eingaben.get(p.id);
-      if (gespeichert) gespeichert.alter += dt;
-      let e =
-        gespeichert && gespeichert.alter < 0.6
-          ? { ...gespeichert }
-          : { x: 0, y: 0, laden: false, item: false };
-      if (gespeichert) gespeichert.item = false;
-      if (p.bot || !p.verbunden) {
-        const ziel = this.spieler
-          .filter((q) => q !== p && q.lebt)
-          .sort(
-            (a, b) =>
-              Math.hypot(a.x - p.x, a.y - p.y) -
-              Math.hypot(b.x - p.x, b.y - p.y),
-          )[0];
-        const rand = Math.hypot(p.x, p.y) > this.radius - 65;
-        const x = rand ? -p.x : (ziel?.x ?? 0) - p.x,
-          y = rand ? -p.y : (ziel?.y ?? 0) - p.y,
-          l = Math.max(1, Math.hypot(x, y));
-        e = {
-          x: x / l,
-          y: y / l,
-          laden: !!ziel && l < 105 && p.laden < 0.8,
-          item: !!p.item,
-        };
-      }
-      p.pause = Math.max(0, p.pause - dt);
-      p.anker = Math.max(0, p.anker - dt);
-      if (Math.hypot(e.x, e.y) > 0.1) p.winkel = Math.atan2(e.y, e.x);
-      const kraft = e.laden ? 140 : 310;
-      p.vx = (p.vx + e.x * kraft * dt) * 0.94;
-      p.vy = (p.vy + e.y * kraft * dt) * 0.94;
-      if (e.laden && p.pause === 0) p.laden = Math.min(1, p.laden + dt);
-      else if (p.laden > 0) {
-        this.schub(p, 55 + 90 * p.laden, 52 + 35 * p.laden);
-        p.laden = 0;
-        p.pause = 0.65;
-      }
-      if (e.item && p.item) {
-        if (p.item === "anker") p.anker = 3;
-        else if (p.item === "schneeball")
-          this.geschosse.push({
-            x: p.x,
-            y: p.y,
-            vx: Math.cos(p.winkel) * 370,
-            vy: Math.sin(p.winkel) * 370,
-            von: p.id,
-            rest: 1.2,
-          });
-        else this.schub(p, 190, 130);
-        p.item = "";
-      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (
-        this.fund &&
-        !p.item &&
-        Math.hypot(p.x - this.fund.x, p.y - this.fund.y) < 30
-      ) {
-        p.item = this.fund.art;
-        this.fund = null;
-      }
-      if (Math.hypot(p.x, p.y) > this.radius + 5) {
-        p.lebt = false;
-        this.effekte.push({
-          x: p.x,
-          y: p.y,
-          art: "wasser",
-          bis: this.ablauf + 2,
-        });
-      }
+      p.vx *= 0.965;
+      p.vy *= 0.965;
+      p.anker = Math.max(0, p.anker - dt);
     }
-    for (const g of this.geschosse) {
-      g.x += g.vx * dt;
-      g.y += g.vy * dt;
-      g.rest -= dt;
-      const ziel = this.spieler.find(
-        (p) =>
-          p.id !== g.von && p.lebt && Math.hypot(p.x - g.x, p.y - g.y) < 23,
-      );
-      if (ziel) {
-        ziel.vx += g.vx * 0.48 * (ziel.anker ? 0.2 : 1);
-        ziel.vy += g.vy * 0.48 * (ziel.anker ? 0.2 : 1);
-        g.rest = 0;
-        this.effekte.push({
-          x: g.x,
-          y: g.y,
-          art: "schnee",
-          bis: this.ablauf + 0.4,
-        });
-      }
-    }
-    this.geschosse = this.geschosse.filter((g) => g.rest > 0);
     for (let i = 0; i < this.spieler.length; i++)
       for (let j = i + 1; j < this.spieler.length; j++) {
         const a = this.spieler[i],
@@ -266,64 +274,95 @@ export class EisPartie {
         const dx = b.x - a.x,
           dy = b.y - a.y,
           d = Math.hypot(dx, dy);
-        if (d < 32) {
-          const nx = d ? dx / d : 1,
-            ny = d ? dy / d : 0;
-          const k = (32 - d) / 2;
-          a.x -= nx * k;
-          a.y -= ny * k;
-          b.x += nx * k;
-          b.y += ny * k;
+        if (d >= 34) continue;
+        const nx = d ? dx / d : 1,
+          ny = d ? dy / d : 0,
+          abstand = (34 - d) / 2;
+        a.x -= nx * abstand;
+        a.y -= ny * abstand;
+        b.x += nx * abstand;
+        b.y += ny * abstand;
+        const annäherung = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+        if (annäherung > 0) {
+          const impuls = annäherung * 0.94;
+          a.vx -= nx * impuls * (a.anker ? 0.2 : 1);
+          a.vy -= ny * impuls * (a.anker ? 0.2 : 1);
+          b.vx += nx * impuls * (b.anker ? 0.2 : 1);
+          b.vy += ny * impuls * (b.anker ? 0.2 : 1);
+          this.effekte.push({
+            x: (a.x + b.x) / 2,
+            y: (a.y + b.y) / 2,
+            art: "schnee",
+            bis: this.uhr + 0.3,
+          });
         }
       }
+    for (const g of this.geschosse) {
+      g.x += g.vx * dt;
+      g.y += g.vy * dt;
+      g.rest -= dt;
+      const q = this.spieler.find(
+        (p) =>
+          p.id !== g.von && p.lebt && Math.hypot(p.x - g.x, p.y - g.y) < 25,
+      );
+      if (q) {
+        q.vx += g.vx * 0.45 * (q.anker ? 0.2 : 1);
+        q.vy += g.vy * 0.45 * (q.anker ? 0.2 : 1);
+        g.rest = 0;
+      }
+    }
+    this.geschosse = this.geschosse.filter((g) => g.rest > 0);
+    for (const p of this.spieler) {
+      if (
+        p.lebt &&
+        this.fund &&
+        !p.item &&
+        Math.hypot(p.x - this.fund.x, p.y - this.fund.y) < 30
+      ) {
+        p.item = this.fund.art;
+        this.fund = null;
+      }
+    }
+    this.stuerze();
+    if (this.rundenende()) return;
+    if (this.zeit === 0) {
+      if (this.warnung) {
+        this.radius = Math.max(0, this.radius - 35);
+        if (
+          this.fund &&
+          Math.hypot(this.fund.x, this.fund.y) > this.radius - 20
+        )
+          this.fund = null;
+        this.stuerze();
+      }
+      if (!this.rundenende()) this.planungsphase();
+    }
+  }
+  private stuerze() {
     for (const p of this.spieler) {
       if (p.lebt && Math.hypot(p.x, p.y) > this.radius + 5) {
         p.lebt = false;
-        this.effekte.push({
-          x: p.x,
-          y: p.y,
-          art: "wasser",
-          bis: this.ablauf + 2,
-        });
+        p.vx = 0;
+        p.vy = 0;
+        this.effekte.push({ x: p.x, y: p.y, art: "wasser", bis: this.uhr + 2 });
       }
     }
+  }
+  private rundenende() {
     const rest = this.spieler.filter((p) => p.lebt);
-    if (rest.length <= 1) {
-      this.gewinner = rest[0]?.id ?? "";
-      if (rest[0]) rest[0].siege++;
-      this.phase = "pause";
-      this.zeit = 5;
-    }
+    if (rest.length > 1) return false;
+    this.gewinner = rest[0]?.id ?? "";
+    if (rest[0]) rest[0].siege++;
+    this.phase = "pause";
+    this.zeit = 4;
+    return true;
   }
-  private schub(p: EisSpieler, kraft: number, reichweite: number) {
-    this.effekte.push({
-      x: p.x + Math.cos(p.winkel) * 25,
-      y: p.y + Math.sin(p.winkel) * 25,
-      art: "schnee",
-      bis: this.ablauf + 0.4,
-    });
-    for (const q of this.spieler) {
-      if (q === p || !q.lebt) continue;
-      const dx = q.x - p.x,
-        dy = q.y - p.y,
-        d = Math.hypot(dx, dy);
-      if (
-        d < reichweite &&
-        (dx * Math.cos(p.winkel) + dy * Math.sin(p.winkel)) / Math.max(1, d) >
-          0.35
-      ) {
-        q.vx += Math.cos(p.winkel) * kraft * (q.anker ? 0.2 : 1);
-        q.vy += Math.sin(p.winkel) * kraft * (q.anker ? 0.2 : 1);
-      }
-    }
-    p.vx -= Math.cos(p.winkel) * 35;
-    p.vy -= Math.sin(p.winkel) * 35;
-  }
-  sicht() {
+  sicht(id?: string) {
     return {
       phase: this.phase,
       zeit: this.zeit,
       runde: this.runde,
+      zug: this.zug,
       radius: this.radius,
       warnung: this.warnung,
       gewinner: this.gewinner,
@@ -331,6 +370,7 @@ export class EisPartie {
       effekte: this.effekte,
       geschosse: this.geschosse,
       fund: this.fund,
+      plan: id ? (this.plaene.get(id) ?? null) : null,
     };
   }
 }

@@ -18,7 +18,7 @@ async function verbinden(url: string) {
   return {
     ws,
     senden(n: unknown) {
-      ws.send(JSON.stringify(n));
+      ws.send(JSON.stringify({ ...(n as object), version: 2 }));
     },
     async warten(art: string, pruefen: (n: any) => boolean = () => true) {
       const bis = Date.now() + 4000;
@@ -87,16 +87,34 @@ test("Ice Clash: gemeinsame Lobby, Hostrechte, Wiederaufnahme und geheime Sitzbe
   b.senden({ art: "bereit", bereit: true });
   await neu.warten("stand", (s) => s.spieler.every((p: any) => p.bereit));
   neu.senden({ art: "start" });
-  await b.warten("stand", (s) => s.phase === "countdown");
+  await b.warten("stand", (s) => s.phase === "planung");
+  const planung = await neu.warten("stand", (s) => s.phase === "planung");
+  neu.senden({ art: "plan", zug: planung.zug, x: 0.6, y: 0.3, fest: true });
+  await neu.warten("stand", (s) => s.plan?.fest);
+  const geheim = await b.warten("stand", (s) =>
+    s.spieler.some((p: any) => p.id === zuerst.ich && p.geplant),
+  );
+  assert.equal(geheim.plan, null);
+  assert.equal("plaene" in geheim, false);
+  neu.senden({ art: "emote", emote: "hallo" });
+  await b.warten("stand", (s) =>
+    s.spieler.some((p: any) => p.emote === "hallo"),
+  );
   neu.ws.close();
   await b.warten(
     "stand",
-    (s) => s.phase === "countdown" && s.spieler.some((p: any) => !p.verbunden),
+    (s) => s.phase === "planung" && s.spieler.some((p: any) => !p.verbunden),
   );
   const spiel = await verbinden(url);
   leitungen.push(spiel.ws);
   spiel.senden({ art: "weiter", code: z.code, token: z.token });
-  assert.equal((await spiel.warten("stand")).ich, zuerst.ich);
+  const wieder = await spiel.warten("stand");
+  assert.equal(wieder.ich, zuerst.ich);
+  assert.deepEqual(wieder.plan, { x: 0.6, y: 0.3, fest: true, item: false });
+  spiel.senden({ art: "plan", zug: wieder.zug, x: -1, y: 0, fest: true });
+  spiel.senden({ art: "ping", zeit: 2 });
+  await spiel.warten("pong");
+  assert.equal((await spiel.warten("stand")).plan.x, 0.6);
 });
 test("Ice Clash: fremde Ursprünge werden abgewiesen", async (t) => {
   const server = createServer(),
@@ -134,12 +152,12 @@ test("Ice Clash: öffentliche Suche vereint vier Geräte und startet automatisch
     c.senden({ art: "online", name: `Gast ${i}` });
     await c.warten("zugang");
   }
-  const s = await leute[0].warten("stand", (s) => s.phase === "countdown");
+  const s = await leute[0].warten("stand", (s) => s.phase === "planung");
   assert.equal(s.spieler.length, 4);
   assert.ok(s.spieler.every((p: any) => !p.bot));
   for (const c of leute.slice(1))
     assert.equal(
-      (await c.warten("stand", (n) => n.phase === "countdown")).code,
+      (await c.warten("stand", (n) => n.phase === "planung")).code,
       s.code,
     );
 });
