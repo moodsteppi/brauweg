@@ -139,6 +139,7 @@ final class HauptController: UIViewController, WKNavigationDelegate, WKUIDelegat
                 self.updateschirm.anzeigen(version: ziel.version, prueft: prueft)
                 self.view.bringSubviewToFront(self.updateschirm)
                 if !warGesperrt {
+                    self.ansicht.endEditing(true)
                     self.dismiss(animated: false)
                     self.imHintergrund()
                     UIAccessibility.post(notification: .screenChanged, argument: self.updateschirm)
