@@ -26,6 +26,8 @@ export type Effekt =
   | { art: 'wehe'; x: number; y: number; seit: number };
 
 export type Buehnenbild = {
+  /** Handy-Arena: volle Breite, weniger leerer Himmel und Meeresgrund. */
+  panorama?: boolean;
   karte?: number; gelaende: Gelaende; gelaendeSchluessel: string; meer: number; wind: number;
   bros: readonly BroSicht[]; amZug?: string; zielen: boolean;
   /** Abgespielter Flug und die Flugzeit in s, bis zu der er gezeigt wird. */
@@ -175,8 +177,8 @@ function windfahne(c: CanvasRenderingContext2D, w: number, wind: number): void {
 export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boolean {
   const breite = canvas.clientWidth, hoehe = canvas.clientHeight;
   if (!breite || !hoehe) return false;
-  const w = SCHLACHTFELD.breite, h = SCHLACHTFELD.hoehe;
-  const rahmen = bildEinpassen(breite, hoehe);
+  const w = SCHLACHTFELD.breite, h = bild.panorama ? hoehe * w / breite : SCHLACHTFELD.hoehe;
+  const rahmen = bild.panorama ? { faktor: breite / w, x: 0, y: 0 } : bildEinpassen(breite, hoehe);
   const dpr = Math.min(1.5, window.devicePixelRatio || 1);
   const pw = Math.round(breite * dpr), ph = Math.round(hoehe * dpr);
   if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
@@ -186,7 +188,8 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
 
   const skala = w / (ANSICHT.rechts - ANSICHT.links);
   const mx = (x: number): number => (x - ANSICHT.links) * skala;
-  const my = (y: number): number => h - (y - ANSICHT.unten) * skala;
+  const unten = bild.panorama ? -Math.min(10, h / skala * .2) : ANSICHT.unten;
+  const my = (y: number): number => h - (y - unten) * skala;
 
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = "#0b1424"; c.fillRect(0, 0, pw, ph);
   c.setTransform(dpr * rahmen.faktor, 0, 0, dpr * rahmen.faktor, rahmen.x * dpr, rahmen.y * dpr);
