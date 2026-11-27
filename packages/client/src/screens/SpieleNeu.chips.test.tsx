@@ -104,7 +104,7 @@ describe('Chips im Reiter „Spiele"', () => {
 it('Ice Clash steht als quadratische Kachel unter Denken, auch ohne Kartenmodule', async () => {
   expect(chipsFuer([], false).map(c=>c.id)).toContain('denken');
   render(<SpieleNeu me={{stats:[]} as unknown as Me} offen={null} onOeffne={vi.fn()} onPick={vi.fn()} onSolo={vi.fn()} onBald={vi.fn()} onSammlung={vi.fn()}/>);
-  const chip=await screen.findByRole('tab',{name:'Denken',exact:true});
+  const chip=await screen.findByRole('tab',{name:'Denken'});
   fireEvent.click(chip);
   const link=screen.getByRole('link',{name:/Bro Ice Clash/});
   expect(link).toHaveAttribute('href','/ice-clash');
