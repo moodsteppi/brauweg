@@ -125,6 +125,7 @@ const VORHANDEN: ReadonlySet<string> = new Set<string>([
   ...['krieger', 'elementar', 'meuchler', 'waechter', 'naturwesen', 'untot', 'drache'].map(
     (m) => `zeichen/marke-${m}`,
   ),
+  'titel',
   'zeichen/stern',
   'zeichen/gold',
   'zeichen/leben',
