@@ -1,9 +1,9 @@
 /**
  * Wortlisten fuer Browort und Clanwort (Emile, 23.10.2026: „Eigene Liste").
  *
- * Selbst geschrieben statt aus dem Netz geladen: keine Lizenzfrage, und jede
- * Loesung ist ein Wort, das man im Alltag kennt. Zwei Listen mit zwei
- * Aufgaben:
+ * Tageslösungen sind selbst zusammengestellt; die Ratebibliothek enthält
+ * zusätzlich eine kuratierte CC0-Auswahl (docs/BROWORT-WORTBIBLIOTHEK.md).
+ * Zwei Listen mit zwei Aufgaben:
  *
  * - `LOESUNGEN` sind die Woerter, die als Tageswort drankommen koennen —
  *   gaengig, ohne Eigennamen, ohne Anstoessiges, ohne Abkuerzungen.
@@ -19,6 +19,8 @@
  * waere falsch geschrieben, also fehlen solche Woerter ganz). Geprueft in
  * test/browort.test.ts.
  */
+
+import { ZUSATZWOERTER } from './woerter-zusatz.js';
 
 function liste(text: string): string[] {
   return text
@@ -168,7 +170,7 @@ const ERGAENZUNGEN: readonly string[] = liste(`
 
 /** Alles, was geraten werden darf. */
 export const ERLAUBT: ReadonlySet<string> = new Set(
-  [...LOESUNGEN, ...NUR_ERLAUBT, ...ERGAENZUNGEN].filter((wort) => wortGueltig(wort)),
+  [...LOESUNGEN, ...NUR_ERLAUBT, ...ERGAENZUNGEN, ...ZUSATZWOERTER].filter((wort) => wortGueltig(wort)),
 );
 
 /** Fuenf Buchstaben A–Z oder Umlaut, sonst nichts. */
