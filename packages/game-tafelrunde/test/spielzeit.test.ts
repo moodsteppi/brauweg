@@ -524,7 +524,7 @@ describe('Spielzeit: der Kampfregler', () => {
       stufe,
       platz: stufe,
       leben: 10,
-      hoechstesLeben: 10,
+      hoechstesLeben: 10, mana: 0, schild: 0,
     }));
     assert.ok(schadenFuerVerlierer(ueberlebende, 1) > schadenFuerVerlierer(ueberlebende, 3));
     assert.equal(schadenFuerVerlierer(ueberlebende), schadenFuerVerlierer(ueberlebende, 3));

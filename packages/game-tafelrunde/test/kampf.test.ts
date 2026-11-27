@@ -655,7 +655,7 @@ describe('Kampf — der Ausgang', () => {
       stufe,
       platz: 0,
       leben: 1,
-      hoechstesLeben: 1,
+      hoechstesLeben: 1, mana: 0, schild: 0,
     });
     // Gerechnet wird die Stufensumme geteilt durch SCHADEN_STUFEN_TEILER und
     // aufgerundet: 0 Ueberlebende kosten nur den Grundwert, ein Stufe-1-Gegner

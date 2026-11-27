@@ -514,6 +514,13 @@ export interface Kaempferstand {
   readonly platz: number;
   readonly leben: number;
   readonly hoechstesLeben: number;
+  /**
+   * Mana und Schild zu diesem Zeitpunkt (seit dem 27.11.2026). Im `start`
+   * zeigen sie, wer schon mit Mana (Elementar) oder Schild (Waechter)
+   * beginnt — der Bildschirm soll das nicht aus Marken nachrechnen.
+   */
+  readonly mana: number;
+  readonly schild: number;
 }
 
 /**
@@ -560,6 +567,8 @@ export type Ereignis =
       readonly manaZiel: number;
       readonly quelle?: 'faehigkeit' | 'brand';
       readonly abgefangen?: number;
+      /** Was vom Schild des Ziels danach noch steht (0 = keiner mehr). */
+      readonly schildDanach: number;
     }
   /**
    * Eine Einheit wirkt ihre Faehigkeit. Kommt VOR den Treffern, Heilungen und
@@ -808,6 +817,8 @@ function standVon(s: Streiter): Kaempferstand {
     platz: s.platz,
     leben: s.leben,
     hoechstesLeben: s.hoechstesLeben,
+    mana: s.mana,
+    schild: s.schild,
   };
 }
 
@@ -1262,6 +1273,7 @@ export function simuliereKampf(
       lebenDanach: ziel.leben,
       manaWer: quelle.mana,
       manaZiel: ziel.mana,
+      schildDanach: ziel.schild,
       ...(art === 'hieb' ? {} : { quelle: art }),
       ...(abgefangen > 0 ? { abgefangen } : {}),
     };
