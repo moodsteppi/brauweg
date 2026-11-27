@@ -6,7 +6,8 @@
   - Kein Tracking, keine Tracking-Domains, kein Werbe- oder Analyse-SDK.
   - BroRemote misst mit der Systemlaufzeit nur den Abstand lokaler
     Netzwerkereignisse, um Nachrichten zu begrenzen (35F9.1). Diese Werte
-    verlassen das Gerät nicht. Kein UserDefaults, keine Datei-Zeitstempel,
+    verlassen das Gerät nicht. UserDefaults hält ausschließlich die zuletzt
+    bestätigte App-Store-Updateversion innerhalb dieser App (CA92.1). Keine Datei-Zeitstempel,
     kein freier Speicherplatz. Der
     Client haelt seine Daten im localStorage des WKWebView; was WebKit
     intern tut, deckt Apples eigenes Manifest ab.
@@ -33,6 +34,12 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array><string>CA92.1</string></array>
+		</dict>
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
