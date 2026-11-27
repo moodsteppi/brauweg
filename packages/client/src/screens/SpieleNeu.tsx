@@ -11,6 +11,7 @@ import { EINZELSPIELE, einzelKennung, einzelName } from '../minispiele/partykist
 import { sitzSpanne } from '../sitzspanne';
 import { SZENEN, szeneBild } from '../szenen';
 import './spielraster.css';
+import './kategorie-register.css';
 import { BRO_SPIELE } from '../broremote/spiele';
 import { bannerFuer } from './StartNeu';
 
@@ -92,6 +93,15 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
       {children}
     </svg>
   );
+}
+
+/** Die Kategorien behalten ihre Motive aus den Abschnittsüberschriften. */
+function KategorieZeichen({ id }: { id: string }): React.JSX.Element {
+  if (id === 'alle' || id === 'denken') return <Symbol><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></Symbol>;
+  if (id === 'broremote') return <Symbol><path d="M3 4h14v11H3z M6 20h8 M10 15v5"/><rect x="18" y="11" width="4" height="11" rx="1"/></Symbol>;
+  if (id === 'solo') return <Symbol><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></Symbol>;
+  if (id === 'bald') return <Symbol><path d="M6 3h12 M6 21h12 M7 3v4l5 5-5 5v4 M17 3v4l-5 5 5 5v4"/></Symbol>;
+  return <Symbol>{KATEGORIEN.find(k => k.id === id)?.icon ?? <path d="M4 7h16v14H4z M8 7V3h8v4"/>}</Symbol>;
 }
 
 /**
@@ -296,7 +306,7 @@ export function SpieleNeu({
       </header>
 
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
-      <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
+      <div className="hb-chips kategorie-register" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
           <button
             type="button"
@@ -309,6 +319,7 @@ export function SpieleNeu({
               if (k.id === 'bald') setBaldOffen(true);
             }}
           >
+            <KategorieZeichen id={k.id} />
             {k.id === 'denken' ? t('spielwahl.chip.denken') : k.titel}
           </button>
         ))}

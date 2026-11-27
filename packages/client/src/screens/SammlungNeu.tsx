@@ -15,6 +15,7 @@ import {
 } from "./SammlungVorschau";
 import "./tagesmarkt.css";
 import "./sammlung.css";
+import "./kategorie-register.css";
 
 type Offen = { spiel: string; art: SammelBereich };
 /** Spielübersicht → aktuell ausgerüstete Bereiche → gezielte Auswahl. Kaufen bleibt im Shop. */
@@ -191,7 +192,7 @@ export function SammlungNeu({
         </button>
       </header>
       <div
-        className="hb-chips sam-spielchips"
+        className="hb-chips sam-spielchips kategorie-register"
         role="tablist"
         aria-label={t("sammlung.chips")}
       >

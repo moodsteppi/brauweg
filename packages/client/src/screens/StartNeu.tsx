@@ -1,22 +1,12 @@
-import './startkacheln.css';
 import { SozialeKanaele } from './SozialeKanaele';
 import type { ActiveTable, Me } from '../api';
 import { t, zahl } from '../i18n';
-import { tf, tn } from '../i18n/einsetzen';
+import { tf } from '../i18n/einsetzen';
 import { inAppSichtbar } from '../app-sichtbar';
-import { LernKarte } from '../lernen/LernKarte';
-import { BrowortKarte } from '../browort/BrowortKarte';
-import { BIOME } from './Pfad';
 
-/**
- * Der Start im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4 vom 26.09.2026).
- *
- * Die Startseite scrollt innerhalb des Hub-Rahmens: der
- * Trophäenweg als Held, darunter „Weiterspielen", die eigenen Spiele und der
- * Knopf „Heute", hinter dem Aufgaben und Truhen als Blatt liegen. Maße und
- * Farben kommen 1:1 aus dem Bauplan (`hub-neu.css`), damit die Seite aussieht
- * wie der Entwurf und nicht wie eine Nacherzählung davon.
- */
+import './start-einstiege.css';
+
+/** Start: Spielen und Tagesaufgaben zuerst; der Trophäenweg ist über den Kopf erreichbar. */
 
 /** Banner je Spiel. Drei Spiele heißen im Bild anders als im Code. */
 export function bannerFuer(gameId: string): string {
@@ -24,7 +14,12 @@ export function bannerFuer(gameId: string): string {
   // docs/ASSETS-DRECKBRO.md). Bis dahin ein gezeichnetes SVG statt eines Pfads
   // auf eine WebP, die es nicht gibt — sonst stuende ein leeres Feld da.
   if (gameId === 'dreckbro') return '/broremote/ausbau/dreckbro.webp';
-  const name: Record<string, string> = { wizard: 'zauberer', easypoker: 'poker', golf: 'minigolf', filler: 'farbduell' };
+  const name: Record<string, string> = {
+    wizard: 'zauberer',
+    easypoker: 'poker',
+    golf: 'minigolf',
+    filler: 'farbduell',
+  };
   return `/hub/banner-${name[gameId] ?? gameId}.webp`;
 }
 
@@ -41,41 +36,27 @@ export function sicherAb(trophies: number): number {
 
 export function StartNeu({
   me,
-  trophies,
   activeTable,
-  bereit,
-  wegBereit,
   onResume,
   onPick,
   onAlleSpiele,
   onHeute,
-  onWeg,
+  onBelohnungen,
   onLernen,
   onBrowort,
 }: {
   me: Me;
-  trophies: number;
   activeTable: ActiveTable | null;
-  /** Truhen und Aufgaben, die abgeholt werden können. */
-  bereit: number;
-  /** Belohnungen des Trophäenwegs, die abgeholt werden können (`me.bereit.weg`). */
-  wegBereit: number;
   onResume: (gameId: string, tableId: string) => void;
   onPick: (gameId: string) => void;
   onAlleSpiele: () => void;
   onHeute: () => void;
-  /** Öffnet den Trophäenweg als Vollbild. */
-  onWeg: () => void;
+  onBelohnungen: () => void;
   /** „Doppelkopf lernen" — fehlt es im Umfang, steht keine Lernkarte da. */
   onLernen?: () => void;
   /** Browort — wie `onLernen` nur gesetzt, wenn es im Umfang steht. */
   onBrowort?: () => void;
 }): React.JSX.Element {
-  const stufe = [...BIOME].reverse().find((b) => trophies >= b.cp) ?? BIOME[0]!;
-  const naechstes = BIOME.find((b) => b.cp > trophies) ?? null;
-  const anteil = naechstes
-    ? Math.min(1, Math.max(0, (trophies - stufe.cp) / (naechstes.cp - stufe.cp)))
-    : 1;
   const eigene = [...me.stats]
     .filter((s) => inAppSichtbar(s.gameId))
     .filter((s) => s.parties > 0 || s.trophies > 0)
@@ -84,63 +65,119 @@ export function StartNeu({
 
   return (
     <div className="hb-start">
-      <button
-        type="button"
-        className="hb-held hb-weg"
-        style={{ backgroundImage: `url(${wegBild(stufe.datei)})` }}
-        onClick={onWeg}
-        aria-label={
-          wegBereit > 0
-            ? tn('start.weg.ariaBereit', wegBereit, { biom: stufe.name, trophaeen: trophies })
-            : tf('start.weg.aria', { biom: stufe.name, trophaeen: trophies })
-        }
-      >
-        <img className="hb-weg-marke" src="/hub/pinguin-marke.webp" alt="" />
-        {wegBereit > 0 && (
-          // Nur fürs Auge; der Vorlesetext steht im Namen des Knopfes
-          // (DESIGN.md, Bereitschaftspunkt: nicht als aria-label am Kind).
-          <span className="hb-weg-bereit" aria-hidden="true">
-            {tn('start.belohnungen', wegBereit)}
+      <section className="start-mosaik" aria-label={t('start.einstiege')}>
+        <button
+          type="button"
+          className="start-kachel start-holzrahmen start-quests"
+          onClick={onHeute}
+          aria-label={
+            me.bereit.aufgaben > 0
+              ? tf('start.heute.ariaBereit', { n: me.bereit.aufgaben })
+              : t('start.heute.aria')
+          }
+        >
+          <span className="start-kachel-text">
+            <strong>{t('start.aufgaben.titel')}</strong>
+            <small>{t('start.mosaik.quests')}</small>
           </span>
-        )}
-        <span className="hb-held-unten">
-          <span className="hb-label">{t('start.weg.label')}</span>
-          <strong className="hb-weg-biom">{stufe.name}</strong>
-          <span className="hb-weg-zeile">
-            <span className="hb-pk">
-              <img src="/hub/symbol-pokal.webp" alt="" />
-              {zahl(trophies)}
-            </span>
-            {naechstes ? (
-              <span>
-                {tf(naechstes.name === 'Sternenhafen' ? 'start.weg.bisZielZum' : 'start.weg.bisZiel', {
-                  zahl: zahl(naechstes.cp),
-                  ziel: naechstes.name,
-                })}
-              </span>
-            ) : (
-              <span>{t('start.weg.amZiel')}</span>
-            )}
-          </span>
-          <span className="hb-balken" aria-hidden="true">
-            <span style={{ width: `${Math.round(anteil * 100)}%` }} />
-          </span>
-          {trophies >= 100 && (
-            <span className="hb-weg-sicher">
-              <Haken />
-              {tf('start.weg.sicher', { zahl: zahl(sicherAb(trophies)) })}
-            </span>
+          <img src="/hub/start-einstiege/aufgaben.webp" alt="" />
+          {me.bereit.aufgaben > 0 && (
+            <b className="start-kachel-badge">
+              {tf('start.heute.bereit', { n: me.bereit.aufgaben })}
+            </b>
           )}
-        </span>
-      </button>
+          <RahmenEcken />
+        </button>
+        <button
+          type="button"
+          className="start-kachel start-holzrahmen start-rewards"
+          onClick={onBelohnungen}
+          aria-label={t('start.mosaik.belohnungenAria')}
+        >
+          <span className="start-kachel-text">
+            <strong>{t('start.mosaik.belohnungen')}</strong>
+            <small>{t('start.mosaik.truhen')}</small>
+          </span>
+          <img src="/hub/truhe-holz.webp" alt="" />
+          {me.bereit.truhen > 0 && (
+            <b className="start-kachel-badge">
+              {tf('start.heute.bereit', { n: me.bereit.truhen })}
+            </b>
+          )}
+          <RahmenEcken />
+        </button>
+        <button
+          type="button"
+          className="start-kachel start-holzrahmen start-lernen"
+          onClick={onLernen ?? onAlleSpiele}
+          aria-label={
+            onLernen ? t('start.mosaik.lernenAria') : t('start.spielen.aria')
+          }
+        >
+          <span className="start-kachel-text">
+            <strong>
+              {t(onLernen ? 'start.mosaik.lernen' : 'start.spiele.titel')}
+            </strong>
+            <small>
+              {onLernen ? t('game.doppelkopf') : t('start.spielen.auswahl')}
+            </small>
+          </span>
+          <img src="/hub/start-einstiege/lernen.webp" alt="" />
+          <RahmenEcken />
+        </button>
+        <button
+          type="button"
+          className="start-kachel start-holzrahmen start-browort"
+          onClick={onBrowort ?? onAlleSpiele}
+          aria-label={
+            onBrowort ? t('start.mosaik.browortAria') : t('start.spielen.aria')
+          }
+        >
+          <span className="start-kachel-text">
+            <strong>
+              {onBrowort ? 'Browort' : t('start.spielen.auswahl')}
+            </strong>
+            <small>
+              {t(onBrowort ? 'start.mosaik.wort' : 'start.mosaik.entdecken')}
+            </small>
+          </span>
+          <img
+            className="start-kachel-szene"
+            src={
+              onBrowort
+                ? '/hub/start-einstiege/browort.webp'
+                : '/hub/start-einstiege/spielen.webp'
+            }
+            alt=""
+          />
+          <RahmenEcken />
+        </button>
+        <button
+          type="button"
+          className="start-play-kreis"
+          onClick={onAlleSpiele}
+          aria-label={t('start.spielen.aria')}
+        >
+          <img
+            src="/hub/start-einstiege/play.webp"
+            alt=""
+            fetchPriority="high"
+          />
+        </button>
+      </section>
 
       {activeTable && inAppSichtbar(activeTable.gameId) && (
         <button
           type="button"
-          className="hb-weiter"
+          className="hb-weiter start-holzrahmen"
           onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
         >
-          <span className="hb-weiter-bild" style={{ backgroundImage: `url(${bannerFuer(activeTable.gameId)})` }} />
+          <span
+            className="hb-weiter-bild"
+            style={{
+              backgroundImage: `url(${bannerFuer(activeTable.gameId)})`,
+            }}
+          />
           <span className="hb-weiter-text">
             <span className="hb-label">{t('start.weiter.label')}</span>
             <strong>{t(`game.${activeTable.gameId}`)}</strong>
@@ -155,13 +192,9 @@ export function StartNeu({
           <span className="hb-weiter-los" aria-hidden="true">
             ›
           </span>
+          <RahmenEcken />
         </button>
       )}
-
-      {(onLernen || onBrowort) && <div className="hb-startkacheln">
-        {onLernen && <LernKarte quadratisch serie={me.lernen} onOeffnen={onLernen} />}
-        {onBrowort && <BrowortKarte quadratisch stand={me.browort} onOeffnen={onBrowort} />}
-      </div>}
 
       <section className="hb-blk">
         <h2 className="hb-ab">
@@ -170,16 +203,25 @@ export function StartNeu({
             {t('start.spiele.alle')}
           </button>
         </h2>
-        <div className="hb-reihe">
+        <div className="start-favoriten">
           {eigene.length === 0 ? (
             <button type="button" className="hb-leer" onClick={onAlleSpiele}>
               {t('start.spiele.leer')}
             </button>
           ) : (
             eigene.map((s) => (
-              <button type="button" className="hb-sk" key={s.gameId} onClick={() => onPick(s.gameId)}>
-                <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(s.gameId)})` }} />
+              <button
+                type="button"
+                className="hb-sk start-holzrahmen"
+                key={s.gameId}
+                onClick={() => onPick(s.gameId)}
+              >
+                <span
+                  className="hb-sk-bild"
+                  style={{ backgroundImage: `url(${bannerFuer(s.gameId)})` }}
+                />
                 <strong>{t(`game.${s.gameId}`)}</strong>
+                <RahmenEcken />
                 <span className="hb-pk">
                   <img src="/hub/symbol-pokal.webp" alt="" />
                   {zahl(s.trophies)}
@@ -189,37 +231,35 @@ export function StartNeu({
           )}
         </div>
       </section>
-
-      <button
-        type="button"
-        className="hb-heute"
-        onClick={onHeute}
-        aria-label={bereit > 0 ? tf('start.heute.ariaBereit', { n: bereit }) : t('start.heute.aria')}
-      >
-        <img src="/hub/truhe-holz.webp" alt="" />
-        <span className="hb-heute-text">
-          <strong>{t('start.heute.titel')}</strong>
-          <span>{t('start.heute.text')}</span>
-        </span>
-        {bereit > 0 && (
-          <span className="hb-heute-bereit" aria-hidden="true">
-            {tf('start.heute.bereit', { n: bereit })}
-          </span>
-        )}
-        <span className="hb-pf" aria-hidden="true">
-          ›
-        </span>
-      </button>
-
-      <SozialeKanaele />
+      <SozialeKanaele kompakt />
     </div>
   );
 }
 
 export function Haken(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="hb-ic"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
+  );
+}
+
+function RahmenEcken() {
+  return (
+    <span className="start-rahmen-ecken" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+      <i />
+    </span>
   );
 }
