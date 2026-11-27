@@ -172,6 +172,8 @@ export {
   effekteFuerEinheit,
   naechsteSchwelle,
   schaetzungFuerEinheit,
+  schwellenVon,
+  traegerVon,
   stufeDerMarke,
   synergie,
   synergienVon,
