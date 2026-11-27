@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { schauplatzFuerRunde } from '../../../figuren3d/grafik-neu';
+import { schauplatzFuerPartie } from '../../../figuren3d/grafik-neu';
 import { type Kampfpaarung, abzuspielen } from '../KampfAnzeige';
 import { eigenerPlatz, gegnerDieseRunde } from '../platzierung';
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
@@ -39,7 +39,7 @@ import { useZiehen } from '../ziehen';
 import { Abschluss } from './Abschluss';
 import { Bank } from './Bank';
 import { Einheitenblatt } from './Einheitenblatt';
-import { Feld, Hexbrett, aufBrett } from './Feld';
+import { Feld, Hexbrett, Schauplatzgrund, aufBrett } from './Feld';
 import { Figur, Sterne } from './grafik';
 import { Kampf } from './Kampf';
 import { Kopfband, type Sitzzeile, sitzName } from './Kopfband';
@@ -111,6 +111,7 @@ function kampfSchluessel(kaempfe: readonly Kampfpaarung[]): string {
 }
 
 export function Spieltisch({
+  tischKennung,
   sicht,
   wissen,
   legaleZuege,
@@ -123,6 +124,8 @@ export function Spieltisch({
   onZurueck,
   onNochmal,
 }: {
+  /** Kennung des Tisches — aus ihr kommt der Schauplatz der Partie. */
+  tischKennung: string;
   sicht: TafelrundeSicht;
   wissen: Tischwissen;
   legaleZuege: readonly Aktion[];
@@ -141,7 +144,10 @@ export function Spieltisch({
   const { katalog, synergieTabelle, stufenwerte, faehigkeiten } = wissen;
   const eigenes = sicht.eigenes;
   const kampfbild = useKampfbild(sicht);
-  const schauplatz = schauplatzFuerRunde(sicht.runde);
+  /* EIN Schauplatz fuer die ganze Partie (Robin, 27.11.2026: "Map ist fuer
+     das Spiel festgelegt"), aus der Tischkennung — in Ruestphase und Kampf
+     derselbe, auf jedem Geraet am Tisch derselbe. */
+  const schauplatz = schauplatzFuerPartie(tischKennung);
 
   const [gezeigterGegner, setGezeigterGegner] = useState<number | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
@@ -335,13 +341,18 @@ export function Spieltisch({
   const zwischenstand = [
     ...(eigenes ? [{ sitz: eigenes.sitz, leben: eigenes.leben, aus: eigenes.ausRunde !== null, ich: true }] : []),
     ...sicht.gegner.map((g) => ({ sitz: g.sitz, leben: g.leben, aus: g.ausRunde !== null, ich: false })),
-  ].map((z) => ({ ...z, name: sitzName(zeile(z.sitz), z.sitz) }));
+  ].map((z) => ({ ...z, name: sitzName(zeile(z.sitz), z.sitz, sitze) }));
 
   const gezogen =
     zug && eigenes ? ((zug.von.bereich === 'bank' ? eigenes.bank : eigenes.brett)[zug.von.platz] ?? null) : null;
 
   return (
     <main className={stil.tisch} data-phase={kampfLaeuft ? 'kampf' : 'ruesten'}>
+      {/* Der Schauplatz als Grund des GANZEN Bildschirms, von Rand zu Rand und
+          unter die Safe Areas (Robin, 27.11.2026: "Full screen ... voll
+          integriert"). Kopfband, Bank und Laden liegen als halbdurchsichtige
+          Ebenen darueber — nicht als eigene Bloecke mit eigenem Grund. */}
+      <Schauplatzgrund schauplatz={schauplatz} />
       <Kopfband
         sicht={sicht}
         sitze={sitze}
@@ -367,9 +378,8 @@ export function Spieltisch({
               schrittMs={sicht.schrittMs}
               katalog={katalog}
               faehigkeiten={faehigkeiten}
-              schauplatz={schauplatz}
               frist={frist}
-              nameVon={(sitz) => sitzName(zeile(sitz), sitz)}
+              nameVon={(sitz) => sitzName(zeile(sitz), sitz, sitze)}
               verblasst={kampfbild.verblasst}
               nachEnde={(ende) => (
                 <Rundenende
@@ -394,12 +404,11 @@ export function Spieltisch({
         <>
           <Markenleiste staende={staende} tabelle={synergieTabelle} gewaehlt={marke} onWahl={waehleMarke} />
           <Feld
-            schauplatz={schauplatz}
             verhaeltnis={rastermass(sicht.brettReihen, sicht.brettSpalten).seitenverhaeltnis}
             gegner={
               eigenes && gegner ? (
                 <>
-                <p className={stil.feldName}>{tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz) })}</p>
+                <p className={stil.feldName}>{tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz, sitze) })}</p>
                 <Hexbrett
                   reihen={sicht.brettReihen}
                   spalten={sicht.brettSpalten}
@@ -412,7 +421,7 @@ export function Spieltisch({
                   ziehtVon={null}
                   marke={null}
                   onNachsehen={(ort) => sieheNach(gegner.sitz, ort)}
-                  beschriftung={tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz) })}
+                  beschriftung={tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz, sitze) })}
                 />
                 </>
               ) : null
@@ -568,7 +577,7 @@ export function Spieltisch({
           fertig={sicht.fertig}
           ausRunde={eigenes.ausRunde}
           trophaeen={trophaeen?.find((t) => t.seat === eigenes.sitz)?.delta ?? null}
-          sieger={sicht.sieger !== null ? sitzName(zeile(sicht.sieger), sicht.sieger) : null}
+          sieger={sicht.sieger !== null ? sitzName(zeile(sicht.sieger), sicht.sieger, sitze) : null}
           onNochmal={onNochmal}
           onZurueck={onZurueck}
           onZusehen={endanlass === 'aus' ? () => setEndbildWeg('aus') : undefined}

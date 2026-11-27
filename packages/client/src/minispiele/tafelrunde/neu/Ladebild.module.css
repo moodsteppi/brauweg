@@ -20,6 +20,9 @@
   color: #f3f5ff;
   font-family: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
   z-index: 30;
+  /* Gegen `main { max-width: 60rem; margin: 0 auto }` aus styles.css. */
+  max-width: none;
+  margin: 0;
 }
 
 .titel {

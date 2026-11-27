@@ -48,6 +48,10 @@ vi.mock('./screens/Startbildschirm', async () => {
 });
 vi.mock('./screens/Lobby', () => ({ Lobby: () => <p>Lobby-Attrappe</p> }));
 vi.mock('./screens/Tafelrunde', () => ({ Tafelrunde: () => <p>Tafelrunde-Attrappe</p> }));
+/* Seit dem 27.11.2026 ist die neue Oberflaeche der Standard (tafelrundeNeu.ts);
+   der Link muss dort genauso ankommen. Dieselbe Attrappe fuer beide, damit
+   der Test den Weg prueft und nicht, welche Oberflaeche gerade gilt. */
+vi.mock('./screens/TafelrundeNeu', () => ({ TafelrundeNeu: () => <p>Tafelrunde-Attrappe</p> }));
 vi.mock('./screens/Partykiste', () => ({ Partykiste: () => <p>Partykiste-Attrappe</p> }));
 
 import { ApiError } from './api';

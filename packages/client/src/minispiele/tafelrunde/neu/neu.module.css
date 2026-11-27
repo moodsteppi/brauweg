@@ -133,14 +133,32 @@
 .seite {
   position: fixed;
   inset: 0;
-  margin: 0 auto;
-  max-width: 30rem;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(140% 60% at 50% -10%, rgba(72, 184, 106, 0.28), transparent 60%),
-    linear-gradient(180deg, var(--tn-grund) 0%, var(--tn-grund-tief) 100%);
+  align-items: center;
+  /* Kein eigener Grund und keine Begrenzung: Hinter der Seite liegt
+     vollflaechig das Titelbild bzw. ein Schauplatz (Seite.tsx). Begrenzt
+     wird nur der Inhalt, unten bei den drei Baendern. */
+  background: var(--tn-grund-tief);
   overflow: hidden;
+  /* Gegen `main { padding: 1rem; max-width: 60rem }` aus styles.css — sonst
+     steht der Grund in einem dunklen Rahmen (siehe `.tisch`). */
+  margin: 0;
+  padding: 0;
+  max-width: none
+}
+
+/* Kopf, Inhalt und Fuss liegen UEBER dem Grund — auf Handybreite begrenzt,
+   der Grund dahinter nie. */
+.seitenKopf,
+.seitenInhalt,
+.seitenFuss {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
 }
 
 .seitenKopf {
@@ -156,13 +174,15 @@
   left: 10px;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(7, 19, 47, 0.7);
+  border-radius: 50%;
+  border: 0;
+  background: rgba(5, 11, 29, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--tn-tinte);
   font-size: 28px;
   line-height: 1;
-  cursor: pointer;
+  cursor: pointer
 }
 
 .seitenTitel {
@@ -176,13 +196,15 @@
   font-weight: 400;
   font-size: 30px;
   letter-spacing: 0.01em;
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 0, 0, 0.5)
 }
 
 .seitenTitel p {
   margin: 2px 0 0;
-  color: var(--tn-leise);
+  color: var(--tn-tinte);
+  opacity: 0.85;
   font-size: 13px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
 }
 
 .seitenInhalt {
@@ -201,19 +223,25 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.85) 30%);
+  /* Ein Auslauf ins Dunkle unter dem Hauptknopf, keine Kante. */
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.7) 40%);
 }
 
 .text {
   margin: 0;
   font-size: 15px;
   line-height: 1.4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7)
 }
 
 .klein {
   margin: 0;
   font-size: 13px;
-  color: var(--tn-leise);
+  /* Hell mit Schatten statt Graublau: Der Satz steht jetzt auf dem Bild
+     und nicht mehr auf einer dunklen Flaeche. */
+  color: var(--tn-tinte);
+  opacity: 0.9;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   text-align: center;
 }
 
@@ -245,7 +273,9 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--tn-leise);
+  color: var(--tn-tinte);
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
 }
 
 .wahl {
@@ -268,12 +298,14 @@
   min-height: 84px;
   padding: 12px;
   border-radius: 16px;
-  border: 1px solid var(--tn-kontur);
-  background: linear-gradient(180deg, var(--tn-karte-hoch), var(--tn-karte));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--tn-tinte);
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: pointer
 }
 
 .kachel strong {
@@ -318,43 +350,27 @@
   min-height: 52px;
   padding: 0 14px;
   border-radius: 14px;
-  border: 1px solid var(--tn-kontur);
-  background: var(--tn-karte);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 19, 47, 0.62);
   color: var(--tn-tinte);
   font: inherit;
-  cursor: pointer;
+  cursor: pointer
 }
 
 /* Das Titelbild bzw. sein Ersatz aus den eigenen Figuren. */
-.titelBild {
-  position: relative;
-  margin: 0 -16px;
-  height: clamp(150px, 26dvh, 240px);
-  overflow: hidden;
-}
 
-.titelBild > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
-.titelBild[data-ersatz] {
-  background:
-    radial-gradient(60% 50% at 50% 100%, rgba(72, 184, 106, 0.55), transparent 70%),
-    radial-gradient(40% 30% at 20% 30%, rgba(245, 192, 46, 0.18), transparent 70%),
-    linear-gradient(180deg, #13306b, #0e1a3d);
-}
 
 .titelReihe {
   position: absolute;
+  z-index: 1;
   left: 0;
   right: 0;
-  bottom: 6%;
+  top: calc(max(8px, env(safe-area-inset-top)) + 8px);
+  height: clamp(170px, 30dvh, 280px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 0;
 }
 
 .titelPlatz {
@@ -466,8 +482,10 @@
   gap: 8px;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid var(--tn-kontur);
-  background: linear-gradient(180deg, var(--tn-karte-hoch), var(--tn-karte));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px)
 }
 
 .code {
@@ -507,9 +525,11 @@
   min-height: 52px;
   padding: 4px 12px;
   border-radius: 14px;
-  background: var(--tn-karte);
-  border: 1px solid var(--tn-kontur);
-  font-weight: 700;
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 700
 }
 
 .platz .gesicht {
@@ -1057,25 +1077,55 @@
 /* ------------------------------------------------------------------------ */
 
 .tisch {
+  /* Der ganze Bildschirm, von Rand zu Rand: Der Schauplatz liegt darunter
+     (`.tisch > .schauplatz`), alles andere als Ebene darueber. Nur die
+     Ebenen sind auf Handybreite begrenzt, nie der Grund. */
   position: fixed;
   inset: 0;
-  margin: 0 auto;
-  max-width: 30rem;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  /* styles.css gibt jedem <main> 1rem Innenabstand und 60rem Hoechstbreite.
+     Genau das war der dunkle Rand rund um Feld und Arena, den Robin am
+     iPhone als Kasten sah — hier gilt Rand zu Rand. */
+  margin: 0;
+  padding: 0;
+  max-width: none;
   background: var(--tn-grund-tief);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
-  -webkit-touch-callout: none;
+  -webkit-touch-callout: none
+}
+
+/* Die Ebenen ueber dem Schauplatz — auf Handybreite begrenzt. Ausdruecklich
+   aufgezaehlt und nicht `.tisch > *`: Die Blaetter, die Meldung und der
+   Zugschatten liegen ebenfalls direkt im Tisch und muessen `fixed` bleiben.
+   `:where` haelt die Spezifitaet bei null, damit jede Ebene ihre eigene
+   Stapelung (Kopfband oben) behaelt. */
+:where(.kopfband, .markenleiste, .markenleer, .feld, .bank, .laden, .auswahlband, .hinweis) {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
+}
+
+/* Der Schauplatz selbst ist die eine Ausnahme: voll, ohne Begrenzung. */
+.tisch > .schauplatz {
+  position: absolute;
+  z-index: 0;
+  max-width: none;
 }
 
 .kopfband {
   flex: 0 0 auto;
-  padding: max(6px, env(safe-area-inset-top)) 8px 4px;
-  background: linear-gradient(180deg, var(--tn-grund), rgba(14, 26, 61, 0.92));
-  border-bottom: 1px solid rgba(53, 81, 140, 0.6);
-  z-index: 5;
+  padding: max(6px, env(safe-area-inset-top)) 8px 14px;
+  /* Ein Verlauf statt eines Blocks: oben dunkel genug fuer die Schrift,
+     unten laeuft er ins Feld aus. */
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.8) 0%, rgba(5, 11, 29, 0.55) 65%, transparent 100%);
+  z-index: 5
 }
 
 .kopfZeile {
@@ -1088,15 +1138,17 @@
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--tn-kontur);
-  background: var(--tn-karte);
+  border-radius: 50%;
+  border: 0;
+  background: rgba(5, 11, 29, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--tn-tinte);
   font: inherit;
   font-size: 22px;
   font-weight: 800;
   line-height: 1;
-  cursor: pointer;
+  cursor: pointer
 }
 
 .phase {
@@ -1111,14 +1163,16 @@
   font-family: var(--tn-anz);
   font-weight: 400;
   font-size: 18px;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6)
 }
 
 .phase span {
   font-size: 12px;
-  color: var(--tn-leise);
+  color: var(--tn-tinte);
+  opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis
 }
 
 .uhr {
@@ -1129,11 +1183,11 @@
   height: 40px;
   padding: 0 6px;
   box-sizing: border-box;
-  border-radius: 12px;
-  background: rgba(72, 184, 106, 0.2);
-  border: 1px solid var(--tn-gruen);
+  border-radius: 20px;
+  background: rgba(72, 184, 106, 0.35);
+  box-shadow: inset 0 0 0 1.5px var(--tn-gruen);
   font-family: var(--tn-anz);
-  font-size: 20px;
+  font-size: 20px
 }
 
 .uhr[data-knapp] {
@@ -1165,52 +1219,45 @@
 /* Bis vier Sitze passen nebeneinander, darueber rollt die Leiste: Jede
    Kachel ist gleich breit, aber nie schmaler als Bild, Kuerzel und Leben. */
 .mitspieler > li {
+  /* Bis vier Sitze teilen sich die Breite, darueber rollt die Leiste. Der
+     NAME bleibt immer stehen (Robin: „da sollen Namen stehen und nicht nur
+     ein Buchstabe") — gekuerzt, nie weggelassen. */
   flex: 1 1 0;
-  min-width: 82px;
+  min-width: 84px
 }
 
-/* Ab vier Sitzen reicht der Platz nicht fuer Namen: Bild und Leben genuegen,
-   der Name steht im Vorlesetext und im Rundenende. */
-.mitspieler:has(> li:nth-child(4)) .kachelName {
-  display: none;
-}
-
-.mitspieler:has(> li:nth-child(4)) > li {
-  min-width: 70px;
-}
-
-.mitspieler:has(> li:nth-child(4)) .spielerKachel {
-  justify-content: space-between;
-}
 
 .spielerKachel {
   position: relative;
   display: flex;
   align-items: center;
   gap: 5px;
-  min-height: 36px;
-  padding: 2px 8px 2px 2px;
+  width: 100%;
+  min-height: 40px;
+  padding: 3px 8px 3px 3px;
   border-radius: 999px;
-  border: 1px solid var(--tn-kontur);
-  background: var(--tn-karte);
+  border: 0;
+  background: rgba(5, 11, 29, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   color: var(--tn-tinte);
   font: inherit;
   cursor: pointer;
-  white-space: nowrap;
-  width: 100%;
+  white-space: nowrap
 }
 
 .spielerKachel[data-ich] {
-  border-color: var(--tn-gruen);
-  background: color-mix(in srgb, var(--tn-gruen) 22%, var(--tn-karte));
+  background: color-mix(in srgb, var(--tn-gruen) 35%, rgba(5, 11, 29, 0.5));
+  box-shadow: inset 0 0 0 1.5px var(--tn-gruen)
 }
 
 .spielerKachel[data-gegner] {
-  border-color: var(--tn-rot);
+  box-shadow: inset 0 0 0 1.5px var(--tn-rot)
 }
 
 .spielerKachel[data-gezeigt] {
-  box-shadow: 0 0 0 2px var(--tn-gold);
+  box-shadow: inset 0 0 0 2px var(--tn-gold)
 }
 
 .spielerKachel[data-aus] {
@@ -1231,20 +1278,19 @@
 }
 
 .kachelGesicht {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   font-size: 14px;
-  border-width: 1.5px;
+  border-width: 1.5px
 }
 
 .kachelName {
-  flex: 1 1 auto;
-  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
-  font-weight: 800;
-  text-align: left;
+  font-weight: 800
 }
 
 .kachelLeben {
@@ -1252,7 +1298,7 @@
   align-items: center;
   gap: 2px;
   font-family: var(--tn-anz);
-  font-size: 15px;
+  font-size: 14px
 }
 
 .kachelLeben .zeichen {
@@ -1265,12 +1311,11 @@
   flex: 0 0 auto;
   list-style: none;
   margin: 0;
-  padding: 6px 8px;
+  padding: 2px 8px 4px;
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  scrollbar-width: none;
-  background: rgba(7, 19, 47, 0.9);
+  scrollbar-width: none
 }
 
 .markenleiste::-webkit-scrollbar {
@@ -1280,10 +1325,11 @@
 .markenleer {
   flex: 0 0 auto;
   margin: 0;
-  padding: 10px 12px;
+  padding: 4px 12px 8px;
   font-size: 12px;
-  color: var(--tn-leise);
-  background: rgba(7, 19, 47, 0.9);
+  color: var(--tn-tinte);
+  opacity: 0.8;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
 }
 
 .markenchip {
@@ -1294,14 +1340,16 @@
   min-height: 34px;
   padding: 0 10px 0 7px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--marke) 45%, transparent);
-  background: rgba(24, 43, 92, 0.8);
+  border: 1px solid color-mix(in srgb, var(--marke) 55%, transparent);
+  background: rgba(5, 11, 29, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--tn-tinte);
   font: inherit;
   font-weight: 800;
   font-size: 14px;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: nowrap
 }
 
 .markenchip .zeichen {
@@ -1328,15 +1376,15 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
-  container-type: size;
+  overflow: visible;
+  container-type: size
 }
 
 .schauplatz {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center;
+  background-position: center
 }
 
 /* Die Ersatzflaechen der vier Schauplaetze, bis die gemalten kommen. */
@@ -1374,10 +1422,12 @@
 
 /* Ein leichter Schleier, damit Raster und Figuren auf jedem Bild lesbar bleiben. */
 .schauplatz::after {
+  /* Oben und unten ins Dunkle, wo Kopfband und Laden liegen; in der Mitte
+     frei, damit der Schauplatz der Schauplatz bleibt. */
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 19, 47, 0.35), rgba(7, 19, 47, 0.05) 45%, rgba(7, 19, 47, 0.3));
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.5) 0%, rgba(5, 11, 29, 0.05) 22%, rgba(5, 11, 29, 0.05) 55%, rgba(5, 11, 29, 0.45) 78%, rgba(5, 11, 29, 0.8) 100%)
 }
 
 .feldInnen {
@@ -1385,10 +1435,10 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
+  justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
-  box-sizing: border-box;
+  padding: 0 4px 6px;
+  box-sizing: border-box
 }
 
 .feldGegner,
@@ -1397,7 +1447,7 @@
   /* Beide Bretter teilen sich die Hoehe; die Breite folgt dem Seitenverhaeltnis
      aus `rastermass` (am Element). Container-Einheiten statt einer festen Zahl,
      damit 375 px und 430 px dieselbe Komposition bekommen. */
-  width: min(100%, 41cqh * var(--verhaeltnis, 1.47));
+  width: min(100%, 50cqh * var(--verhaeltnis, 1.47));
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1405,7 +1455,7 @@
 
 .feldGegner {
   opacity: 0.88;
-  width: min(80%, 33cqh * var(--verhaeltnis, 1.47));
+  width: min(88%, 40cqh * var(--verhaeltnis, 1.47));
 }
 
 .feldEigen::before {
@@ -1414,7 +1464,7 @@
   position: absolute;
   left: 10%;
   right: 10%;
-  top: -3cqh;
+  top: -1.5cqh;
   height: 2px;
   border-radius: 1px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
@@ -1572,17 +1622,16 @@
   display: grid;
   grid-template-columns: repeat(var(--bankplaetze, 9), 1fr);
   gap: 4px;
-  background: linear-gradient(180deg, #13244f, #0d1a3c);
-  border-top: 1px solid rgba(53, 81, 140, 0.8);
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.6))
 }
 
 .bankplatz {
   position: relative;
   aspect-ratio: 0.82;
   border-radius: 10px;
-  background: rgba(7, 19, 47, 0.8);
-  box-shadow: inset 0 0 0 1px rgba(53, 81, 140, 0.9);
-  touch-action: none;
+  background: rgba(5, 11, 29, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  touch-action: none
 }
 
 .bankplatz[role='button'] {
@@ -1623,8 +1672,8 @@
 /* Laden */
 .laden {
   flex: 0 0 auto;
-  padding: 6px 8px max(8px, env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, #0d1a3c, #07132f);
+  padding: 4px 8px max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.6), rgba(5, 11, 29, 0.92) 40%)
 }
 
 .ladenKopf {
@@ -1922,9 +1971,10 @@
 }
 
 .ladenknopf {
-  border: 1px solid var(--tn-kontur);
-  background: var(--tn-karte);
-  color: var(--tn-tinte);
+  border: 0;
+  background: rgba(24, 43, 92, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: var(--tn-tinte)
 }
 
 .ladenknopf em {
@@ -1964,9 +2014,9 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px max(10px, env(safe-area-inset-bottom));
-  background: #0d1a3c;
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.6), rgba(5, 11, 29, 0.92));
   font-weight: 800;
-  font-size: 14px;
+  font-size: 14px
 }
 
 .auswahlband span {
@@ -1983,8 +2033,8 @@
   padding: 12px 16px max(12px, env(safe-area-inset-bottom));
   text-align: center;
   font-size: 14px;
-  color: var(--tn-leise);
-  background: #0d1a3c;
+  color: var(--tn-tinte);
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.85))
 }
 
 .meldung {
@@ -2107,13 +2157,21 @@
 /* ------------------------------------------------------------------------ */
 
 .kampfFlaeche {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
+  /* Ueber die GANZE Hoehe, auch unter dem Kopfband: Die Arena wird so gross,
+     wie der Bildschirm es zulaesst, und das Kopfband liegt als Ebene
+     darueber. Oben bleibt nur so viel frei, dass die Gegnerreihe nicht unter
+     den Mitspielern verschwindet. */
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  gap: 4px;
+  padding: calc(max(6px, env(safe-area-inset-top)) + 92px) 0 max(8px, env(safe-area-inset-bottom))
 }
 
 .kampfFlaeche > .zweitknopf {
@@ -2127,8 +2185,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease
 }
 
 .kampf[data-verblasst] {
@@ -2142,9 +2199,9 @@
   display: flex;
   justify-content: space-between;
   margin: 0;
-  padding: 6px 12px;
+  padding: 2px 12px;
   font-size: 13px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9)
 }
 
 .kampfSeite strong {
@@ -2469,17 +2526,14 @@
 .rundenende {
   position: absolute;
   z-index: 20;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   top: 50%;
   translate: 0 -50%;
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(7, 19, 47, 0.93);
-  border: 1px solid var(--tn-kontur);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  padding: 28px 16px;
+  background: linear-gradient(180deg, transparent 0%, rgba(5, 11, 29, 0.88) 18%, rgba(5, 11, 29, 0.88) 82%, transparent 100%);
   text-align: center;
-  animation: hochfahren 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  animation: hochfahren 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both
 }
 
 .rundenende h2 {
@@ -2506,13 +2560,14 @@
 
 .zwischenstand {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
+  max-width: 24rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px 10px;
   text-align: left;
-  font-size: 13px;
+  font-size: 13px
 }
 
 .zwischenstand li {
@@ -2545,25 +2600,23 @@
   z-index: 38;
   display: grid;
   place-items: center;
-  padding: 16px;
-  background: rgba(3, 8, 22, 0.7);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 80% at 50% 45%, rgba(5, 11, 29, 0.55), rgba(5, 11, 29, 0.92))
 }
 
 .abschluss {
   width: 100%;
   max-width: 24rem;
-  padding: 20px 16px max(16px, env(safe-area-inset-bottom));
+  padding: 0 8px;
   box-sizing: border-box;
-  border-radius: 24px;
-  border: 1px solid var(--tn-kontur);
-  background: linear-gradient(180deg, var(--tn-karte-hoch), var(--tn-grund));
   text-align: center;
-  animation: hochfahren 0.3s ease both;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: hochfahren 0.3s ease both
 }
 
 .abschluss[data-sieg] {
-  border-color: var(--tn-gold);
-  box-shadow: 0 0 40px rgba(245, 192, 46, 0.35);
+  /* Kein Kasten, sondern Licht: ein goldener Schein hinter der Zahl. */
+  background: radial-gradient(closest-side, rgba(245, 192, 46, 0.28), transparent)
 }
 
 .abschlussOben {
@@ -2641,4 +2694,44 @@
   .kampfFigur {
     transition: none;
   }
+}
+
+.titelGrund {
+  position: absolute;
+  inset: 0;
+  z-index: 0
+}
+
+.titelGrund > img {
+  /* Volle Breite, und so weit nach oben geschoben, dass die Figurengruppe
+     (im Bild bei gut der Haelfte der Hoehe) in der Luecke ueber dem Titel
+     steht — Text und Knoepfe liegen darunter auf dem dunklen Auslauf. Das
+     Bild ist 3:4, die Gruppe sitzt bei rund 52 % seiner Hoehe (133vw). */
+  position: absolute;
+  left: 0;
+  top: calc(24dvh - 69vw);
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4
+}
+
+.titelGrund::after {
+  /* Unten ins Dunkle, wo Text und Knoepfe stehen; oben frei fuer die Gruppe. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.3) 0%, transparent 12%, transparent 30%, rgba(5, 11, 29, 0.78) 44%, rgba(7, 19, 47, 0.97) 56%, rgb(7, 19, 47) 100%)
+}
+
+.titelLuecke {
+  height: clamp(170px, 30dvh, 290px)
+}
+
+.kachelText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1
 }

@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   feldBild,
   kartenRahmen,
-  schauplatzFuerRunde,
+  schauplatzFuerPartie,
   zeichenBild,
 } from '../figuren3d/grafik-neu';
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
@@ -40,13 +40,14 @@ import { useTable } from '../useTable';
 /**
  * Welche Bilder diese Sicht braucht — nur, was gerade zu sehen ist
  * (Umsetzungsplan, Abschnitt 4): die Figuren in Laden, Bank, Brett und Kampf,
- * der Schauplatz dieser und der naechsten Runde, Rahmen und Zeichen.
+ * der Schauplatz der Partie, Rahmen und Zeichen.
  *
  * Was `grafik-neu.ts` noch nicht kennt, liefert dort null und faellt hier
  * heraus; fuer die Figuren tritt dann das alte Rollenblatt ein, und das wird
  * geholt.
  */
 export function benoetigteBilder(
+  tischKennung: string,
   sicht: TafelrundeSicht,
   katalog: Record<string, Einheit>,
   synergieTabelle: readonly Synergie[],
@@ -64,10 +65,8 @@ export function benoetigteBilder(
     const einheit = katalog[id];
     if (einheit) pfade.push(figurBlatt(einheit));
   }
-  pfade.push(feldBild(schauplatzFuerRunde(sicht.runde)));
-  // Die naechste Runde schon mitnehmen: Der Schauplatz wechselt, und ein
-  // Kampf-Ende ist kein guter Moment fuer ein Ladebild.
-  pfade.push(feldBild(schauplatzFuerRunde(sicht.runde + 1)));
+  // Der eine Schauplatz der Partie (grafik-neu.ts, `schauplatzFuerPartie`).
+  pfade.push(feldBild(schauplatzFuerPartie(tischKennung)));
   for (const kosten of [1, 2, 3]) pfade.push(kartenRahmen(kosten));
   for (const rolle of ROLLEN) pfade.push(zeichenBild(`rolle-${rolle}`));
   for (const s of synergieTabelle) pfade.push(zeichenBild(`marke-${s.marke}`));
@@ -121,7 +120,7 @@ export function TafelrundeNeu({
 
   /* Bilder nach Bedarf. Das Ladebild steht nur VOR der ersten Ruestphase;
      danach laedt alles still im Hintergrund weiter. */
-  const pfade = sicht ? benoetigteBilder(sicht, katalog, synergieTabelle) : [];
+  const pfade = sicht && lobby.tischId ? benoetigteBilder(lobby.tischId, sicht, katalog, synergieTabelle) : [];
   const geladen = useNachladen(pfade);
   const [erstesBild, setErstesBild] = useState(false);
   const bereitZumZeigen = sicht !== null && Object.keys(katalog).length > 0 && geladen.fertig;
@@ -244,6 +243,7 @@ export function TafelrundeNeu({
 
   return (
     <Spieltisch
+      tischKennung={lobby.tischId}
       sicht={sicht}
       wissen={wissen}
       /* `legalActions` ist im Protokoll als Kartenspiel-Aktion typisiert;

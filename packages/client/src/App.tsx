@@ -50,10 +50,11 @@ const TafelrundeAlt = lazy(() =>
   import('./screens/Tafelrunde').then((m) => ({ default: m.Tafelrunde })),
 );
 /*
- * Die neue Oberflaeche von Tafelrunde, hinter dem Schalter `?tafelrunde=neu`
- * (tafelrundeNeu.ts, gebaut wie der Hub-Schalter #277). Bis zu Robins Abnahme
- * bleibt das alte Tafelrunde der Standard. Ein eigenes Stueck: Wer den
- * Schalter nicht setzt, laedt die neue Oberflaeche nie.
+ * Die neue Oberflaeche von Tafelrunde ist seit dem 27.11.2026 abends der
+ * Standard (Robin). Das alte Tafelrunde bleibt als Notausgang hinter
+ * `?tafelrunde=alt` (tafelrundeNeu.ts, gebaut wie der Hub-Schalter #277), bis
+ * es in einem eigenen Schritt entfernt wird. Beide sind eigene Stuecke: Wer
+ * den Notausgang nicht nimmt, laedt das alte Tafelrunde nie.
  */
 const TafelrundeNeu = lazy(() =>
   import('./screens/TafelrundeNeu').then((m) => ({ default: m.TafelrundeNeu })),

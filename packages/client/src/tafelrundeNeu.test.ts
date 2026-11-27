@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { liesSchalter } from './tafelrundeNeu';
 
 /*
- * Der Schalter fuer die neue Oberflaeche von Tafelrunde. Bis zu Robins
- * Abnahme muss das alte Tafelrunde der Standard bleiben — sonst saehe die
- * Produktion eine Oberflaeche, die noch niemand abgenommen hat.
+ * Der Schalter fuer Tafelrunde. Seit dem 27.11.2026 abends ist die neue
+ * Oberflaeche der Standard (Robin); `?tafelrunde=alt` ist der Notausgang zum
+ * alten Tafelrunde, bis es entfernt wird.
  */
 
 function oeffne(suche: string): void {
@@ -18,29 +18,35 @@ describe('Schalter fuer Tafelrunde neu', () => {
     oeffne('');
   });
 
-  it('zeigt ohne Wunsch das alte Tafelrunde', () => {
-    oeffne('');
-    expect(liesSchalter()).toBe(false);
-  });
-
-  it('merkt sich ?tafelrunde=neu, auch beim naechsten Aufruf ohne Zusatz', () => {
-    oeffne('?tafelrunde=neu');
-    expect(liesSchalter()).toBe(true);
+  it('zeigt ohne Wunsch die neue Oberflaeche', () => {
     oeffne('');
     expect(liesSchalter()).toBe(true);
   });
 
-  it('nimmt die Wahl mit ?tafelrunde=alt zurueck', () => {
-    oeffne('?tafelrunde=neu');
-    liesSchalter();
+  it('wer frueher ?tafelrunde=neu gespeichert hat, bleibt bei neu', () => {
+    window.localStorage.setItem('brauweg.tafelrunde', 'neu');
+    oeffne('');
+    expect(liesSchalter()).toBe(true);
+  });
+
+  it('?tafelrunde=alt ist der Notausgang und wird gemerkt', () => {
     oeffne('?tafelrunde=alt');
     expect(liesSchalter()).toBe(false);
     oeffne('');
     expect(liesSchalter()).toBe(false);
   });
 
+  it('?tafelrunde=neu nimmt den Notausgang zurueck', () => {
+    oeffne('?tafelrunde=alt');
+    liesSchalter();
+    oeffne('?tafelrunde=neu');
+    expect(liesSchalter()).toBe(true);
+    oeffne('');
+    expect(liesSchalter()).toBe(true);
+  });
+
   it('ein anderer Wert schaltet nichts um', () => {
     oeffne('?tafelrunde=vielleicht');
-    expect(liesSchalter()).toBe(false);
+    expect(liesSchalter()).toBe(true);
   });
 });
