@@ -64,6 +64,7 @@ const alias = Object.fromEntries(
 );
 
 // Die Manufaktur-Simulation rechnet der Client zur Laufzeit mit (vite.config.ts).
+alias['@brauweg/broremote-kern/tanks'] = fileURLToPath(new URL('../broremote-kern/src/tanks', import.meta.url));
 alias['@brauweg/broremote-kern'] = fileURLToPath(new URL('../broremote-kern/src/index.ts', import.meta.url));
 alias['@brauweg/building-kern'] = fileURLToPath(new URL('../building-kern/src/index.ts', import.meta.url));
 alias['@brauweg/manufaktur-kern'] = fileURLToPath(new URL('../manufaktur-kern/src/index.ts', import.meta.url));

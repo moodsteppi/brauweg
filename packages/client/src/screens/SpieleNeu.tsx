@@ -335,9 +335,9 @@ export function SpieleNeu({
               <h2 className="hb-ab">
                 <Symbol>{k.icon}</Symbol>
                 {t(k.titel)}
-                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 1 : 0)}</span>
+                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 2 : 0)}</span>
               </h2>
-              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{liste.map(karte)}</div>
+              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/brotanks" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/broremote/ausbau/tanks.webp)',backgroundSize:'contain',backgroundRepeat:'no-repeat'}}/><strong>BroTanks Online</strong><small>2–4 Spieler · Mit Freunden</small></a>}{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{liste.map(karte)}</div>
             </section>
           );
         })}

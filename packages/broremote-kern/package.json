@@ -5,10 +5,22 @@
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "exports": { ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./tanks/*": {
+      "types": "./dist/src/tanks/*.d.ts",
+      "import": "./dist/src/tanks/*.js"
+    }
+  },
   "scripts": {
     "build": "node ../../werkzeug/dist-raeumen.mjs && tsc",
     "test": "npm run build && node --test \"dist/test/**/*.test.js\""
   },
-  "devDependencies": { "@types/node": "^22.0.0", "typescript": "^5.5.0" }
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
 }

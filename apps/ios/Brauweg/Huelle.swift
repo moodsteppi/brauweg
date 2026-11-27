@@ -83,10 +83,10 @@ enum Huelle {
             let auswahl = ["building", "brotanks"].contains(spiel ?? "") ? "?spiel=" + spiel! : ""
             return "/broremote" + auswahl + (link.fragment.map { "#" + $0 } ?? "")
         }
-        if link.path == "/ice-clash" {
+        if ["/ice-clash", "/brotanks"].contains(link.path) {
             let code = URLComponents(url: link, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "raum" })?.value ?? ""
-            if code.range(of: "^[A-Fa-f0-9]{8}$", options: .regularExpression) != nil { return "/ice-clash?raum=" + code.uppercased() }
-            return "/ice-clash"
+            if code.range(of: "^[A-Fa-f0-9]{8}$", options: .regularExpression) != nil { return link.path + "?raum=" + code.uppercased() }
+            return link.path
         }
         return pfadFuerPfad(link.path)
     }
@@ -94,7 +94,7 @@ enum Huelle {
     /// Der reine Pfadteil von [pfadFuerLink] — wie `Huelle.pfadFuerPfad` unter Android.
     static func pfadFuerPfad(_ pfad: String?) -> String? {
         guard let pfad else { return nil }
-        if pfad == "/broremote" { return pfad }
+        if ["/broremote", "/brotanks"].contains(pfad) { return pfad }
         let bereich = NSRange(pfad.startIndex..<pfad.endIndex, in: pfad)
         guard let treffer = beitritt.firstMatch(in: pfad, options: [], range: bereich),
               let code = Range(treffer.range(at: 1), in: pfad) else { return nil }

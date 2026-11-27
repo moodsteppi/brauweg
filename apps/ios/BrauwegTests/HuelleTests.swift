@@ -48,6 +48,14 @@ final class HuelleTests: XCTestCase {
         XCTAssertNil(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/ice-clash?raum=AB12CD34"), serverHost: "www.brauweg-spielen.de"))
     }
 
+    func testBroTanksEinladung() {
+        let host = "staging.brauweg-spielen.de"
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/brotanks?raum=ab12cd34"), serverHost: host), "/brotanks?raum=AB12CD34")
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/brotanks?raum=falsch"), serverHost: host), "/brotanks")
+        XCTAssertEqual(Huelle.pfadFuerPfad("/brotanks"), "/brotanks")
+        XCTAssertNil(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/brotanks?raum=AB12CD34"), serverHost: "www.brauweg-spielen.de"))
+    }
+
     func testFremdeUndUnsichereLinksBleibenAussen() {
         let server = "www.brauweg-spielen.de"
         for link in [
