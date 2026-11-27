@@ -1,3 +1,4 @@
+import { SozialeKanaele } from './SozialeKanaele';
 import {
   Suspense,
   lazy,
@@ -791,6 +792,7 @@ function ProfilTab({
         )}
 
         <Freunde neu onShowProfile={onShowProfile} />
+        <SozialeKanaele profil />
 
         {mitGeburtstag && !me.birthdayRewardClaimable && geburtstag}
 

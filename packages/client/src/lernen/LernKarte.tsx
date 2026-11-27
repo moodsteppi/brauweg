@@ -11,7 +11,7 @@ import './lernen.css';
  * Ohne `serie` (ein Server, der das Feld noch nicht kennt) steht die Karte
  * trotzdem da — als Einladung, nicht als Zahl.
  */
-export function LernKarte({ serie, onOeffnen }: { serie: LernserieKurz | undefined; onOeffnen: () => void }): React.JSX.Element {
+export function LernKarte({ serie, onOeffnen, quadratisch = false }: { quadratisch?: boolean; serie: LernserieKurz | undefined; onOeffnen: () => void }): React.JSX.Element {
   const tage = serie?.serie ?? 0;
   const ziel = serie?.ziel ?? 7;
   const heute = serie?.heuteGespielt ?? false;
@@ -24,6 +24,17 @@ export function LernKarte({ serie, onOeffnen }: { serie: LernserieKurz | undefin
       : tage > 0
         ? t('startkarte.lernen.lektion')
         : tf('startkarte.lernen.einladung', { ziel });
+
+  if (quadratisch) return (
+    <button type="button" className="hb-startkachel" onClick={onOeffnen} aria-label={tn('startkarte.lernen.aria', tage, { unter })}>
+      <img src="/hub/startkacheln/doppelkopf-lernen.webp" alt="" />
+      <span className="hb-startkachel-inhalt">
+        <strong>{t('startkarte.lernen.label')}</strong>
+        <span>{tage > 0 ? tn('startkarte.serie', tage) : t('startkarte.lernen.starten')}{heute ? ' ✓' : ''}</span>
+        <span className="ln-startkarte-punkte" aria-hidden="true">{Array.from({ length: ziel }, (_, i) => <i key={i} className={i < Math.min(tage, ziel) ? 'is-voll' : undefined} />)}</span>
+      </span>
+    </button>
+  );
 
   return (
     <button

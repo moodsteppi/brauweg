@@ -1,3 +1,5 @@
+import './startkacheln.css';
+import { SozialeKanaele } from './SozialeKanaele';
 import type { ActiveTable, Me } from '../api';
 import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
@@ -156,8 +158,10 @@ export function StartNeu({
         </button>
       )}
 
-      {onLernen && <LernKarte serie={me.lernen} onOeffnen={onLernen} />}
-      {onBrowort && <BrowortKarte stand={me.browort} onOeffnen={onBrowort} />}
+      {(onLernen || onBrowort) && <div className="hb-startkacheln">
+        {onLernen && <LernKarte quadratisch serie={me.lernen} onOeffnen={onLernen} />}
+        {onBrowort && <BrowortKarte quadratisch stand={me.browort} onOeffnen={onBrowort} />}
+      </div>}
 
       <section className="hb-blk">
         <h2 className="hb-ab">
@@ -207,6 +211,7 @@ export function StartNeu({
         </span>
       </button>
 
+      <SozialeKanaele />
     </div>
   );
 }
