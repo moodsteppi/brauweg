@@ -37,7 +37,6 @@ export function sicherAb(trophies: number): number {
 export function StartNeu({
   me,
   activeTable,
-  bereit,
   onResume,
   onPick,
   onAlleSpiele,
@@ -48,8 +47,6 @@ export function StartNeu({
 }: {
   me: Me;
   activeTable: ActiveTable | null;
-  /** Truhen und Aufgaben, die abgeholt werden können. */
-  bereit: number;
   onResume: (gameId: string, tableId: string) => void;
   onPick: (gameId: string) => void;
   onAlleSpiele: () => void;
@@ -74,8 +71,8 @@ export function StartNeu({
           className="start-kachel start-holzrahmen start-quests"
           onClick={onHeute}
           aria-label={
-            bereit > 0
-              ? tf('start.heute.ariaBereit', { n: bereit })
+            me.bereit.aufgaben > 0
+              ? tf('start.heute.ariaBereit', { n: me.bereit.aufgaben })
               : t('start.heute.aria')
           }
         >

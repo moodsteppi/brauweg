@@ -283,7 +283,6 @@ export function GameSelect({
           <StartNeu
             me={me}
             activeTable={me.activeTable}
-            bereit={me.bereit.truhen + me.bereit.aufgaben}
             onResume={onResume}
             onPick={(gameId) => {
               setSpielseite(gameId);
