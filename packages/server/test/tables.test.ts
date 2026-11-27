@@ -34,7 +34,7 @@ async function ctx() {
   return context;
 }
 
-test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind dreizehn', () => {
+test('die interne Spielauswahl führt alle implementierten Spiele und Vorschauen mit', () => {
   const all = registry.all();
   const playable = all.filter((meta) => meta.availability === 'playable');
   const preview = all.filter((meta) => meta.availability === 'preview');
@@ -57,6 +57,7 @@ test('die Spielauswahl fuehrt Vorschau-Spiele mit, spielbar sind dreizehn', () =
       'brocooked',
       'brochess',
       'dreckbro',
+      'wuerfelglanz',
     ],
   );
   assert.deepEqual(

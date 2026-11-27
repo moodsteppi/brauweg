@@ -2,6 +2,7 @@ import type { Woerterbuch } from '../woerterbuch';
 
 /** Deutsche Texte, Bereich „spiele". Umgezogen aus dem alten i18n.ts, Wortlaut unverändert. */
 export default {
+  'ruleset.invalid': 'Würfelglanz benötigt 1 bis 6 Spieler, genau eine Runde und keine zusätzlichen Regeln.',
   'blatt.schach-pinguin': 'Pinguin-Figuren',
 
   'game.doppelkopf': 'Doppelkopf',
