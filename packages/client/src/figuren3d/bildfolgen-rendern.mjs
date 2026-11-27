@@ -1286,8 +1286,16 @@ const nurVergleich = process.argv.includes('--vergleich');
  */
 const probeModell = argument('--modell');
 const probeName = argument('--name') ?? 'probe';
+/**
+ * `--modelle <ordner>`: ALLE `<name>.glb` darin in einem Durchgang, mit EINEM
+ * gemeinsamen Ausschnitt — wie die Spielblaetter in `baueBlaetter`. Nur so
+ * sind die Figuren im Spiel gleich gross und stehen auf einer Linie; mit
+ * `--modell` je Figur bekaeme jede ihren eigenen Ausschnitt und fuellte ihre
+ * Zelle, ein Salamander waere so gross wie eine Giraffe.
+ */
+const probeOrdner = argument('--modelle');
 const probeAusgabe = argument('--ausgabe');
-if (probeModell && !probeAusgabe) throw new Error('--modell braucht --ausgabe <ordner>');
+if ((probeModell || probeOrdner) && !probeAusgabe) throw new Error('--modell/--modelle braucht --ausgabe <ordner>');
 
 // Fester Name statt `mkdtemp`: Die 17,6 MB Originale sollen beim zweiten Lauf
 // nicht noch einmal aus dem Netz kommen (`hole()` ueberspringt, was schon da
@@ -1296,8 +1304,19 @@ const zwischen = join(tmpdir(), 'brauweg-figuren3d');
 await mkdir(zwischen, { recursive: true });
 console.log(`Zwischenstand: ${zwischen}`);
 
+/** Die Namen der Probemodelle, die im Zwischenordner liegen. */
+const probeNamen = [];
 if (probeModell) {
   await writeFile(join(zwischen, `${probeName}.glb`), await readFile(resolve(probeModell)));
+  probeNamen.push(probeName);
+} else if (probeOrdner) {
+  const { readdir } = await import('node:fs/promises');
+  for (const datei of (await readdir(resolve(probeOrdner))).filter((d) => d.endsWith('.glb')).sort()) {
+    const name = datei.slice(0, -'.glb'.length);
+    await writeFile(join(zwischen, datei), await readFile(join(resolve(probeOrdner), datei)));
+    probeNamen.push(name);
+  }
+  if (probeNamen.length === 0) throw new Error(`Keine .glb in ${probeOrdner}`);
 } else {
   const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
   await baueModelle(zwischen, gebraucht);
@@ -1631,23 +1650,28 @@ async function baueVergleich() {
  */
 async function baueProbe() {
   await mkdir(resolve(probeAusgabe), { recursive: true });
-  const ausschnitt = await messeAusschnitt(seite, [probeName], {
+  const ausschnitt = await messeAusschnitt(seite, probeNamen, {
     grad: KAMERA_GRAD,
     // `--drehung` nur fuer die Probe: Pinguine mit grossen Augen zeigen bei
     // 17 Grad fast nur den Hinterkopf (Stilprobe 27.11.2026, Abnahme 1).
     drehungGrad: Number(argument('--drehung') ?? DREHUNG_GRAD),
   });
-  const { png, raster, laengen, fusspunkt } = await rendereBlatt(seite, sharp, probeName, ausschnitt);
-  const basis = join(resolve(probeAusgabe), probeName);
-  await writeFile(`${basis}.png`, png);
-  await sharp(png).webp({ quality: 70, alphaQuality: 100, effort: 6 }).toFile(`${basis}.webp`);
-  const groesse = (await readFile(`${basis}.webp`)).byteLength;
-  const angaben = { kante: KANTE, raster, bewegungen: BEWEGUNGEN, laengen, fusspunkt, groesse };
-  await writeFile(`${basis}.json`, JSON.stringify(angaben, null, 2));
-  console.log(`${probeName}: ${basis}.webp (${kb(groesse)}), Raster ${raster.spalten} x ${raster.zeilen} zu ${KANTE} px`);
+  console.log(
+    `Ausschnitt fuer ${probeNamen.length} Modell(e): halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
+  );
+  for (const name of probeNamen) {
+    const { png, raster, laengen, fusspunkt } = await rendereBlatt(seite, sharp, name, ausschnitt);
+    const basis = join(resolve(probeAusgabe), name);
+    await writeFile(`${basis}.png`, png);
+    await sharp(png).webp({ quality: 70, alphaQuality: 100, effort: 6 }).toFile(`${basis}.webp`);
+    const groesse = (await readFile(`${basis}.webp`)).byteLength;
+    const angaben = { kante: KANTE, raster, bewegungen: BEWEGUNGEN, laengen, fusspunkt, groesse, ausschnitt };
+    await writeFile(`${basis}.json`, JSON.stringify(angaben, null, 2));
+    console.log(`${name}: ${basis}.webp (${kb(groesse)}), Fusspunkt ${fusspunkt.x.toFixed(3)}/${fusspunkt.y.toFixed(3)}`);
+  }
 }
 
-if (probeModell) {
+if (probeModell || probeOrdner) {
   await baueProbe();
 } else if (nurVergleich) {
   await baueVergleich();

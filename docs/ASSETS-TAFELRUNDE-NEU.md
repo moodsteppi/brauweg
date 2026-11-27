@@ -223,3 +223,56 @@ Die Vorschauen (animiertes WebP), Konzeptbilder und Modelle liegen vorerst nur
 auf dem Mood-XPS unter `D:\Claude\tools\3d-lokal\stilprobe\`. Ins Archiv
 `brauweg-art` (`tafelrunde-neu/`) gehen sie, sobald Abnahme 1 entschieden hat,
 welche Fassung gilt.
+
+## 8. Serie (27.11.2026, nach Robins Freigabe des Umsetzungsplans)
+
+Alle 22 Figuren laufen über den neuen Weg aus Abschnitt 7: TripoSG für die
+Form, Farbe vorn aus dem Konzeptbild, Rest aus TripoSR. Ansicht 40°, Zelle
+256 px. Die Besetzung (8 Pinguin-Helden, 14 Freunde) steht in
+`docs/TAFELRUNDE-NEU-UMSETZUNG.md`, Abschnitt 2. Die Bildzeilen erzeugt
+`packages/client/src/figuren3d/lokal/prompts_serie.py`. Freunde bekommen eine
+eigene Einleitung (`_einleitung-freunde.txt`) und einen Posenblock mit Armen
+statt Flossen (`_pose-stil-freunde.txt`).
+
+**Gelenkpunkte automatisch** (`punkte_auto.py`): Gemessen werden die Füße,
+die Rumpfbreite auf Bauchhöhe und die Kopfhöhe, der Rest folgt den
+Proportionen der von Hand abgelesenen Dorfwache. Die Abweichung zur Handmessung
+an der Dorfwache liegt unter 0,13 m.
+
+**Gleich groß und auf einer Linie:**
+
+- `riggen.py` bringt jeden Körper auf 1,8 m. Gemessen wird ohne einen Stab
+  über dem Kopf (`koerperhoehe` aus `punkte_auto.py`).
+- `bildfolgen-rendern.mjs --modelle` rendert alle Blätter in einem Durchgang
+  mit einem gemeinsamen Ausschnitt.
+
+**Weitere Grafik**, alles über codex mit dem Ritter-Pinguin als Vorlage
+(`grafik_prompts.py`):
+
+- 4 Schauplätze, hochkant und deckend, Hex-Felder **nicht** eingemalt
+- 3 Kartenrahmen
+- 15 Zeichen: 5 Rollen, 7 Marken, Stern, Gold, Leben
+- 10 Effekte als Einzelbild, im Code animiert
+
+`aufbereiten.mjs` beschneidet und verkleinert. Die Zielgrößen stehen im Skript.
+Danach kommt das gewohnte `wandeln.mjs`.
+
+### Klänge — Bestellliste für später (am Mac, mit dem Klangwerkzeug)
+
+Auf diesem Rechner gibt es das Klangwerkzeug nicht (`CLAUDE.md`, Regel 4).
+Deshalb steht hier nur, was gebraucht wird. Alles kurz (unter 0,6 s), als MP3
+über `~/klangwerkzeug/wandeln.mjs … sfx`.
+
+| Datei | Wofür |
+| --- | --- |
+| `faehigkeit-auf.mp3` | Mana voll, Fähigkeit wird gewirkt (allgemein) |
+| `schild.mp3` | Schildwall, Panzer, Runenschild, Schutzschild |
+| `heilung.mp3` | Kräuterwolke, Lichtsegen, Wachstum |
+| `feuer.mp3` | Feuerstrahl, Funkenwurf, Brand |
+| `blitz.mp3` | Kettenblitz |
+| `frost.mp3` | Frostring |
+| `hieb-schwer.mp3` | Axtwirbel, Klingentanz, Speerstoß |
+| `stampfer.mp3` | Stampfer, Betäubung |
+| `sprung.mp3` | Schattensprung, Hinterhalt |
+| `wiederkehr.mp3` | Untot steht wieder auf |
+| `kauf.mp3`, `verschmelzen.mp3` | Shop und Stern-Aufstieg (falls die alten nicht passen) |

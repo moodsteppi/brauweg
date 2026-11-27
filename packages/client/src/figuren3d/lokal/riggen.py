@@ -87,6 +87,18 @@ mitte = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
 figur.data.transform(Matrix.Scale(faktor, 4) @ Matrix.Translation(-mitte))
 figur.data.update()
 
+# Alle Koerper gleich gross: Die Huelle schliesst einen Stab ueber dem Kopf
+# ein, und eine Figur mit hohem Stab waere sonst kleiner als eine ohne.
+# `koerperhoehe` kommt aus punkte.json (punkte_auto.py); fehlt sie, gilt
+# die Huelle als Koerper (Figuren ohne etwas ueber dem Kopf).
+KOERPER_ZIEL = 1.8
+KOERPER = float(PUNKTE.get("koerperhoehe", HOEHE))
+NACHSKALIERUNG = KOERPER_ZIEL / KOERPER
+if abs(NACHSKALIERUNG - 1) > 0.01:
+    figur.data.transform(Matrix.Scale(NACHSKALIERUNG, 4))
+    figur.data.update()
+print(f"[riggen] Koerper {KOERPER:.2f} m -> {KOERPER_ZIEL} m (x{NACHSKALIERUNG:.2f})")
+
 # Textur: TripoSR legt texture.png neben eine OBJ ohne Materialdatei.
 import os
 textur = os.path.join(os.path.dirname(EINGANG), "texture.png")
@@ -140,8 +152,9 @@ H = HOEHE
 
 
 def punkt(name, vorgabe):
-    """Ein Ankerpunkt: aus punkte.json, sonst die Vorgabe (Anteile von H)."""
-    return Vector(PUNKTE.get(name, vorgabe))
+    """Ein Ankerpunkt: aus punkte.json, sonst die Vorgabe — beides mit der
+    Koerper-Nachskalierung, damit das Skelett zum Netz passt."""
+    return Vector(PUNKTE.get(name, vorgabe)) * NACHSKALIERUNG
 
 
 # Vorgaben fuer einen Chibi-Pinguin in A-Haltung: grosser Kopf (obere 45 %),
