@@ -175,5 +175,7 @@ Was die Probe nicht entschieden hat und deshalb zu Abnahme 1 gehört:
 2. Drehung 17° wie heute oder 40°.
 3. Zelle 256 px oder 192 px.
 
-Die Vorschauen (animiertes WebP) liegen im Archiv unter
-`tafelrunde-neu/stilprobe/`.
+Die Vorschauen (animiertes WebP), Konzeptbilder und Modelle liegen vorerst nur
+auf dem Mood-XPS unter `D:\Claude\tools\3d-lokal\stilprobe\`. Ins Archiv
+`brauweg-art` (`tafelrunde-neu/`) gehen sie, sobald Abnahme 1 entschieden hat,
+welche Fassung gilt.
