@@ -3,7 +3,7 @@ import { useHubWischen } from './hub-wischen';
 import type { Me } from '../api';
 import { mitEdelsteinen, serverAdresse } from '../laufzeit';
 import { kompakteZahl, t, zahl } from '../i18n';
-import { tf } from '../i18n/einsetzen';
+import { tf, tn } from '../i18n/einsetzen';
 
 /** Bis 9.999 ausgeschrieben (wie im Entwurf), darüber kurz („12K“). */
 const kopfZahl = (n: number): string => (n < 10000 ? zahl(n) : kompakteZahl(n));
@@ -61,6 +61,7 @@ export function NeuerRahmen<T extends Reiter>({
   tabFolge,
   online,
   trophies,
+  onWeg,
   kaufbar,
   onTab,
   renderTab,
@@ -72,6 +73,7 @@ export function NeuerRahmen<T extends Reiter>({
   tabFolge: T[];
   online: number | null;
   trophies: number;
+  onWeg: () => void;
   /** Der Münz-Shop ist erreichbar; Echtgeldpakete gehören nicht in diesen Reiter. */
   kaufbar: boolean;
   onTab: (tab: T) => void;
@@ -121,10 +123,11 @@ export function NeuerRahmen<T extends Reiter>({
           </span>
         </button>
         <div className="hb-geld">
-          <span className="hb-pill is-pk" aria-label={tf('rahmen.trophaeen', { n: trophies })}>
+          <button type="button" className="hb-pill is-pk hb-pokal-zugang" onClick={onWeg} title={t('trophaeenweg.titel')} aria-label={(me.bereit.weg ?? 0) > 0 ? tn('rahmen.wegBereit', me.bereit.weg ?? 0, {trophaeen:trophies}) : tf('rahmen.wegOeffnen',{n:trophies})}>
             <img src="/hub/symbol-pokal.webp" alt="" />
             {kopfZahl(trophies)}
-          </span>
+            {(me.bereit.weg ?? 0) > 0 && <span className="hb-pokal-bereit" aria-hidden="true">{me.bereit.weg}</span>}
+          </button>
           {[
             { wert: me.coins, bild: '/hub/symbol-muenze.webp', name: 'muenzen' },
             ...(mitEdelsteinen() ? [{ wert: me.gems, bild: '/hub/symbol-edelstein.webp', name: 'edelsteine' }] : []),

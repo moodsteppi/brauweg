@@ -200,6 +200,7 @@ export function GameSelect({
    * fuenf Plaetze mit "Spielen" mittig und groesser — ein sechster nimmt die
    * Mitte weg, und damit die einzige Stelle, die man ohne Hinsehen trifft.
    */
+  const [heuteBereich, setHeuteBereich] = useState<'aufgaben' | 'truhen'>('aufgaben');
   const [aufgabenOffen, setAufgabenOffen] = useState(anfangsHeute ?? false);
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
@@ -301,10 +302,8 @@ export function GameSelect({
         return (
           <StartNeu
             me={me}
-            trophies={trophies}
             activeTable={me.activeTable}
             bereit={me.bereit.truhen + me.bereit.aufgaben}
-            wegBereit={me.bereit.weg ?? 0}
             onResume={onResume}
             onPick={(gameId) => {
               setSpielseite(gameId);
@@ -314,8 +313,8 @@ export function GameSelect({
               setSpielseite(null);
               setTab('spiele');
             }}
-            onHeute={() => setAufgabenOffen(true)}
-            onWeg={() => setWegOffen(true)}
+            onHeute={() => { setHeuteBereich('aufgaben'); setAufgabenOffen(true); }}
+            onBelohnungen={() => { setHeuteBereich('truhen'); setAufgabenOffen(true); }}
             onLernen={oeffneLernen}
             onBrowort={oeffneBrowort}
           />
@@ -356,7 +355,7 @@ export function GameSelect({
               spiele('blatt-auf');
               setWerkstattOffen(true);
             }}
-            onAufgaben={() => setAufgabenOffen(true)}
+            onAufgaben={() => { setHeuteBereich('aufgaben'); setAufgabenOffen(true); }}
             onBald={setBald}
             onShowProfile={onShowProfile}
           />
@@ -373,6 +372,7 @@ export function GameSelect({
         {stufenOffen && <Stufenleiter neu onClose={() => setStufenOffen(false)} />}
         {aufgabenOffen && (
           <HeuteNeu
+            bereich={heuteBereich}
             onClose={() => setAufgabenOffen(false)}
             onGuthaben={onAvatarChange}
             onRangliste={() => {
@@ -480,6 +480,7 @@ export function GameSelect({
       tabFolge={tabFolge}
       online={online}
       trophies={trophies}
+      onWeg={() => setWegOffen(true)}
       kaufbar={kaufbar}
       onTab={setTab}
       renderTab={renderTab}

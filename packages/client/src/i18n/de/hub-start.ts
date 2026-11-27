@@ -6,6 +6,28 @@ import type { Woerterbuch } from '../woerterbuch';
  * Biom-Namen („Sternenhafen") sind Eigennamen und stehen nicht hier.
  */
 export default {
+  'start.mosaik.quests': 'Kleine Ziele. Jeden Tag.',
+  'start.mosaik.belohnungen': 'Belohnungen',
+  'start.mosaik.belohnungenAria': 'Belohnungen: Truhen öffnen',
+  'start.mosaik.truhen': 'Deine Truhen warten',
+  'start.mosaik.lernen': 'Spiel lernen',
+  'start.mosaik.lernenAria': 'Doppelkopf lernen. Lernpfad öffnen.',
+  'start.mosaik.browortAria': 'Browort. Wort des Tages öffnen.',
+  'start.mosaik.wort': 'Dein Wort des Tages',
+  'start.mosaik.entdecken': 'Finde dein nächstes Spiel',
+
+  'start.einstiege': 'Direkt loslegen',
+  'start.spielen.aria': 'Spielen: Spieleübersicht öffnen',
+  'start.spielen.kicker': 'DEIN NÄCHSTES SPIEL WARTET',
+  'start.spielen.titel': 'Spielen',
+  'start.spielen.text': 'Alleine oder gemeinsam. Such dir dein Spiel aus.',
+  'start.spielen.auswahl': 'Spiele entdecken',
+  'start.aufgaben.kicker': 'JEDEN TAG ETWAS NEUES',
+  'start.aufgaben.titel': 'Tagesaufgaben',
+  'rahmen.wegOeffnen': 'Trophäenweg öffnen. {n} Trophäen.',
+  'rahmen.wegBereit.eins': 'Trophäenweg öffnen. {trophaeen} Trophäen. {n} Belohnung bereit.',
+  'rahmen.wegBereit.mehr': 'Trophäenweg öffnen. {trophaeen} Trophäen. {n} Belohnungen bereit.',
+
   // StartNeu
   'start.weg.aria': 'Trophäenweg öffnen. Du bist in {biom} mit {trophaeen} Trophäen.',
   'start.weg.ariaBereit.eins': 'Trophäenweg öffnen. Du bist in {biom} mit {trophaeen} Trophäen. {n} Belohnung bereit.',

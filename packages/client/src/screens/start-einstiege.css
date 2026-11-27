@@ -1,0 +1,298 @@
+/* Feste Messingecken, flexible Seiten: Der Rahmen wächst ohne verzogene Ornamente. */
+.hb .start-mosaik {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 3px 0;
+}
+.hb .start-holzrahmen {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 5px solid #624024;
+  border-radius: 23px;
+  color: #fff7df;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px #b18b4d,
+    inset 0 0 0 1px #e5bf72,
+    0 7px 18px #0003;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb .start-holzrahmen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid #e6bd70a6;
+  border-radius: 17px;
+  pointer-events: none;
+}
+.hb .start-holzrahmen:focus-visible,
+.hb .hb-pokal-zugang:focus-visible {
+  outline: 3px solid #ffe09a;
+  outline-offset: 4px;
+}
+.hb .start-holzrahmen:active {
+  filter: brightness(0.93);
+}
+
+.hb .start-kachel {
+  height: 184px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 15px 12px;
+  background:
+    radial-gradient(ellipse at 0% 100%, #35624a, transparent 75%), #142f29;
+}
+.hb .start-kachel-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 100%;
+}
+.hb .start-kachel-text strong {
+  font: 400 clamp(17px, 4.8vw, 23px)/1.15 var(--hb-anz);
+  overflow-wrap: anywhere;
+}
+.hb .start-kachel-text small {
+  font: 600 11px/1.35 var(--hb-txt);
+  color: #d0dccc;
+}
+.hb .start-kachel > img {
+  width: 84px;
+  max-width: 58%;
+  height: 88px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px #0005);
+}
+.hb .start-rewards {
+  align-items: flex-end;
+  text-align: right;
+  background:
+    radial-gradient(ellipse at 100% 100%, #755331, transparent 85%), #302b21;
+}
+.hb .start-lernen,
+.hb .start-browort {
+  flex-direction: column-reverse;
+}
+.hb .start-browort {
+  align-items: flex-end;
+  text-align: right;
+  background:
+    radial-gradient(ellipse at 100% 0%, #385a78, transparent 85%), #152c35;
+}
+.hb .start-kachel > .start-kachel-szene {
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: right;
+  border: 1px solid #cda76270;
+}
+.hb .start-kachel-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 2px 6px;
+  border: 1px solid #e8ce7a80;
+  border-radius: 8px;
+  background: #162d20ee;
+  color: #ffe296;
+  font: 800 10px/1.4 var(--hb-txt);
+}
+.hb .start-rewards .start-kachel-badge {
+  left: auto;
+  right: 10px;
+}
+.hb .start-play-kreis {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 144px;
+  height: 144px;
+  border-radius: 50%;
+  background: #193e31;
+  box-shadow:
+    0 0 0 5px #101f29,
+    0 8px 20px #0008;
+  color: #ffe5a3;
+  cursor: pointer;
+}
+.hb .start-play-kreis img {
+  position: absolute;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.hb .start-play-kreis strong {
+  position: absolute;
+  bottom: 23px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font: 400 20px/1 var(--hb-anz);
+  text-shadow: 0 2px 2px #14251a;
+  pointer-events: none;
+}
+.hb .start-play-kreis:focus-visible {
+  outline: 3px solid #fff0c7;
+  outline-offset: 6px;
+}
+.hb .start-play-kreis:active {
+  filter: brightness(1.15);
+}
+.hb .start-favoriten {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.hb .start-favoriten .hb-sk {
+  width: auto;
+  min-width: 0;
+  border-width: 3px;
+  border-radius: 16px;
+}
+.hb .start-favoriten .hb-sk::after {
+  border-radius: 12px;
+}
+.hb .start-favoriten .hb-sk-bild {
+  height: auto;
+  aspect-ratio: 1;
+}
+.hb .start-favoriten .hb-sk > strong {
+  font-size: clamp(12px, 3.5vw, 16px);
+  padding: 8px 6px 2px;
+  overflow-wrap: anywhere;
+}
+.hb .start-favoriten .hb-pk {
+  padding: 2px 6px 9px;
+}
+.hb .start-favoriten .hb-leer {
+  grid-column: 1 / -1;
+}
+.hb .start-rahmen-ecken {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hb .start-rahmen-ecken i {
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  border: solid #cda762;
+  border-width: 3px 0 0 3px;
+  border-radius: 9px 0 0 0;
+  top: 3px;
+  left: 3px;
+  filter: drop-shadow(0 1px 1px #0008);
+}
+.hb .start-rahmen-ecken i:nth-child(2) {
+  left: auto;
+  right: 3px;
+  transform: rotate(90deg);
+}
+.hb .start-rahmen-ecken i:nth-child(3) {
+  top: auto;
+  bottom: 3px;
+  left: auto;
+  right: 3px;
+  transform: rotate(180deg);
+}
+.hb .start-rahmen-ecken i:nth-child(4) {
+  top: auto;
+  bottom: 3px;
+  transform: rotate(270deg);
+}
+.hb .hb-pokal-zugang {
+  position: relative;
+  min-height: 44px;
+  cursor: pointer;
+}
+.hb .hb-geld {
+  align-items: center;
+  flex-shrink: 0;
+}
+.hb .hb-spieler {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+.hb .hb-wer {
+  min-width: 0;
+}
+.hb .hb-wer strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb .hb-balken.is-xp {
+  max-width: 100%;
+}
+.hb .hb-pokal-bereit {
+  position: absolute;
+  right: -5px;
+  top: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid #142524;
+  border-radius: 10px;
+  background: #f7c742;
+  color: #17222b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 350px) {
+  .hb .hb-kopf {
+    gap: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .hb .hb-spieler {
+    gap: 6px;
+  }
+  .hb .hb-spieler .hb-ava {
+    width: 32px;
+    height: 32px;
+  }
+  .hb .hb-geld {
+    gap: 3px;
+  }
+  .hb .hb-pill {
+    font-size: 11px;
+    gap: 3px;
+    padding-right: 5px;
+  }
+  .hb .hb-pill img {
+    width: 18px;
+    height: 18px;
+  }
+  .hb .start-kachel {
+    padding: 14px 10px;
+    height: 176px;
+  }
+  .hb .start-play-kreis {
+    width: 126px;
+    height: 126px;
+  }
+  .hb .start-play-kreis strong {
+    bottom: 19px;
+    font-size: 18px;
+  }
+  .hb .start-kachel > img {
+    height: 78px;
+  }
+}
