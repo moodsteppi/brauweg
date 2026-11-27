@@ -251,3 +251,13 @@ export function Kurzname({ name, klasse }: { name: string; klasse?: string }): R
     </span>
   );
 }
+
+/**
+ * Was eine Einheit im Laden kostet — `preis` aus dem Katalog (seit dem
+ * 27.11.2026 abends getrennt von der Kostenstufe `kosten`, die nur noch Farbe
+ * und Chancen bestimmt). Ein Tisch aus der Zeit davor hat kein `preis`; dort
+ * WAR die Stufe der Preis, also gilt sie. Umgerechnet wird nichts.
+ */
+export function preisVon(einheit: { kosten: number; preis?: number }): number {
+  return einheit.preis ?? einheit.kosten;
+}

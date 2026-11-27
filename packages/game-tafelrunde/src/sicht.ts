@@ -29,7 +29,7 @@ import {
   KATALOG,
   MAX_STUFE,
   VERSCHMELZ_ZAHL,
-  gesamtkosten,
+  erloes,
   werteFuer,
 } from './katalog.js';
 import { STANDARD_REGLER, schrittdauer } from './kampf.js';
@@ -52,7 +52,7 @@ import {
   sieger,
   sitzeVon,
 } from './partie.js';
-import { aufstiegKosten, feldplaetze } from './regeln.js';
+import { feldplaetze, levelFuerRunde } from './regeln.js';
 
 /** Alles, was nur dem eigenen Sitz gehoert. */
 export interface EigeneSicht {
@@ -81,7 +81,6 @@ export interface EigeneSicht {
   readonly belegt: number;
   /** Was die naechste Runde einbringt — Grundeinkommen, Zins und Serie. */
   readonly einkommen: number;
-  readonly neuwuerfelnKosten: number;
   /**
    * Wie oft dieser Sitz in DIESER Runde schon neu gewuerfelt hat.
    *
@@ -90,8 +89,12 @@ export interface EigeneSicht {
    * (bot.ts, WUERFE_JE_RUNDE). Fuer den Bildschirm ist die Zahl ohne Belang.
    */
   readonly wuerfeRunde: number;
-  /** Gold fuer den naechsten Level, null beim hoechsten. */
-  readonly aufstiegKosten: number | null;
+  /**
+   * Feldplaetze in der NAECHSTEN Runde (seit dem 27.11.2026 folgen sie der
+   * Runde, `levelFuerRunde`). Steht hier, damit der Bildschirm "+1 Platz
+   * naechste Runde" zeigen kann, ohne die Regel nachzurechnen.
+   */
+  readonly feldplaetzeNaechsteRunde: number;
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
   readonly darfHandeln: boolean;
   /**
@@ -238,7 +241,7 @@ const STUFENWERTE: Readonly<Record<EinheitId, readonly Stufenwerte[]>> = (() => 
   for (const e of KATALOG) {
     tabelle[e.id] = Array.from({ length: MAX_STUFE }, (_, i) => {
       const stufe = (i + 1) as Stufe;
-      return { stufe, ...werteFuer(e.id, stufe), erloes: gesamtkosten(e.id, stufe) };
+      return { stufe, ...werteFuer(e.id, stufe), erloes: erloes(e.id, stufe) };
     });
   }
   return tabelle;
@@ -512,9 +515,8 @@ export function sichtFuer(
     feldplaetze: feldplaetze(heer.level),
     belegt: brettBelegung(heer),
     einkommen: einkommen(heer, partie.regeln),
-    neuwuerfelnKosten: partie.regeln.neuwuerfelnKosten,
     wuerfeRunde: heer.wuerfeRunde,
-    aufstiegKosten: aufstiegKosten(heer.level),
+    feldplaetzeNaechsteRunde: feldplaetze(levelFuerRunde(partie.runde + 1)),
     darfHandeln: darfHandeln(partie, sitz),
     synergien: synergienVon(heer.brett),
   };

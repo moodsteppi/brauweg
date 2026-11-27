@@ -184,8 +184,6 @@ function sicht(teil: Record<string, unknown> = {}): Record<string, unknown> {
       feldplaetze: 3,
       belegt: 0,
       einkommen: 6,
-      neuwuerfelnKosten: 2,
-      aufstiegKosten: 4,
       darfHandeln: true,
       /*
        * Drei Krieger stehen, die naechste Schwelle ist die 4 - der Kauf einer
@@ -241,8 +239,6 @@ function stelle(
   legalActions: unknown[] = [
     { typ: 'kaufen', platz: 0 },
     { typ: 'kaufen', platz: 1 },
-    { typ: 'neuwuerfeln' },
-    { typ: 'levelAuf' },
     /* Das Modul schickt je BESETZTEM Platz ein `verkaufen` mit (partie.ts,
        `erlaubteZuege`). Hier stehen die beiden ersten, weil die Fixture dort
        eine Einheit hat - die Verkaufen-Knoepfe fragen die Liste, statt selbst
@@ -436,13 +432,6 @@ describe('Laden', () => {
     expect(within(laden).getByText('Dorfwache').closest('button')).toBeDisabled();
   });
 
-  it('sperrt Neu würfeln und Rang steigern, wenn sie nicht erlaubt sind', () => {
-    stelle(sicht(), [{ typ: 'bereit' }]);
-    zeige();
-    expect(screen.getByRole('button', { name: /Neu würfeln/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Rang steigern/ })).toBeDisabled();
-  });
-
   it('meldet den Kauf, der drei voll macht', () => {
     // Zwei Dorfwachen auf der Bank: Die dritte im Laden verschmilzt.
     const zwei = sicht({
@@ -517,30 +506,6 @@ describe('Was gerade nicht geht, und warum', () => {
     stelle(sicht({ eigenes: { bereit: true, gold: 0, darfHandeln: false } }), []);
     zeige();
     expect(screen.queryByText('Zu wenig Gold')).not.toBeInTheDocument();
-  });
-
-  it('faerbt den Preis von Neu wuerfeln, wenn das Gold nicht reicht', () => {
-    stelle(sicht({ eigenes: { gold: 1 } }), [{ typ: 'bereit' }]);
-    zeige();
-    const knopf = screen.getByRole('button', { name: /Neu w/ });
-    expect(knopf.querySelector('em')).toHaveAttribute('data-teuer');
-  });
-
-  it('faerbt den Preis nicht, wenn die Zahlen die Sperre nicht erklaeren', () => {
-    // Gold 7, Wuerfeln kostet 2 - gesperrt ist der Knopf aus einem anderen
-    // Grund. Ein roter Preis waere hier eine Behauptung.
-    stelle(sicht(), [{ typ: 'bereit' }]);
-    zeige();
-    const knopf = screen.getByRole('button', { name: /Neu w/ });
-    expect(knopf.querySelector('em')).not.toHaveAttribute('data-teuer');
-  });
-
-  it('zeigt gar keinen Preis, wenn Neu wuerfeln nichts kostet', () => {
-    // Vorgabe seit dem 05.09.2026. "0 Gold" waere schlechter als nichts.
-    stelle(sicht({ eigenes: { neuwuerfelnKosten: 0 } }), [{ typ: 'neuwuerfeln' }]);
-    zeige();
-    const knopf = screen.getByRole('button', { name: /Neu w/ });
-    expect(knopf.querySelector('em')).toBeNull();
   });
 
   it('zaehlt zum Verschmelzen mit der Zahl aus der Sicht, nicht mit einer 3', () => {

@@ -136,7 +136,13 @@ export interface Einheit extends Grundwerte {
    * balanciert, will Name und Werte am selben Ort lesen.
    */
   readonly name: string;
+  /**
+   * Die KOSTENSTUFE (1 bis 3): Rahmenfarbe, Chancen im Laden, Vorrat. Was eine
+   * Einheit in Gold kostet, steht seit dem 27.11.2026 in `preis`.
+   */
   readonly kosten: Kosten;
+  /** Was ein Kauf in Gold kostet (`PREIS_JE_KOSTEN`). */
+  readonly preis: number;
   readonly rolle: Rolle;
   /** Ein bis zwei Marken, wie im Konzept vorgegeben. */
   readonly marken: readonly Marke[];
@@ -180,7 +186,16 @@ export type EinheitId =
  * Der Katalog. 22 Einheiten ueber drei Kostenstufen (8 / 8 / 6) — genau die
  * Verteilung aus der Balancing-Tabelle des Konzepts.
  */
-export const KATALOG: readonly Einheit[] = [
+/**
+ * PREISE (Robin, 27.11.2026: "Mindestpreis fuer Units ist 2"): jede Stufe
+ * einen Gold teurer als ihre Nummer. Zusammen mit dem Abschlag beim Verkaufen
+ * (`erloes`) verhindert das, dass man sich ohne Wuerfeln durch Kaufen und
+ * Verkaufen genau die Einheit holt, die man braucht — ein Kauf zieht ja den
+ * ganzen Laden neu.
+ */
+export const PREIS_JE_KOSTEN: Readonly<Record<Kosten, number>> = { 1: 2, 2: 3, 3: 4 };
+
+const KATALOG_OHNE_PREIS: readonly Omit<Einheit, 'preis'>[] = [
   // --- 1 Gold: Grundwerte rund 550 Leben / 40 Angriff ---------------------
   /**
    * LEBEN AM 25.09.2026 GESENKT (vorher 650). In der Tauschprobe stand sie
@@ -765,6 +780,12 @@ export const KATALOG: readonly Einheit[] = [
   },
 ];
 
+/** Der Katalog, je Einheit mit ihrem Preis. */
+export const KATALOG: readonly Einheit[] = KATALOG_OHNE_PREIS.map((e) => ({
+  ...e,
+  preis: PREIS_JE_KOSTEN[e.kosten],
+}));
+
 const NACH_ID = new Map<EinheitId, Einheit>(KATALOG.map((e) => [e.id, e]));
 
 /**
@@ -854,7 +875,18 @@ export function werteFuer(id: EinheitId, stufe: Stufe, bonus: Wertebonus = KEIN_
  * wieder hergeben.
  */
 export function gesamtkosten(id: EinheitId, stufe: Stufe): number {
-  return einheit(id).kosten * VERSCHMELZ_ZAHL ** (stufe - 1);
+  return einheit(id).preis * VERSCHMELZ_ZAHL ** (stufe - 1);
+}
+
+/**
+ * Was ein Verkauf einbringt (Robin, 27.11.2026): Eine einfache Einheit bringt
+ * einen Gold weniger zurueck, als sie gekostet hat; eine verschmolzene den
+ * vollen Preis aller darin steckenden Kopien. Der Abschlag macht Kaufen und
+ * Verkaufen zum Auswuerfeln unrentabel, das Aufraeumen nach dem Verschmelzen
+ * kostet dagegen nichts.
+ */
+export function erloes(id: EinheitId, stufe: Stufe): number {
+  return stufe === 1 ? einheit(id).preis - 1 : gesamtkosten(id, stufe);
 }
 
 /**

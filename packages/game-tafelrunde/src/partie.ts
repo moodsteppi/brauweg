@@ -28,18 +28,16 @@ import {
   KATALOG,
   einheit,
   einheitenMitKosten,
-  gesamtkosten,
+  erloes,
   istEinheitId,
   kartenZahl,
 } from './katalog.js';
 import { BRETT_FELDER, istBrettplatz } from './brett.js';
 import {
-  MAX_LEVEL,
   type TafelrundeRegeln,
-  START_LEVEL,
-  aufstiegKosten,
   feldplaetze,
   ladenChancen,
+  levelFuerRunde,
   serienBonus,
   zins,
 } from './regeln.js';
@@ -448,7 +446,7 @@ function neuesHeer(regeln: TafelrundeRegeln): Heer {
   return {
     leben: regeln.startLeben,
     gold: regeln.startGold,
-    level: START_LEVEL,
+    level: levelFuerRunde(1),
     laden: new Array(regeln.ladenPlaetze).fill(null),
     bank: new Array(regeln.bankPlaetze).fill(null),
     brett: new Array(BRETT_FELDER).fill(null),
@@ -637,7 +635,7 @@ function passeBankAn(
  * der Client zeigte einen Knopf, den der Server abweist.
  */
 function rechneKauf(heer: Heer, plaetze: number, id: EinheitId): Heer | null {
-  const kosten = einheit(id).kosten;
+  const kosten = einheit(id).preis;
   if (heer.gold < kosten) return null;
 
   const frei = heer.bank.indexOf(null);
@@ -668,10 +666,8 @@ export function erlaubteZuege(
     }
   });
 
-  if (heer.gold >= partie.regeln.neuwuerfelnKosten) zuege.push({ typ: 'neuwuerfeln' });
-
-  const aufstieg = aufstiegKosten(heer.level);
-  if (aufstieg !== null && heer.gold >= aufstieg) zuege.push({ typ: 'levelAuf' });
+  // Kein Neuwuerfeln und kein Aufstieg mehr (27.11.2026): Der Laden kommt
+  // jede Runde und nach jedem Kauf neu, die Feldplaetze folgen der Runde.
 
   heer.brett.forEach((k, platz) => {
     if (k) zuege.push({ typ: 'verkaufen', ort: { bereich: 'brett', platz } });
@@ -739,33 +735,10 @@ export function fuehreAus(
       return { ...ohneGekaufte, vorrat, heere: { ...ohneGekaufte.heere, [sitz]: gefuellt } };
     }
 
-    case 'neuwuerfeln': {
-      if (heer.gold < regeln.neuwuerfelnKosten) throw new Error('Zu wenig Gold');
-      const bezahlt = setzeHeer(partie, sitz, {
-        ...heer,
-        gold: heer.gold - regeln.neuwuerfelnKosten,
-      });
-      const { heer: gefuellt, vorrat } = fuelleLaden(bezahlt, sitz);
-      return {
-        ...bezahlt,
-        vorrat,
-        heere: {
-          ...bezahlt.heere,
-          [sitz]: { ...gefuellt, wuerfeRunde: heer.wuerfeRunde + 1 },
-        },
-      };
-    }
-
-    case 'levelAuf': {
-      const kosten = aufstiegKosten(heer.level);
-      if (kosten === null) throw new Error('Hoechster Level erreicht');
-      if (heer.gold < kosten) throw new Error('Zu wenig Gold');
-      return setzeHeer(partie, sitz, {
-        ...heer,
-        gold: heer.gold - kosten,
-        level: Math.min(heer.level + 1, MAX_LEVEL),
-      });
-    }
+    case 'neuwuerfeln':
+    case 'levelAuf':
+      // Seit dem 27.11.2026 abgeschafft (siehe `levelFuerRunde` in regeln.ts).
+      throw new Error('Diesen Zug gibt es nicht mehr');
 
     case 'verschieben': {
       const { von, nach } = aktion;
@@ -798,11 +771,12 @@ export function fuehreAus(
       const verkauft = anOrt(heer, ort);
       if (!verkauft) throw new Error('Da steht niemand');
       /*
-       * Der volle Preis zurueck, auch fuer verschmolzene Einheiten. Ein
-       * Abschlag waere eine zweite Waehrung im Spiel und wuerde vor allem den
-       * bestrafen, der sich verbaut hat — also genau den, der umbauen muss.
+       * Bis zum 27.11.2026 kam hier immer der volle Preis zurueck. Seit es
+       * kein Neuwuerfeln mehr gibt, waere das ein Gratis-Wurf (ein Kauf zieht
+       * den ganzen Laden neu); deshalb der Abschlag bei einfachen Einheiten,
+       * siehe `erloes` in katalog.ts.
        */
-      const gold = heer.gold + gesamtkosten(verkauft.id, verkauft.stufe);
+      const gold = heer.gold + erloes(verkauft.id, verkauft.stufe);
       const zurueck = { ...partie.vorrat } as Record<EinheitId, number>;
       zurueck[verkauft.id] = (zurueck[verkauft.id] ?? 0) + kartenZahl(verkauft.stufe);
       const ohne = mitOrt({ ...heer, gold }, ort, null);
@@ -1132,6 +1106,8 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
     heere[sitz] = {
       ...heer,
       gold: heer.gold + einkommen(heer, partie.regeln),
+      // Die Feldplaetze folgen der Runde (regeln.ts, `levelFuerRunde`).
+      level: levelFuerRunde(partie.runde + 1),
       bereit: false,
       // Der Wuerfel-Deckel des Bots gilt je Runde, nicht je Partie.
       wuerfeRunde: 0,

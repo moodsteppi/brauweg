@@ -1,8 +1,11 @@
 /**
  * Proben fuer den Bot.
  *
- * Sie fassen alle vier Regeln aus bot.ts an, aber zwei davon sind wichtiger
- * als der Rest und stehen deshalb zuerst:
+ * Sie fassen alle Regeln aus bot.ts an — seit dem 27.11.2026 sind es noch
+ * zwei, Aufstellen und Kaufen; Aufstieg und Neuwuerfeln gibt es nicht mehr,
+ * und die Proben dazu pruefen jetzt, dass der Bot sie auch nicht mehr
+ * versucht. Zwei Zusagen sind wichtiger als der Rest und stehen deshalb
+ * zuerst:
  *
  *   - DETERMINISMUS. Dieselbe Lage muss denselben Zug ergeben, sonst laufen
  *     zwei Server auseinander (Grundsatz 1). Geprueft wird beides: der einzelne
@@ -48,6 +51,7 @@ import {
   platzNummer,
   sichtFuer,
 } from '../src/index.js';
+import { levelFuerRunde } from '../src/regeln.js';
 import { spieleParte } from './messen.js';
 
 const SAAT = '0123456789abcdef0123456789abcdef';
@@ -235,14 +239,17 @@ describe('Bot: kaufen', () => {
    * und die Probe faellt.
    *
    * Das Brett ist mit einer einzigen Einheit auf Level 1 voll, damit vorher
-   * kein Stellungszug dazwischenkommt, und ein Gold reicht fuer den Kauf, aber
-   * nicht fuer den Aufstieg (2) — sonst griffe eine andere Regel zuerst.
+   * kein Stellungszug dazwischenkommt. Level 1 kommt seit dem 27.11.2026 in
+   * keiner Partie mehr vor (Runde 1 hat zwei Plaetze); hier ist es nur das
+   * kleinste volle Brett. Zwei Gold reichen fuer genau einen Kauf: Beide
+   * Ladeneinheiten haben Kostenstufe 1 und damit den Preis 2. (Bis zum
+   * 27.11.2026 stand hier ein Gold, damit der Aufstieg nicht dazwischenkam.)
    */
   function bauVerschmelzung(bank: (Kaempfer | null)[]): TafelrundePartie {
     const brett = leeresBrett();
     brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
     return mitHeer(neu(), 0, {
-      gold: 1,
+      gold: 2,
       level: 1,
       brett,
       bank,
@@ -322,7 +329,9 @@ describe('Bot: kaufen', () => {
   it('nimmt sonst die staerkste bezahlbare Einheit', () => {
     const brett = leeresBrett();
     brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
-    // Level 9: Dort gibt es keinen Aufstieg mehr, und der steht vor dem Kauf.
+    // Level 9 stammt aus der Zeit, als der Aufstieg vor dem Kauf stand; seit
+    // dem 27.11.2026 gibt es ihn nicht mehr, und der Level ist hier nur noch
+    // Kulisse (ein freies Feld, die Bank leer, also kein Stellungszug).
     const p = mitHeer(neu(), 0, {
       gold: 3,
       level: 9,
@@ -331,7 +340,8 @@ describe('Bot: kaufen', () => {
       laden: ladenMit(['moosheiler', 'schildknappe', 'gassendieb']),
     });
     /*
-     * Alle drei kosten 1 Gold, keine passt zu einer Marke des Grimmbart. Der
+     * Alle drei kosten 2 Gold (Kostenstufe 1), drei Gold reichen fuer genau
+     * einen, und keine passt zu einer Marke des Grimmbart. Der
      * Gassendieb gewinnt ueber den Schaden: Er teilt mit 45,6 je Sekunde fast
      * dreimal so viel aus wie der Schildknappe, der dafuer laenger steht. Es
      * ist genau der Fall, in dem eine addierende Bewertung den Sandsack
@@ -349,7 +359,7 @@ describe('Bot: kaufen', () => {
   /**
    * Die untere Schranke: ohne Hochzahl waere es das Irrlicht.
    *
-   * Schildknappe und Irrlicht kosten beide 1 Gold, stehen beide in der
+   * Schildknappe und Irrlicht kosten beide gleich viel, stehen beide in der
    * Vorderreihe (Rolle `wache`, Reichweite 1) und teilen keine Marke mit dem
    * Grimmbart auf dem Brett. Damit faellt alles weg, was sonst mitentscheidet:
    * kein Markenbonus, keine Verschmelzung, und weil beide Nahkaempfer sind,
@@ -368,7 +378,7 @@ describe('Bot: kaufen', () => {
   it('zieht bei fast gleichem Produkt die zaehere Einheit vor', () => {
     const brett = leeresBrett();
     brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
-    // Level 9 wie oben: Dort steht kein Aufstieg mehr vor dem Kauf.
+    // Level 9 wie oben: nur Kulisse, seit es keinen Aufstieg mehr gibt.
     const p = mitHeer(neu(), 0, {
       gold: 3,
       level: 9,
@@ -383,16 +393,17 @@ describe('Bot: kaufen', () => {
   });
 
   /**
-   * Das Polster laesst sich nur pruefen, wenn der Aufstieg nicht dazwischen
-   * kommt — er steht vor dem Kauf. Deshalb Level 9: Dort gibt es keinen
-   * Aufstieg mehr (`aufstiegKosten` ist null).
+   * Level 1 bei EINER Einheit auf dem Brett: Das Brett ist voll. Seit dem
+   * 27.11.2026 gilt das Polster nur bei vollem Brett (`luecke` in
+   * `kandidaten`) — bei freiem Feldplatz kauft der Bot ohne Ruecklage, und
+   * genau das soll diese Probe nicht messen.
    */
   function reicherSitz(runde: number, gold: number): TafelrundePartie {
     const brett = leeresBrett();
     brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
     return mitHeer({ ...neu(), runde }, 0, {
       gold,
-      level: 9,
+      level: 1,
       brett,
       bank: leereBank(),
       laden: ladenMit(['sturmrufer']),
@@ -400,14 +411,15 @@ describe('Bot: kaufen', () => {
   }
 
   /**
-   * Der Sturmrufer kostet 3. Mit 6 Gold blieben danach 3 uebrig — unter dem
-   * Polster von 4, das `normal` ab Runde 4 zurueckhaelt. Vor Runde 4 gibt es
-   * kein Polster, und derselbe Kauf geht durch.
+   * Der Sturmrufer kostet 4 (Preis seit dem 27.11.2026; vorher 3). Mit 6 Gold
+   * blieben danach 2 uebrig — unter dem Polster von 4, das `normal` ab Runde 4
+   * zurueckhaelt. Vor Runde 4 gibt es kein Polster, und derselbe Kauf geht
+   * durch.
    */
   it('haelt ab Runde 4 ein Polster zurueck, vorher nicht', () => {
     assert.deepEqual(zug(reicherSitz(1, 6)), { typ: 'kaufen', platz: 0 });
     assert.equal(zug(reicherSitz(5, 6)).typ, 'bereit', 'unter dem Polster wird nicht gekauft');
-    // Mit 10 Gold bleiben nach dem Kauf 7 — ueber dem Polster, also gekauft.
+    // Mit 10 Gold bleiben nach dem Kauf 6 — ueber dem Polster, also gekauft.
     assert.deepEqual(zug(reicherSitz(5, 10)), { typ: 'kaufen', platz: 0 });
   });
 
@@ -416,6 +428,12 @@ describe('Bot: kaufen', () => {
    * die ihn die Messung geschickt hat: Horten ist in diesem Spiel eine
    * Schwaeche, kein Vorteil (siehe GANGARTEN in bot.ts).
    */
+  it('kauft bei freiem Feldplatz auch unter dem Polster', () => {
+    const p = reicherSitz(5, 6);
+    const mitLuecke = mitHeer(p, 0, { ...p.heere[0]!, level: 2 });
+    assert.deepEqual(zug(mitLuecke), { typ: 'kaufen', platz: 0 });
+  });
+
   it('sitzt als sanfter Gegner laenger auf seinem Gold', () => {
     const p = reicherSitz(5, 10);
     assert.deepEqual(zug(p, 'normal'), { typ: 'kaufen', platz: 0 });
@@ -571,10 +589,19 @@ describe('Bot: aufstellen', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Aufstieg bei vollem Brett
+// 3. Kein Aufstieg mehr (bis zum 27.11.2026: "Aufstieg bei vollem Brett")
 // ---------------------------------------------------------------------------
 
-describe('Bot: Aufstieg', () => {
+/*
+ * Robin, 27.11.2026: "Neu wuerfeln und Rang steigern gibt es nicht.
+ * Truppengroesse kommt einfach ueber die Rundenanzahl." Die Proben zum
+ * Aufstiegszeitpunkt (volles Brett, Reserve je Gangart) sind damit
+ * gegenstandslos. Was an ihre Stelle tritt: Dieselben Lagen, in denen der
+ * Bot frueher aufstieg, muessen jetzt einen Zug ergeben, den `fuehreAus`
+ * annimmt — ein Bot, der weiter `levelAuf` schickte, wuerde am Tisch bei
+ * jedem Takt abgewiesen und stuende die ganze Vorbereitung herum.
+ */
+describe('Bot: kein Aufstieg mehr', () => {
   function mitBrett(gold: number, voll: boolean): TafelrundePartie {
     const brett = leeresBrett();
     if (voll) brett[platzNummer(0, 2)] = { id: 'grimmbart', stufe: 1 };
@@ -587,59 +614,54 @@ describe('Bot: Aufstieg', () => {
     });
   }
 
-  it('steigt bei vollem Brett und genug Gold auf', () => {
-    // Level 1 kostet 2, die Reserve von normal ist 3.
-    assert.deepEqual(zug(mitBrett(5, true), 'normal'), { typ: 'levelAuf' });
+  it('kauft bei vollem Brett und genug Gold, statt aufzusteigen', () => {
+    // Frueher die Lage fuer `levelAuf` (Level 1 kostete 2, Reserve 3).
+    assert.deepEqual(zug(mitBrett(5, true), 'normal'), { typ: 'kaufen', platz: 0 });
   });
 
-  it('steigt ohne die Reserve nicht auf', () => {
-    assert.notEqual(zug(mitBrett(4, true), 'normal').typ, 'levelAuf');
-  });
-
-  it('steigt bei leerem Brett nicht auf, sondern kauft', () => {
-    assert.deepEqual(zug(mitBrett(20, true), 'normal'), { typ: 'levelAuf' });
+  it('kauft mit viel Gold, ob das Brett voll ist oder nicht', () => {
+    assert.deepEqual(zug(mitBrett(20, true), 'normal'), { typ: 'kaufen', platz: 0 });
     assert.deepEqual(zug(mitBrett(20, false), 'normal'), { typ: 'kaufen', platz: 0 });
   });
 
-  /**
-   * Der harte Gegner haelt sich an das volle Brett wie `normal`, legt aber
-   * KEINE Reserve obendrauf: volles Brett und das Gold reicht genau — er
-   * steigt auf.
-   *
-   * Bis zum 06.09.2026 liess er beide Bedingungen weg, und die Probe hier
-   * pruefte das ausdruecklich nur als VERHALTEN, weil der frueh Aufstieg
-   * "weder Vorteil noch Nachteil" sei. Nachgemessen war er beides nicht mehr,
-   * sondern ein Nachteil: Allein das volle Brett wieder einzufordern brachte
-   * `hart` von 133 auf 190 Siege je 400 Partien. Zahlen und Zerlegung stehen
-   * bei GANGARTEN in bot.ts.
+  /*
+   * Ueber alle drei Gangarten und die Lagen, in denen `hart` (2 Gold) und
+   * `sanft` (8 Gold) frueher aufstiegen. Jeder Zug wird ausgefuehrt: Erst
+   * das zeigt, dass der Bot nichts mehr schickt, was der Server abweist.
    */
-  it('steigt als harter Gegner ohne Reserve auf, aber nicht mit leerem Brett', () => {
-    // Level 1 kostet 2 — genau so viel hat er, und `hart` will nichts uebrig.
-    assert.deepEqual(zug(mitBrett(2, true), 'hart'), { typ: 'levelAuf' });
-    assert.notEqual(zug(mitBrett(20, false), 'hart').typ, 'levelAuf');
-  });
-
-  /** Und der sanfte wartet am laengsten: volles Brett und sechs Gold obendrauf. */
-  it('steigt als sanfter Gegner erst mit grosser Reserve auf', () => {
-    assert.notEqual(zug(mitBrett(5, true), 'sanft').typ, 'levelAuf');
-    assert.deepEqual(zug(mitBrett(8, true), 'sanft'), { typ: 'levelAuf' });
+  it('schickt in keiner Gangart mehr einen Aufstieg', () => {
+    for (const grad of GANGARTEN) {
+      for (const [gold, voll] of [
+        [2, true],
+        [5, true],
+        [8, true],
+        [20, true],
+        [20, false],
+      ] as const) {
+        const p = mitBrett(gold, voll);
+        const aktion = zug(p, grad);
+        assert.notEqual(aktion.typ, 'levelAuf', `${grad}, ${gold} Gold`);
+        assert.doesNotThrow(() => fuehreAus(p, 0, aktion), `${grad}, ${gold} Gold`);
+      }
+    }
   });
 });
 
 // ---------------------------------------------------------------------------
-// 4. Neu-Wuerfeln
+// 4. Kein Neuwuerfeln mehr (bis zum 27.11.2026: "Neu-Wuerfeln")
 // ---------------------------------------------------------------------------
 
-describe('Bot: neu wuerfeln', () => {
+describe('Bot: kein Neuwuerfeln mehr', () => {
   /**
    * Volles Brett aus Meuchlern (Stufe 2, damit die Kopien nicht als
    * Verschmelzung zaehlen), Bank frei, viel Gold — und ein Laden, in dem keine
-   * einzige Marke des eigenen Heeres vorkommt.
+   * einzige Marke des eigenen Heeres vorkommt. Das war bis zum 27.11.2026 die
+   * Lage, in der der Bot neu wuerfelte.
    *
    * IN REIHE 1, DER WUNSCHREIHE DES MEUCHLERS (`wunschreihe` in bot.ts, seit
    * dem 06.09.2026). In Reihe 0 stuenden sie eine Reihe zu weit vorn, und der
    * Bot raeumte erst einmal um — die Probe misst dann das Umstellen und nicht
-   * das Neu-Wuerfeln.
+   * den Kauf.
    */
   function fremderLaden(laden: readonly EinheitId[], gold = 20): TafelrundePartie {
     const brett = leeresBrett();
@@ -663,49 +685,66 @@ describe('Bot: neu wuerfeln', () => {
     'knochenspaeher',
   ];
 
-  it('wuerfelt neu, wenn kein Ladenplatz zum Heer passt', () => {
-    assert.deepEqual(zug(fremderLaden(FREMD), 'normal'), { typ: 'neuwuerfeln' });
+  it('wuerfelt in keiner Gangart mehr, auch wenn kein Ladenplatz zum Heer passt', () => {
+    for (const grad of GANGARTEN) {
+      const p = fremderLaden(FREMD);
+      const aktion = zug(p, grad);
+      assert.notEqual(aktion.typ, 'neuwuerfeln', grad);
+      assert.doesNotThrow(() => fuehreAus(p, 0, aktion), grad);
+    }
   });
 
-  it('wuerfelt nicht, wenn eine Marke des Heeres im Laden steht', () => {
-    // Nachtpfeil traegt die Marke meuchler — dieselbe wie die fuenf Gassendiebe.
+  it('nimmt bei vollem Brett die Einheit, die eine Marke des Heeres verstaerkt', () => {
+    // Nachtpfeil traegt die Marke meuchler — dieselbe wie die fuenf
+    // Gassendiebe. Frueher hiess diese Probe "wuerfelt nicht, wenn eine Marke
+    // des Heeres im Laden steht"; ohne Wurf bleibt die Haelfte, die etwas
+    // tut: Er kauft genau diesen Platz.
     const passend = [...FREMD.slice(0, 4), 'nachtpfeil' as EinheitId];
-    assert.notEqual(zug(fremderLaden(passend), 'normal').typ, 'neuwuerfeln');
+    assert.deepEqual(zug(fremderLaden(passend), 'normal'), { typ: 'kaufen', platz: 4 });
   });
 
-  it('wuerfelt auch ohne Gold, solange der Wurf nichts kostet', () => {
-    // Seit der Vorgabe 0 nimmt ein Wurf nichts weg — die Ruecklage, die frueher
-    // 8 Gold zur Sperre machte, gilt nur noch bei einem Tisch mit Preis.
-    assert.deepEqual(zug(fremderLaden(FREMD, 0), 'normal'), { typ: 'neuwuerfeln' });
+  it('meldet ohne Gold bereit, statt zu wuerfeln', () => {
+    // Bis zum 27.11.2026 wuerfelte er hier, weil der Wurf nichts kostete.
+    // Jetzt gibt es ohne Gold schlicht nichts zu tun.
+    assert.deepEqual(zug(fremderLaden(FREMD, 0), 'normal'), { typ: 'bereit' });
   });
 
-  it('wuerfelt nicht, wenn ein Preis gesetzt ist und danach kein Kauf drin waere', () => {
-    // 8 Gold, Wurf kostet 2: danach blieben 6, das Polster von normal ist 4,
-    // und drei Gold Ruecklage passen nicht mehr daneben.
+  it('wuerfelt auch an einem Tisch nicht, der noch einen Wuerfelpreis setzt', () => {
+    // `neuwuerfelnKosten` steht noch im Regelsatz; der Bot darf daraus keinen
+    // Zug ableiten.
     const teuer = {
       ...fremderLaden(FREMD, 8),
       regeln: { ...DEFAULT_REGELN, neuwuerfelnKosten: 2 },
     };
-    assert.notEqual(zug(teuer, 'normal').typ, 'neuwuerfeln');
+    const aktion = zug(teuer, 'normal');
+    assert.notEqual(aktion.typ, 'neuwuerfeln');
+    assert.doesNotThrow(() => fuehreAus(teuer, 0, aktion));
   });
 
-  it('hoert nach vier Wuerfen in derselben Runde auf', () => {
-    // DER ABBRUCH: Ohne ihn wuerfelte der Bot in dieser Lage endlos, weil ihn
-    // seit dem kostenlosen Wurf kein Gold mehr bremst.
-    const satt = mitHeer(fremderLaden(FREMD), 0, { wuerfeRunde: 4 });
-    assert.notEqual(zug(satt, 'normal').typ, 'neuwuerfeln');
-  });
-
-  it('wuerfelt als sanfter Gegner nie', () => {
-    assert.notEqual(zug(fremderLaden(FREMD), 'sanft').typ, 'neuwuerfeln');
+  /*
+   * Ersetzt "hoert nach vier Wuerfen in derselben Runde auf". Der Deckel
+   * (`WUERFE_JE_RUNDE`) war die Bremse gegen endloses Wuerfeln; ohne Wurf
+   * muss die Vorbereitung von selbst enden, weil jeder Kauf Gold kostet.
+   * `ruesteAus` bricht nach 200 Zuegen hart ab und meldet es.
+   */
+  it('kommt in der alten Wuerfel-Lage von selbst zum Ende', () => {
+    for (const grad of GANGARTEN) {
+      const { zuege } = ruesteAus(fremderLaden(FREMD), 0, grad);
+      assert.ok(
+        zuege.every((z) => z.typ !== 'neuwuerfeln' && z.typ !== 'levelAuf'),
+        `${grad}: ${JSON.stringify(zuege)}`,
+      );
+      assert.equal(zuege[zuege.length - 1]!.typ, 'bereit', grad);
+    }
   });
 
   /**
-   * Die Regel, an der die erste Fassung scheiterte: Zu einem leeren Heer passt
-   * NICHTS, und ohne die Bedingung "Brett voll" haette der Bot in Runde 2 sein
-   * ganzes Gold weggewuerfelt, statt seine erste Einheit zu kaufen.
+   * Die Regel, an der die erste Fassung des Wuerfelns scheiterte: Zu einem
+   * leeren Heer passt NICHTS, und der Bot muss trotzdem seine erste Einheit
+   * kaufen. Ohne Wurf ist das selbstverstaendlicher geworden, bleibt aber die
+   * Lage, in der ein Kauf am dringendsten ist.
    */
-  it('wuerfelt nicht, solange ein Feldplatz frei ist', () => {
+  it('kauft, solange ein Feldplatz frei ist, auch aus einem fremden Laden', () => {
     const p = mitHeer({ ...neu(), runde: 5 }, 0, {
       gold: 20,
       level: 5,
@@ -727,42 +766,83 @@ describe('Bot: das fertige Heer', () => {
    * mit halb leerem Brett antreten. Geprueft wird ueber vier Saaten, damit ein
    * einzelner guenstiger Laden nichts beweist.
    */
-  it('tritt ab Runde 4 mit vollem Brett an', () => {
-    for (const saat of ['a', 'b', 'c', 'd']) {
-      let p = neu([0, 1, 2, 3], `${SAAT}-${saat}`);
-      for (let runde = 0; runde < 5; runde++) {
-        for (const sitz of lebendeSitze(p)) {
-          if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz).partie;
-        }
-        if (p.phase === 'kampf') p = loeseKampfAuf(p);
-      }
-      for (const sitz of lebendeSitze(p)) {
-        const heer = p.heere[sitz]!;
-        const belegt = heer.brett.filter((k) => k !== null).length;
-        assert.equal(
-          belegt,
-          feldplaetze(heer.level),
-          `Saat ${saat}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)} Feldplaetzen`,
-        );
-      }
-    }
-  });
-
-  /**
-   * Und er entwickelt sich: Wer nach fuenf Runden noch auf Level 1 steht,
-   * spielt nicht, sondern steht herum.
+  /*
+   * GEMESSEN WIRD SEIT DEM 27.11.2026 IM AUGENBLICK DES KAMPFES, also nach der
+   * Vorbereitung und vor `loeseKampfAuf`. Vorher stand die Messung nach dem
+   * Kampf der fuenften Runde, und das ging, solange der Bot seinen Level
+   * selbst kaufte. Jetzt waechst der Level beim Rundenwechsel
+   * (`levelFuerRunde`): Nach dem Kampf steht schon der Level der NAECHSTEN
+   * Runde im Heer, und deren neuer Platz ist zwangslaeufig noch leer — die
+   * alte Messung waere an jedem Sitz rot, ohne etwas ueber den Bot zu sagen.
+   *
+   * OFFEN (27.11.2026, deshalb `todo`): Auch im Augenblick des Kampfes tritt
+   * `normal` ab Runde 4 nicht immer voll an. Gemessen ueber 40 Partien zu
+   * viert und Runde 4 bis 9: in 131 von 804 Kaempfen mit 1 bis 3 freien
+   * Plaetzen, davon 114-mal mit genug Gold fuer eine Ladeneinheit (bei `hart`
+   * 83 von 798, 57 davon bezahlbar). Ursache ist das Polster in
+   * `kandidaten` (bot.ts): Es gilt auch, wenn ein Feldplatz frei ist. Das war
+   * frueher folgenlos, weil der Bot neue Plaetze nur bei vollem Brett kaufte;
+   * jetzt kommt jede Runde einer von allein dazu. Die Probe bleibt deshalb
+   * scharf und laeuft als `todo` mit, statt die Schranke aufzuweichen: Sie
+   * wird von selbst gruen, sobald der Bot freie Plaetze vor dem Polster
+   * fuellt — dann gehoert das `todo` weg.
+   *
+   * BEHOBEN AM SELBEN TAG: Das Polster gilt nicht mehr, solange ein
+   * Feldplatz frei ist (`luecke` in `kandidaten`), das `todo` ist weg.
    */
-  it('steigt in fuenf Runden ueber Level 1 hinaus', () => {
-    let p = neu([0, 1, 2, 3]);
-    for (let runde = 0; runde < 5; runde++) {
-      for (const sitz of lebendeSitze(p)) {
-        if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz).partie;
+  it(
+    'tritt ab Runde 4 mit vollem Brett an',
+    () => {
+      for (const saat of ['a', 'b', 'c', 'd']) {
+        let p = neu([0, 1, 2, 3], `${SAAT}-${saat}`);
+        for (let runde = 1; runde <= 5; runde++) {
+          for (const sitz of lebendeSitze(p)) {
+            if (darfHandeln(p, sitz)) p = ruesteAus(p, sitz).partie;
+          }
+          if (runde >= 4) {
+            for (const sitz of lebendeSitze(p)) {
+              const heer = p.heere[sitz]!;
+              const belegt = heer.brett.filter((k) => k !== null).length;
+              assert.equal(
+                belegt,
+                feldplaetze(heer.level),
+                `Saat ${saat}, Runde ${runde}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)} Feldplaetzen`,
+              );
+            }
+          }
+          if (p.phase === 'kampf') p = loeseKampfAuf(p);
+        }
       }
-      if (p.phase === 'kampf') p = loeseKampfAuf(p);
+    },
+  );
+
+  /*
+   * Ersetzt am 27.11.2026 "steigt in fuenf Runden ueber Level 1 hinaus".
+   * Den Level steigert der Bot nicht mehr selbst, er folgt der Runde. Was von
+   * der Aussage "er entwickelt sich, statt herumzustehen" bleibt: Er nutzt
+   * die Plaetze, die dazukommen. Nach fuenf Runden steht jeder Sitz mit mehr
+   * Einheiten im Kampf, als Runde 1 ueberhaupt Plaetze hatte — und den Level
+   * hat er dafuer weder gekauft noch kaufen muessen.
+   */
+  it('nutzt in fuenf Runden die Feldplaetze, die mit der Runde dazukommen', () => {
+    let p = neu([0, 1, 2, 3]);
+    const zuege: TafelrundeAktion[] = [];
+    for (let runde = 1; runde <= 5; runde++) {
+      for (const sitz of lebendeSitze(p)) {
+        if (!darfHandeln(p, sitz)) continue;
+        const gespielt = ruesteAus(p, sitz);
+        p = gespielt.partie;
+        zuege.push(...gespielt.zuege);
+      }
+      if (runde < 5 && p.phase === 'kampf') p = loeseKampfAuf(p);
     }
     for (const sitz of lebendeSitze(p)) {
-      assert.ok(p.heere[sitz]!.level > 1, `Sitz ${sitz} steht noch auf Level 1`);
+      const heer = p.heere[sitz]!;
+      assert.equal(heer.level, levelFuerRunde(5), `Sitz ${sitz}`);
+      const belegt = heer.brett.filter((k) => k !== null).length;
+      assert.ok(belegt > levelFuerRunde(1), `Sitz ${sitz}: nur ${belegt} Einheiten in Runde 5`);
     }
+    assert.ok(!zuege.some((z) => z.typ === 'levelAuf' || z.typ === 'neuwuerfeln'));
   });
 
   /**
@@ -891,6 +971,13 @@ describe('Bot: das fertige Heer', () => {
    * die Duenne der Gangart — rund 20 bis 35 Siege ueber dem Kontrolllauf, also
    * die Groessenordnung des Rauschens. Der ist weg; drei Basen kosteten nur
    * noch Rechenzeit. WER DEN ABSTAND WIEDER KLEIN MACHT, HOLT SIE ZURUECK.
+   *
+   * NACHTRAG 27.11.2026: Die Begruendung oben ("`hart` verlangt beim Aufstieg
+   * ein volles Brett") ist Geschichte — Aufstieg und Neuwuerfeln gibt es
+   * nicht mehr, die Gangarten unterscheiden sich nur noch beim Kaufen
+   * (Polster, Patzer). Die Aussage haelt trotzdem: 173 : 75,7 ueber diese 400
+   * Partien, im langen Stand 157 : 81,0. Gegen `sanft` je 100 Partien:
+   * `hart` 69 : 10,3, `normal` 75 : 8,3.
    */
   it('gewinnt als harter Gegner oefter als drei normale', () => {
     const [hart, normal] = imFeld(

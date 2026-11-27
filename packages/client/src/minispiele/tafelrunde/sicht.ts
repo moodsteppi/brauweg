@@ -23,7 +23,14 @@ export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
 export interface Einheit {
   id: string;
   name: string;
+  /** Kostenstufe 1–3: Rahmenfarbe und Chancen im Laden — NICHT der Preis. */
   kosten: number;
+  /**
+   * Was der Kauf kostet (seit dem 27.11.2026 abends, katalog.ts). Wahlfrei,
+   * weil die aufgezeichneten Szenen der Proben und Tische aus der Zeit davor
+   * es nicht haben; dort war die Stufe der Preis (`preisVon` in neu/grafik.tsx).
+   */
+  preis?: number;
   rolle: Rolle;
   marken: string[];
   leben: number;
@@ -78,10 +85,19 @@ export interface EigeneSicht {
   bereit: boolean;
   ausRunde: number | null;
   feldplaetze: number;
+  /**
+   * Wie viele Feldplaetze es in der naechsten Runde gibt (seit dem 27.11.2026
+   * abends: Die Plaetze wachsen mit der Runde statt mit gekauften Raengen).
+   * Aus der Sicht und nicht aus der Runde gerechnet — wie viele dazukommen und
+   * wo Schluss ist, weiss das Modul. Wahlfrei fuer Tische aus der Zeit davor.
+   */
+  feldplaetzeNaechsteRunde?: number;
   belegt: number;
   einkommen: number;
-  neuwuerfelnKosten: number;
-  aufstiegKosten: number | null;
+  /*
+   * `neuwuerfelnKosten` und `aufstiegKosten` standen hier bis zum 27.11.2026:
+   * Neu wuerfeln und Rang steigern gibt es seitdem nicht mehr (Robin).
+   */
   darfHandeln: boolean;
   /**
    * Die Marken auf dem eigenen BRETT mit Anzahl, erreichter und naechster

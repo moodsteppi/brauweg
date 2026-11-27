@@ -126,6 +126,7 @@ export function Kampf({
   frist,
   nameVon,
   verblasst,
+  rundeBisMs = 0,
   nachEnde,
 }: {
   /** Der abzuspielende Kampf (der eigene oder der eines angetippten Sitzes). */
@@ -142,8 +143,15 @@ export function Kampf({
   frist: number | null;
   nameVon: (sitz: number) => string;
   verblasst?: boolean;
-  /** Was nach dem Ende ueber der Arena steht (das Rundenende). */
-  nachEnde?: (ende: { sieger: Seite | null; seite: Seite | null; schaden: number }) => ReactNode;
+  /**
+   * Wie lange der laengste Kampf der Runde dauert. Bis dahin laeuft die Uhr
+   * weiter, auch wenn der gezeigte Kampf schon vorbei ist — sonst wuesste das
+   * Rundenende nicht, welche Paare noch kaempfen (Robin, 27.11.2026: „wirkt
+   * wie ein ewig langer Ladebildschirm").
+   */
+  rundeBisMs?: number;
+  /** Was nach dem Ende ueber der Arena steht (das Rundenende), mit dem Stand der Uhr. */
+  nachEnde?: (ende: { sieger: Seite | null; seite: Seite | null; schaden: number; zeitMs: number }) => ReactNode;
 }): React.JSX.Element | null {
   const bericht = kampf?.bericht ?? null;
   const schluessel = kampf && bericht ? `${kampf.a}:${kampf.b}:${bericht.saat}` : null;
@@ -173,9 +181,11 @@ export function Kampf({
     let letzterTakt = -1;
     let lebt = true;
     let anhalten = (): void => {};
+    // Die Uhr laeuft bis zum Ende der RUNDE, nicht nur des gezeigten Kampfes.
+    const schluss = Math.max(b.dauerMs, rundeBisMs) + NACHLAUF_MS;
     const tick = (): void => {
       if (!lebt) return;
-      const zeitMs = Math.max(0, Math.min(Date.now() - nullpunkt.current!, b.dauerMs + NACHLAUF_MS));
+      const zeitMs = Math.max(0, Math.min(Date.now() - nullpunkt.current!, schluss));
       const neu = spieleBisNeu(stand, b, zeitMs);
       const zeichentakt = Math.floor(zeitMs / ZEICHENTAKT_MS);
       if (neu !== stand || zeichentakt !== letzterTakt) {
@@ -187,7 +197,7 @@ export function Kampf({
         const el = blaetter.current.get(f.id);
         if (el) bildSchieben(el, bildstand(f, zeitMs, takt, ruhig));
       }
-      if (zeitMs >= b.dauerMs + NACHLAUF_MS) return;
+      if (zeitMs >= schluss) return;
       anhalten = naechstesBild(tick);
     };
     anhalten = naechstesBild(tick);
@@ -262,6 +272,7 @@ export function Kampf({
           sieger: anzeige.stand.ende.sieger,
           seite: ichSeite,
           schaden: anzeige.stand.ende.sieger === null ? 0 : bericht.schaden,
+          zeitMs: anzeige.zeitMs,
         })}
     </section>
   );

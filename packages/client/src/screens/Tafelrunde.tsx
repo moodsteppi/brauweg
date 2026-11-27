@@ -1075,8 +1075,6 @@ export function Ruestkammer({
     for (const zug of legaleZuege) if (zug.typ === 'kaufen') raus.add(zug.platz);
     return raus;
   }, [legaleZuege]);
-  const darfWuerfeln = legaleZuege.some((z) => z.typ === 'neuwuerfeln');
-  const darfLevel = legaleZuege.some((z) => z.typ === 'levelAuf');
 
   /**
    * Welche Plaetze der Server gerade zum Verkauf freigibt, als Schluessel.
@@ -1967,58 +1965,13 @@ export function Ruestkammer({
               </p>
             )}
             <div className="tr-ladenknoepfe">
-              <button
-                type="button"
-                className="tr-ladenknopf"
-                disabled={!darfWuerfeln || !darfHandeln}
-                onClick={() => schicke({ typ: 'neuwuerfeln' })}
-              >
-                {tz('laden.neuWuerfeln')}
-                {/* Kostet das Wuerfeln nichts (Vorgabe seit dem 05.09.2026),
-                    faellt die Preisangabe ganz weg. "0 Gold" waere schlechter
-                    als nichts: Es liest sich wie ein Preis, den man erst
-                    nachrechnen muss. Ein Tisch darf den Preis weiterhin
-                    setzen, dann steht er wieder da.
-
-                    Der Preis wird rot, wenn das Gold nicht reicht — sonst
-                    sieht ein gesperrter Knopf aus wie ein kaputter. Beide
-                    Bedingungen muessen zutreffen: `legalActions` hat den Zug
-                    abgelehnt UND die Zahlen der Sicht erklaeren es auch.
-                    Erklaeren sie es nicht, bleibt der Preis ruhig statt zu
-                    raten. */}
-                {eigenes.neuwuerfelnKosten > 0 && (
-                  <em
-                    data-teuer={
-                      darfHandeln && !darfWuerfeln && eigenes.gold < eigenes.neuwuerfelnKosten
-                        ? ''
-                        : undefined
-                    }
-                  >
-                    <GoldZeichen />
-                    {eigenes.neuwuerfelnKosten}
-                  </em>
-                )}
-              </button>
-              <button
-                type="button"
-                className="tr-ladenknopf"
-                disabled={!darfLevel || !darfHandeln}
-                onClick={() => schicke({ typ: 'levelAuf' })}
-              >
-                {tz(eigenes.aufstiegKosten === null ? 'laden.hoechsterRang' : 'laden.rangSteigern')}
-                {eigenes.aufstiegKosten !== null && (
-                  <em
-                    data-teuer={
-                      darfHandeln && !darfLevel && eigenes.gold < eigenes.aufstiegKosten
-                        ? ''
-                        : undefined
-                    }
-                  >
-                    <GoldZeichen />
-                    {eigenes.aufstiegKosten}
-                  </em>
-                )}
-              </button>
+              {/* „Neu wuerfeln" und „Rang steigern" standen hier bis zum
+                  27.11.2026. Robin hat beide aus den Regeln genommen (die
+                  Feldplaetze wachsen mit der Runde, der Laden ist, was er
+                  ist), das Modul bietet sie nicht mehr an, und die Sicht
+                  kennt ihre Preise nicht mehr. Auch dieses alte Tafelrunde,
+                  das nur noch als Notausgang hinter `?tafelrunde=alt` steht,
+                  zeigt deshalb keine Knoepfe mehr, die nie gehen. */}
               <button
                 type="button"
                 className="tr-bereitknopf"

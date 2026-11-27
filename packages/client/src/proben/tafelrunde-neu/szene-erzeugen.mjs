@@ -37,7 +37,9 @@ import {
 const SITZE = [0, 1, 2, 3];
 const ICH = 0;
 const GANGART = 'normal';
-const RUNDE = 7;
+// Runde 5: Das Feld waechst noch (6 Plaetze, naechste Runde 7) — so zeigt die
+// Probe auch die Ankuendigung ueber dem Laden.
+const RUNDE = 5;
 
 function allesBereit(p) {
   let q = p;
@@ -59,11 +61,15 @@ function bewerte(ruest, kampf) {
   if (brett < 4 || bank < 2 || faehigkeiten < 2) return -1;
   // Ein Kampf bis zur Hoechstdauer zeigt in der Probe vor allem Warten.
   if (eigener.bericht.grund === 'zeit') return -1;
-  return brett * 2 + bank + faehigkeiten + zustaende + e.synergien.length * 3;
+  // Laeuft ein fremder Kampf deutlich laenger als der eigene, zeigt die Probe
+  // (Fall `zuschauen`) das Rundenende mit „Die anderen kaempfen noch …".
+  const andere = (kampf.paarungen ?? []).filter((p) => p.a !== eigener.a || p.b !== eigener.b);
+  const zuschauen = andere.some((p) => p.dauerMs > eigener.bericht.dauerMs + 4000) ? 40 : 0;
+  return brett * 2 + bank + faehigkeiten + zustaende + e.synergien.length * 3 + zuschauen;
 }
 
 let beste = null;
-for (let n = 0; n < 300; n++) {
+for (let n = 0; n < 800; n++) {
   const saat = `probe-neu-${n}`;
   let p = erstellePartie(DEFAULT_REGELN, SITZE, saat);
   let ok = true;

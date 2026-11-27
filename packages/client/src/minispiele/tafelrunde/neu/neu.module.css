@@ -1615,22 +1615,24 @@
 
 /* Bank */
 .bank {
+  /* Keine Kaestchen mehr (Robin, 27.11.2026: „sieht komisch aus"): Die
+     Figuren stehen frei auf einer Holzleiste, die neun Stellplaetze sind nur
+     helle Flecken darauf. Ziehen und Antippen gehen wie vorher — die
+     Trefferflaeche ist der Platz, nicht der Fleck. */
+  position: relative;
   flex: 0 0 auto;
   list-style: none;
   margin: 0;
-  padding: 6px 8px;
+  padding: 14px 10px 6px;
   display: grid;
   grid-template-columns: repeat(var(--bankplaetze, 9), 1fr);
-  gap: 4px;
-  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.6))
+  gap: 2px;
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.55))
 }
 
 .bankplatz {
   position: relative;
   aspect-ratio: 0.82;
-  border-radius: 10px;
-  background: rgba(5, 11, 29, 0.45);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
   touch-action: none
 }
 
@@ -1639,34 +1641,43 @@
 }
 
 .bankplatz[data-zielbar] {
-  box-shadow: inset 0 0 0 2px var(--tn-gruen-hell);
-  background: rgba(72, 184, 106, 0.25);
+  /* Der Fleck leuchtet, wenn die gewaehlte Einheit hierhin darf. */
+  background: none
+}
+
+.bankplatz[data-zielbar]::after {
+  background: radial-gradient(closest-side, rgba(111, 220, 142, 0.85), rgba(111, 220, 142, 0.2));
+}
+
+.bankplatz[data-unter]::after {
+  background: radial-gradient(closest-side, rgba(245, 192, 46, 0.95), rgba(245, 192, 46, 0.25));
 }
 
 .bankplatz[data-unter] {
-  box-shadow: inset 0 0 0 2px var(--tn-gold);
-  background: rgba(245, 192, 46, 0.3);
+  background: none
 }
 
 .bankEinheit .feldFigur {
-  height: 128%;
-  top: -24%;
+  /* Etwas groesser als auf dem Feld: Die Bank ist schmal (neun Plaetze auf
+     Handybreite), und frei stehend ohne Kasten soll man die Figur erkennen. */
+  height: 175%;
+  top: -58%
 }
 
 .bankEinheit .einheitSterne {
-  top: 1px;
-  font-size: 8px;
+  top: -46%;
+  font-size: 8px
 }
 
 .bankEinheit .sockel {
   width: 12px;
   height: 12px;
-  bottom: 2px;
+  bottom: 0
 }
 
 .bankEinheit .ring {
-  bottom: 4%;
-  height: 26%;
+  bottom: 2%;
+  height: 22%
 }
 
 /* Laden */
@@ -1703,20 +1714,7 @@
   color: var(--tn-leise);
 }
 
-.rang {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  font-family: var(--tn-anz);
-  font-size: 16px;
-}
 
-.rang small {
-  font-family: var(--tn-txt);
-  font-weight: 800;
-  font-size: 12px;
-  color: var(--tn-leise);
-}
 
 .karten {
   list-style: none;
@@ -1758,27 +1756,22 @@
   border: 0;
   border-radius: 12px;
   overflow: hidden;
-  /* Der Rahmen in Bronze, Silber oder Gold: eine Kante mit Glanz, solange
-     es kein gemaltes Rahmenbild gibt (`Kartenrahmen`). */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.0) 60%, rgba(7, 19, 47, 0.95) 82%),
-    radial-gradient(80% 60% at 50% 35%, color-mix(in srgb, var(--rahmen) 35%, #22397a), #0e1a3d);
-  box-shadow:
-    inset 0 0 0 2px var(--rahmen),
-    inset 0 0 0 3px rgba(0, 0, 0, 0.45),
-    0 3px 0 rgba(0, 0, 0, 0.45);
+  /* EIN Rahmen (Robin: der doppelte verschwendete Platz): Das Rahmenbild
+     liegt obenauf (`Kartenrahmen`), darunter randlos das Bild auf einem
+     Verlauf in der Kostenfarbe. Ein eigener Rand am Knopf kommt nur, wenn es
+     kein Rahmenbild gibt (`:not([data-rahmenbild])` unten). */
+  background: none;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
   color: var(--tn-tinte);
   font: inherit;
   cursor: pointer;
-  touch-action: manipulation;
+  touch-action: manipulation
 }
 
 .karte[data-rahmen='gold'] .karteKnopf {
   box-shadow:
-    inset 0 0 0 2px var(--rahmen),
-    inset 0 0 0 3px rgba(0, 0, 0, 0.45),
     0 3px 0 rgba(0, 0, 0, 0.45),
-    0 0 10px rgba(245, 192, 46, 0.35);
+    0 0 10px rgba(245, 192, 46, 0.35)
 }
 
 .karteKnopf:active:not(:disabled) {
@@ -1800,10 +1793,16 @@
 }
 
 .portraet {
+  /* Bis an den Rahmen: Das Rahmenbild deckt die Kante, das Bild darunter
+     reicht bis knapp unter seinen Aussenrand. Splash-Art und Rahmen haben
+     dasselbe Format (352 x 512). */
   position: absolute;
-  inset: 3px 3px 30% 3px;
+  inset: 1.5% 2%;
   overflow: hidden;
-  border-radius: 9px 9px 0 0;
+  border-radius: 10px;
+  background:
+    radial-gradient(90% 60% at 50% 30%, color-mix(in srgb, var(--rahmen) 70%, #ffffff 20%), transparent 75%),
+    linear-gradient(180deg, color-mix(in srgb, var(--rahmen) 55%, #22397a), color-mix(in srgb, var(--rahmen) 25%, #0e1a3d))
 }
 
 /* Brustbild: die Zelle so gross und so weit oben, dass Kopf und Oberkoerper
@@ -1958,45 +1957,29 @@
   inset: -10px;
 }
 
-.ladenKnoepfe {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.15fr;
-  gap: 6px;
-  margin-top: 8px;
-}
 
-.ladenknopf,
 .bereitknopf {
-  display: inline-flex;
-  flex-direction: column;
+  /* Der eine Knopf unten, ueber die ganze Breite: Wuerfeln und Rang gibt es
+     seit dem 27.11.2026 nicht mehr. */
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 2px 4px;
-  border-radius: 14px;
-  font: inherit;
-  font-weight: 800;
-  font-size: 13px;
-  line-height: 1.15;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.ladenknopf {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 8px;
   border: 0;
-  background: rgba(24, 43, 92, 0.75);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: var(--tn-tinte)
+  border-radius: 16px;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 20px;
+  color: #052512;
+  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
+  box-shadow: 0 3px 0 #2a7a44;
+  cursor: pointer;
+  touch-action: manipulation
 }
 
-.ladenknopf em {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-style: normal;
-  font-size: 12px;
-  color: var(--tn-gold-hell);
-}
+
 
 .bereitknopf {
   border: 0;
@@ -2014,7 +1997,6 @@
   box-shadow: none;
 }
 
-.ladenknopf:disabled,
 .bereitknopf:disabled {
   opacity: 0.5;
   cursor: default;
@@ -2754,4 +2736,119 @@
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.1
+}
+
+.bank::before {
+  /* Die Leiste: dunkles Holz mit heller Oberkante, unter den Fuessen. */
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 4px;
+  height: 34%;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 46px, rgba(0, 0, 0, 0.12) 46px 48px),
+    linear-gradient(180deg, #a06a3c 0%, #7a4c28 35%, #4f2f18 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 214, 160, 0.45), 0 4px 10px rgba(0, 0, 0, 0.45)
+}
+
+.bankplatz::after {
+  /* Der Stellplatz: ein heller Fleck auf der Leiste. */
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 6%;
+  height: 16%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 230, 190, 0.32), rgba(255, 230, 190, 0.08));
+  pointer-events: none
+}
+
+.karte:not([data-rahmenbild]) .karteKnopf {
+  box-shadow:
+    inset 0 0 0 2px var(--rahmen),
+    0 3px 0 rgba(0, 0, 0, 0.45)
+}
+
+.splash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top
+}
+
+.feldstand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--tn-anz);
+  font-size: 16px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7)
+}
+
+.feldstand small {
+  font-family: var(--tn-txt);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--tn-gruen-hell)
+}
+
+.zuschauen {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: 22rem;
+  margin: 16px auto 0
+}
+
+.zuschauenText {
+  margin: 0;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--tn-tinte)
+}
+
+.paare {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.paar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer
+}
+
+.paar em {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--tn-leise)
+}
+
+.paar[data-laeuft] em {
+  color: var(--tn-gruen-hell)
 }

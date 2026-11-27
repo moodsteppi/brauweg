@@ -56,7 +56,7 @@ describe('Spieltisch', () => {
 
   it('Kaufen schickt die Aktion und sperrt bis zur naechsten Revision', () => {
     const { onAktion, rerender } = tisch();
-    fireEvent.click(screen.getByRole('button', { name: /Pinguinwache, Wache, 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Pinguinwache, Wache, 2 Gold/ }));
     expect(onAktion).toHaveBeenCalledWith({ typ: 'kaufen', platz: 0 });
     // Gesperrt: Ein zweiter Tipp im selben Moment geht nicht raus.
     expect(screen.getByRole('button', { name: /Eichhornschütze, Schütze/ })).toBeDisabled();
@@ -183,6 +183,67 @@ describe('Spieltisch', () => {
       expect(screen.queryByRole('region', { name: 'Laden' })).not.toBeInTheDocument();
       act(() => {
         vi.advanceTimersByTime(800);
+      });
+      expect(screen.getByRole('status')).toHaveTextContent('Sieg!');
+    });
+
+    /*
+     * Robin, 27.11.2026: Nach dem eigenen Kampf stand nur das Ergebnis da,
+     * waehrend die anderen noch zwanzig Sekunden kaempften — „wie ein ewig
+     * langer Ladebildschirm". Jetzt: Hinweis, Knopf „Zuschauen", Liste der
+     * Paare, und der Weg zurueck zum eigenen Ergebnis.
+     */
+    it('nach dem eigenen Kampf: „Die anderen kämpfen noch …", Zuschauen und zurück', () => {
+      const bericht = (saat: string, dauerMs: number, a: string, b: string) => ({
+        saat,
+        erstZieher: 0 as const,
+        start: [
+          { id: 0, seite: 0 as const, einheitId: a, stufe: 1, platz: 41, leben: 500, hoechstesLeben: 500 },
+          { id: 1, seite: 1 as const, einheitId: b, stufe: 1, platz: 7, leben: 500, hoechstesLeben: 500 },
+        ],
+        ereignisse: [{ art: 'ende' as const, zeitMs: dauerMs, sieger: 0 as const, grund: 'ausgeloescht' as const }],
+        sieger: 0 as const,
+        grund: 'ausgeloescht' as const,
+        dauerMs,
+        ueberlebende: [],
+        schaden: 2,
+      });
+      const meiner: Kampfpaarung = { a: 0, b: 1, geist: false, bericht: bericht('r3|0', 500, 'dorfwache', 'gassendieb') };
+      const fremder: Kampfpaarung = { a: 2, b: 3, geist: false, bericht: bericht('r3|2', 5000, 'sturmrufer', 'grimmbart') };
+      const sicht = ruestsicht({
+        phase: 'kampf',
+        kaempfe: [meiner, fremder],
+        gegner: [1, 2, 3].map((sitz) => ({ ...ruestsicht().gegner[0]!, sitz })),
+      });
+      tisch({
+        sicht,
+        sitze: [
+          { seat: 1, displayName: 'Tom', accountId: 't', avatarUrl: null, isBot: false },
+          { seat: 2, displayName: null, accountId: null, avatarUrl: null, isBot: true },
+          { seat: 3, displayName: 'Lea', accountId: 'l', avatarUrl: null, isBot: false },
+        ],
+      });
+      act(() => {
+        vi.advanceTimersByTime(900);
+      });
+      const ende = screen.getByRole('status');
+      expect(ende).toHaveTextContent('Sieg!');
+      expect(ende).toHaveTextContent('Die anderen kämpfen noch …');
+      expect(within(ende).getByRole('button', { name: /KI 1 gegen Lea/ })).toHaveTextContent('läuft …');
+      fireEvent.click(within(ende).getByRole('button', { name: 'Zuschauen' }));
+      // Jetzt laeuft der fremde Kampf, und das eigene Ergebnis ist weg.
+      expect(screen.getByLabelText(/Sturmalbatros/)).toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(4500);
+      });
+      // Auch dieser Kampf ist vorbei: alle fertig, und der Weg zurueck.
+      const zweites = screen.getByRole('status');
+      expect(zweites).toHaveTextContent('Alle Kämpfe sind vorbei');
+      fireEvent.click(within(zweites).getByRole('button', { name: 'Zurück zu deinem Ergebnis' }));
+      // Ein Bild der Uhr, dann steht der eigene Kampf wieder am Ende.
+      act(() => {
+        vi.advanceTimersByTime(50);
       });
       expect(screen.getByRole('status')).toHaveTextContent('Sieg!');
     });

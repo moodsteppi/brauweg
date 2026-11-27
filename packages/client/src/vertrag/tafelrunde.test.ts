@@ -34,8 +34,8 @@ import {
  * Tafelrunde ist der Fall, an dem die Lücke am meisten kostet, weil die Sicht
  * ZAHLEN trägt, die anderswo Regeln wären: `feldplaetze` und `belegt`
  * entscheiden, ob eine Einheit aufs Brett darf, `verschmelzZahl` beschriftet
- * den Fortschritt („zwei von drei"), `neuwuerfelnKosten` und `aufstiegKosten`
- * stehen auf den Knöpfen. Der Bildschirm rechnet keine davon nach — fällt
+ * den Fortschritt („zwei von drei"), `feldplaetzeNaechsteRunde` sagt an, ob
+ * das Feld zur nächsten Runde wächst. Der Bildschirm rechnet keine davon nach — fällt
  * eine weg, zeigt er stumm etwas Falsches.
  *
  * Drei Ebenen, drei Zusicherungen: die Partiesicht, die eigene Sicht und die
@@ -123,8 +123,7 @@ const EIGENE_FELDER = [
   'feldplaetze',
   'belegt',
   'einkommen',
-  'neuwuerfelnKosten',
-  'aufstiegKosten',
+  'feldplaetzeNaechsteRunde',
   'darfHandeln',
   'synergien',
 ] as const;

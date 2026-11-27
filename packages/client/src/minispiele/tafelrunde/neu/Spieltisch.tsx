@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { schauplatzFuerPartie } from '../../../figuren3d/grafik-neu';
-import { type Kampfpaarung, abzuspielen } from '../KampfAnzeige';
+import { type Kampfpaarung, type Paarungsergebnis, abzuspielen } from '../KampfAnzeige';
 import { eigenerPlatz, gegnerDieseRunde } from '../platzierung';
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
 import { type Synergie, type Synergiestand, markennamen, schwellenPruefer } from '../Synergien';
@@ -47,9 +47,14 @@ import { Laden } from './Laden';
 import { Markenleiste, Markenpopup } from './Markenleiste';
 import stil from './neu.module.css';
 import { Regelblatt } from './Regelblatt';
-import { Rundenende } from './Rundenende';
+import { Rundenende, Zuschauen } from './Rundenende';
 
-/** Die Aktionen des Moduls (partie.ts) — dieselbe Form wie im alten Bildschirm. */
+/**
+ * Die Aktionen des Moduls (partie.ts). `neuwuerfeln` und `levelAuf` gibt es
+ * seit dem 27.11.2026 abends nicht mehr (Robin) — die Feldplaetze wachsen mit
+ * der Runde, und der Laden ist, was er ist. Kommen sie in einer alten Liste
+ * noch vor, bietet dieser Bildschirm sie nicht an.
+ */
 export type Aktion =
   | { typ: 'kaufen'; platz: number }
   | { typ: 'neuwuerfeln' }
@@ -256,8 +261,6 @@ export function Spieltisch({
     for (const z of legaleZuege) if (z.typ === 'kaufen') raus.add(z.platz);
     return raus;
   }, [legaleZuege]);
-  const darfWuerfeln = legaleZuege.some((z) => z.typ === 'neuwuerfeln');
-  const darfLevel = legaleZuege.some((z) => z.typ === 'levelAuf');
   const verkaufbar = useMemo(() => {
     const raus = new Set<string>();
     for (const z of legaleZuege) if (z.typ === 'verkaufen') raus.add(ortSchluessel(z.ort));
@@ -297,6 +300,20 @@ export function Spieltisch({
         ? sicht.ich
         : (schauKaempfe[0]?.a ?? null);
   const kampf = kampfbild ? abzuspielen(kampfbild.kaempfe, kampfSitz) : null;
+  /* Alle Paare der Runde als Ergebnis (`paarungen` aus der Sicht, sonst aus
+     den Kaempfen) und wie lange der laengste dauert — bis dahin laeuft die
+     Uhr der Arena weiter, auch nach dem eigenen Ende. */
+  const paarungen: Paarungsergebnis[] =
+    sicht.paarungen ??
+    (kampfbild?.kaempfe ?? []).map((k) => ({
+      a: k.a,
+      b: k.b,
+      geist: k.geist,
+      sieger: k.bericht.sieger,
+      schaden: k.bericht.schaden,
+      dauerMs: k.bericht.dauerMs,
+    }));
+  const rundeBisMs = Math.max(0, ...paarungen.map((p) => p.dauerMs));
 
   // --- Blaetter --------------------------------------------------------------
 
@@ -381,6 +398,7 @@ export function Spieltisch({
               frist={frist}
               nameVon={(sitz) => sitzName(zeile(sitz), sitz, sitze)}
               verblasst={kampfbild.verblasst}
+              rundeBisMs={rundeBisMs}
               nachEnde={(ende) => (
                 <Rundenende
                   sieger={ende.sieger}
@@ -388,7 +406,17 @@ export function Spieltisch({
                   schaden={ende.schaden}
                   geist={kampf.geist}
                   stand={zwischenstand}
-                />
+                >
+                  <Zuschauen
+                    paarungen={paarungen}
+                    gezeigt={kampf}
+                    ich={sicht.ich}
+                    zeitMs={ende.zeitMs}
+                    nameVon={(sitz) => sitzName(zeile(sitz), sitz, sitze)}
+                    onWahl={(sitz) => setGezeigterGegner(sitz)}
+                    onEigener={eigenerKampf && kampfSitz !== sicht.ich ? () => setGezeigterGegner(null) : undefined}
+                  />
+                </Rundenende>
               )}
             />
           ) : (
@@ -477,14 +505,10 @@ export function Spieltisch({
                   katalog={katalog}
                   kaufbar={kaufbar}
                   darfHandeln={darfHandeln}
-                  darfWuerfeln={darfWuerfeln}
-                  darfLevel={darfLevel}
                   fehlen={fehlen}
                   trifft={trifft}
                   onKauf={(platz) => schicke({ typ: 'kaufen', platz })}
                   onBlatt={setLadenBlatt}
-                  onWuerfeln={() => schicke({ typ: 'neuwuerfeln' })}
-                  onLevel={() => schicke({ typ: 'levelAuf' })}
                   onBereit={() => schicke({ typ: 'bereit' })}
                 />
               )}

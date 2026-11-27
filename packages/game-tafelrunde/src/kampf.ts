@@ -196,7 +196,15 @@ export const SCHRITT_MS = 500;
  *
  * WER GEWINNT DANN: siehe `entscheideNachZeit`.
  */
-export const HOECHSTDAUER_MS = 45_000;
+/*
+ * 27.11.2026: VON 45 AUF 55 SEKUNDEN. Seit die Feldplaetze mit der Runde
+ * wachsen (2 bis 7, regeln.ts) und es Schilde und Wiederkehr gibt, stehen
+ * mehr Einheiten laenger: Mit 45 s liefen 13,2 % der Kaempfe an die Uhr,
+ * mit 55 s sind es 9,2 %, die Partie zu viert bleibt bei 6:57 im Median
+ * (werkzeug/spielzeit.mjs, 300 Partien). Der Absatz oben beschreibt den
+ * Stand davor.
+ */
+export const HOECHSTDAUER_MS = 55_000;
 
 /**
  * Grundschaden am Verlierer, unabhaengig davon, was noch steht.
