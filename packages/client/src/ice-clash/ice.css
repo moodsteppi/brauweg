@@ -1,0 +1,571 @@
+.ice-app {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: radial-gradient(ellipse at top, #164964, #081b33 75%);
+  color: #ecfbff;
+  overflow: auto;
+  font-family: Nunito, sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.ice-app * {
+  box-sizing: border-box;
+}
+.ice-app button,
+.ice-app input {
+  font: inherit;
+  border-radius: 16px;
+  border: 1px solid #72b8cf66;
+  padding: 12px 18px;
+  color: #effbff;
+  background: linear-gradient(#235875, #14344d);
+  font-weight: 800;
+}
+.ice-app button {
+  cursor: pointer;
+  box-shadow: 0 4px 0 #061b2d;
+}
+.ice-app button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ice-app button:focus-visible,
+.ice-app input:focus-visible {
+  outline: 3px solid #ffd46e;
+}
+.ice-app h1,
+.ice-app h2,
+.ice-app h3 {
+  font-family: "Lilita One", sans-serif;
+  font-weight: 400;
+}
+.ice-kopf {
+  height: 64px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 20px;
+  background: #071b31bb;
+  position: relative;
+  z-index: 4;
+}
+.ice-kopf strong {
+  font-family: "Lilita One";
+  font-size: 24px;
+}
+.ice-kopf span {
+  margin-left: auto;
+  color: #a0d8e6;
+  font-size: 12px;
+}
+.ice-start {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  max-width: 1200px;
+  margin: 25px auto;
+  gap: 30px;
+  padding: 0 24px;
+}
+.ice-titelbild {
+  position: relative;
+  overflow: hidden;
+  border-radius: 25px;
+  min-height: 350px;
+}
+.ice-titelbild > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+}
+.ice-titelbild > div {
+  position: absolute;
+  inset: 0;
+  padding: 28px;
+  background: linear-gradient(#07182c55, transparent 45%, #07182cdd);
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+.ice-titelbild h1 {
+  font-size: clamp(35px, 5vw, 64px);
+  margin: 10px 0;
+  text-shadow: 0 3px 8px #07182c;
+}
+.ice-startwahl {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+.ice-startwahl label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  color: #a9d5e2;
+}
+.ice-startwahl small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ice-startwahl p {
+  font-size: 12px;
+  color: #93bdce;
+  text-align: center;
+}
+.ice-app .ice-gold {
+  background: linear-gradient(#ffe8a3, #ffc552);
+  color: #122b3c;
+  border-color: #ffedb5;
+  box-shadow: 0 5px 0 #a8782e;
+}
+.ice-code {
+  display: flex;
+  gap: 8px;
+}
+.ice-code input {
+  min-width: 0;
+  flex: 1;
+}
+.ice-lobby {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
+.ice-lobbytitel {
+  text-align: center;
+}
+.ice-lobbytitel span,
+.ice-ende > span {
+  color: #70e7dc;
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+.ice-lobby h1 {
+  margin: 8px 0;
+  font-size: 34px;
+}
+.ice-lobby p {
+  color: #b7dbea;
+}
+.ice-sitze {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin: 20px 0;
+}
+.ice-sitze article {
+  text-align: center;
+  background: radial-gradient(ellipse at center, #367b9166, #102a46);
+  border: 1px solid;
+  border-radius: 22px;
+  padding: 14px;
+}
+.ice-sitze img {
+  height: 110px;
+  width: 110px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 8px #041d33);
+}
+.ice-sitze h3 {
+  margin: 0;
+  font-size: 23px;
+}
+.ice-sitze p {
+  font-size: 12px;
+}
+.ice-lobbyaktionen {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ice-im-spiel {
+  overflow: hidden;
+}
+.ice-arena {
+  position: absolute;
+  inset: 100px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ice-arena svg {
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 840/580;
+}
+.ice-punkte {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px;
+}
+.ice-punkte span {
+  border-bottom: 3px solid;
+  border-radius: 7px;
+  background: #071b31c9;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+.ice-punkte b {
+  display: block;
+  text-align: center;
+  color: #ffda86;
+  letter-spacing: 4px;
+}
+.ice-steuerung {
+  position: absolute;
+  inset: auto 32px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  pointer-events: none;
+}
+.ice-steuerung > * {
+  pointer-events: auto;
+}
+.ice-stick {
+  width: 110px;
+  height: 110px;
+  border: 2px solid #d1faff77;
+  background: #10395288;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+.ice-stick i {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(at 30% 20%, #defcff, #5ca6bb);
+  box-shadow: 0 4px 0 #153a50;
+}
+.ice-rechts {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+}
+.ice-app .ice-schubs {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: linear-gradient(#ffe7a2, #ffc448);
+  color: #152a3e;
+  font-size: 40px;
+  touch-action: none;
+  border: 3px solid #ffedbf;
+}
+.ice-schubs small {
+  display: block;
+  font-size: 12px;
+}
+.ice-item {
+  width: 86px;
+  height: 86px;
+  display: grid;
+  justify-items: center;
+  padding: 5px !important;
+}
+.ice-item small {
+  font-size: 10px;
+}
+.ice-symbol {
+  width: 42px;
+  height: 42px;
+}
+.ice-meldung {
+  position: absolute;
+  top: 112px;
+  left: 20%;
+  right: 20%;
+  text-align: center;
+  pointer-events: none;
+  color: #fff2c7;
+  text-shadow: 0 2px 4px #000;
+  font-weight: 900;
+  z-index: 3;
+}
+.ice-ende,
+.ice-warten {
+  text-align: center;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+}
+.ice-ende > img,
+.ice-warten > img {
+  display: block;
+  width: 140px;
+  margin: auto;
+  filter: drop-shadow(0 10px 25px #63ebda55);
+  animation: ice-jubel 2s ease-in-out infinite;
+}
+.ice-ergebnis {
+  background: #11334c;
+  border: 1px solid #7dc8da55;
+  border-radius: 20px;
+  padding: 10px 24px;
+  margin: 20px;
+}
+.ice-ergebnis p {
+  display: flex;
+  justify-content: space-between;
+}
+.ice-regeln {
+  position: absolute;
+  z-index: 10;
+  inset: 15% 20%;
+  overflow: auto;
+  border: 2px solid #83cbd9;
+  background: #102d47;
+  box-shadow: 0 0 0 100vmax #0008;
+  border-radius: 22px;
+  padding: 25px;
+}
+.ice-fehler {
+  position: relative;
+  z-index: 6;
+  text-align: center;
+  background: #693f33;
+  padding: 8px;
+  margin: 0;
+}
+.ice-drehen {
+  display: none;
+}
+.ice-riss {
+  animation: ice-riss 0.65s alternate infinite;
+}
+@keyframes ice-riss {
+  to {
+    opacity: 0.35;
+  }
+}
+@keyframes ice-jubel {
+  50% {
+    transform: translateY(-8px) rotate(5deg);
+  }
+}
+@media (orientation: portrait) {
+  .ice-drehen {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: radial-gradient(#225777, #071a32);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 35px;
+  }
+  .ice-telefon {
+    font-size: 110px;
+    color: #8ae9ed;
+    animation: ice-dreh 2s infinite;
+  }
+  .ice-drehen h2 {
+    font-size: 32px;
+  }
+  .ice-drehen p {
+    color: #b8deed;
+  }
+  .ice-drehen small {
+    color: #81a9be;
+  }
+  @keyframes ice-dreh {
+    60%,
+    100% {
+      transform: rotate(90deg);
+    }
+  }
+}
+@media (max-height: 500px) {
+  .ice-kopf {
+    height: 45px;
+  }
+  .ice-kopf strong {
+    font-size: 20px;
+  }
+  .ice-start {
+    margin: 12px auto;
+    gap: 18px;
+  }
+  .ice-titelbild {
+    min-height: 290px;
+  }
+  .ice-startwahl {
+    gap: 8px;
+  }
+  .ice-app button,
+  .ice-app input {
+    padding: 8px 12px;
+  }
+  .ice-lobby {
+    padding: 8px 20px;
+  }
+  .ice-lobby h1 {
+    font-size: 26px;
+  }
+  .ice-lobbytitel p {
+    margin: 4px;
+  }
+  .ice-sitze {
+    margin: 10px 0;
+  }
+  .ice-sitze article {
+    padding: 7px;
+  }
+  .ice-sitze img {
+    height: 75px;
+    width: 75px;
+  }
+  .ice-sitze h3 {
+    font-size: 19px;
+  }
+  .ice-sitze p {
+    margin: 4px;
+  }
+  .ice-arena {
+    inset: 85px 0 0;
+  }
+  .ice-meldung {
+    top: 94px;
+    font-size: 13px;
+  }
+  .ice-steuerung {
+    bottom: 15px;
+  }
+  .ice-ende > img {
+    width: 80px;
+  }
+  .ice-ende h1 {
+    font-size: 28px;
+    margin: 5px;
+  }
+  .ice-ergebnis {
+    margin: 8px;
+  }
+  .ice-ergebnis p {
+    margin: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ice-app * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.ice-app {
+  max-width: none !important;
+  width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ice-app input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.ice-app button {
+  touch-action: manipulation;
+}
+.ice-lobbyfigur {
+  height: 110px;
+  display: grid;
+  place-items: center;
+}
+.ice-siegerfigur {
+  display: grid;
+  place-items: center;
+  animation: ice-jubel 2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 20px #63ebda55);
+}
+.ice-sitze article:has(h3) {
+  position: relative;
+  overflow: hidden;
+}
+.ice-im-spiel .ice-kopf {
+  background: linear-gradient(#081c36ee, #123c55aa);
+}
+.ice-steuerung {
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+}
+.ice-platsch circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ice-welle 1.8s ease-out both;
+}
+.ice-treffer circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ice-welle 0.4s ease-out both;
+}
+@keyframes ice-welle {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+@media (max-height: 500px) {
+  .ice-lobbyfigur {
+    height: 75px;
+  }
+  .ice-lobbyfigur .pinguin {
+    height: 70px !important;
+    width: auto !important;
+  }
+  .ice-siegerfigur .pinguin {
+    height: 80px !important;
+    width: auto !important;
+  }
+  .ice-punkte {
+    gap: 6px;
+    padding: 5px;
+  }
+  .ice-punkte span {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  .ice-startwahl p {
+    margin: 3px;
+  }
+  .ice-start {
+    padding-bottom: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ice-app * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.ice-im-spiel {
+  background: radial-gradient(ellipse at 50% 60%, #185568, #081b33 80%);
+}
+.ice-drehen button {
+  margin-top: 25px;
+}
+.ice-regeln {
+  max-height: 75dvh;
+}
+.ice-lobby {
+  background:
+    linear-gradient(#0b263ce6, #0b263cf7),
+    url("/ice-clash/titel.webp") center/cover;
+  border-radius: 24px;
+}

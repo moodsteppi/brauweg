@@ -81,6 +81,11 @@ enum Huelle {
         if link.path == "/broremote", link.query == nil {
             return "/broremote" + (link.fragment.map { "#" + $0 } ?? "")
         }
+        if link.path == "/ice-clash" {
+            let code = URLComponents(url: link, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "raum" })?.value ?? ""
+            if code.range(of: "^[A-Fa-f0-9]{8}$", options: .regularExpression) != nil { return "/ice-clash?raum=" + code.uppercased() }
+            return "/ice-clash"
+        }
         return pfadFuerPfad(link.path)
     }
 

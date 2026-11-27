@@ -1,0 +1,3 @@
+# Bro Ice Clash Grafiklieferung
+
+Eigenständige, generierte Grafiken im plastischen Pinguin-Stil. Titelbild: 1536×1024, vier Pinguine auf brechendem Eis, freie obere Zone für separat gesetzte Schrift. Arena: senkrechte Vogelperspektive, türkisfarbenes Wasser und transparente Eisoberfläche. Spielfigur: ein einzelner Pinguin senkrecht von oben, Schnabel nach oben, echter Alphakanal, keine eingebrannten Schatten außerhalb der Figur. Keine Schrift, Logos, Schachbretter oder Wasserzeichen. Originale unter art/ice-clash; optimierte WebP unter public/ice-clash. Originalarchiv noch nicht extern übertragen.

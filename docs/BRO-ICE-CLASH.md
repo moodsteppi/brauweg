@@ -1,0 +1,15 @@
+# Bro Ice Clash
+
+Eigenständiges Echtzeitspiel unter `/ice-clash`, eigener Spiele-Einstieg. Online-Suche für vier Plätze (30 Sekunden, danach Bots), private Lobby mit Code und Link für zwei bis vier Spieler, Üben gegen drei Bots. Querformat mit Drehhinweis; gleiche Vogelperspektive für alle.
+
+Server entscheidet mit festen 40-ms-Schritten über Bewegung, Schubsen, Items, Eisradius, Ausscheiden und Siege. Zustände alle 80 ms; WebSocket `/ws/ice` mit Origin-Prüfung, Größen-, Nachrichten-, Raum- und Verbindungsgrenzen. Keine Kontobelohnungen. Raum und geheime Wiederverbindungsberechtigung bleiben im Serverspeicher; Neustarts beenden Partien. Verbindungsabbruch ersetzt Spieler während der Partie durch Bots; Lobbyplätze werden 15 Sekunden für die Wiederverbindung gehalten, danach freigegeben. Sitzung kann im selben Tab nach Neuladen fortgesetzt werden. Eingaben verfallen nach 600 ms; ein alter Socket kann den wieder verbundenen Sitz nicht steuern. Runde bis ein Überlebender; Gleichstand ohne Krone; drei Kronen beenden Partie. Eiswarnung drei Sekunden vor dem nächsten Abbruch.
+
+Generierte Grafiken: Titelbild, tatsächliche senkrechte Pinguin-Spielfigur mit Alpha, Eisoberfläche. Originale lokal unter `packages/client/art/ice-clash`; WebP unter public. Fähigkeiten als skalierbare eigene Symbole. Aktuell gemeinsame Pinguinfigur mit farbigen Spielermarkierungen; Der eigene Kleiderschrank-Pinguin erscheint in Lobby und Siegeransicht. Fremde Outfits und vollständige Topdown-Versionen sämtlicher Skins sowie Kontostatistiken sind noch nicht implementiert. Kein TestFlight-Upload vorgesehen.
+
+Prüfung: `node --test packages/server/dist/test/ice.test.js` nach Workspace-Bau. Browser `/ice-clash`, Tastatur WASD/Leertaste/E; mobile Touch-Steuerung mit Pointer-Capture und Neutralstellung bei Fokusverlust. Grafiken mit eingebauter Bildgenerierung erstellt; Prompts: vier Pinguine auf brechender Eisscholle, einzelner Pinguin orthografisch von oben transparent, orthografische Eisoberfläche ohne Figuren. WebP-Konvertierung mit bestehendem Bildwerkzeug.
+
+Die iOS-Hülle erlaubt Querformat ausschließlich auf `/ice-clash`, sonst bleibt Hochformat. Universal Links übernehmen den validierten Raumcode. Diese nativen Änderungen werden erst mit einem künftigen App-Build ausgeliefert; der jetzige Auftrag veröffentlicht ausschließlich Staging.
+
+Neue Prüfungen: Spiellogik inklusive simultaner Stürze, Projektil-Flugzeit, Eingabeablauf und vollständiger Bot-Serien; echte WebSocket-Clients für Lobby, Hostrechte, Origin-Abweisung, Reconnect und vier öffentliche Teilnehmer; React-Prüfungen für Wiederverbindung und abgelaufene Sitzberechtigung; Typvertrag zwischen Serversicht und Oberfläche.
+
+Ice Clash nutzt einen eigenen Echtzeit-Gateway analog zu BroRemote, weil analoge Bewegung und kontinuierliche Kollisionen nicht über die Zugaktionen der Kartenspiele laufen. Der Spielkern selbst enthält weder Netzwerk noch Datenbank oder Echtzeituhr; Zufall ist mit einem Startwert reproduzierbar. Der Client bekommt nur die öffentliche Spielsicht, niemals Sitzschlüssel anderer Spieler.

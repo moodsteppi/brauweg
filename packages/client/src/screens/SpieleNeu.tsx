@@ -293,6 +293,7 @@ export function SpieleNeu({
         <img src="/broremote/ausbau/broremote.webp" alt="" style={{width: 88, height: 88, objectFit: "cover", borderRadius: 20}} />
         <span><strong>BroRemote</strong><small>Handys verbinden. Gemeinsam spielen.</small></span><b aria-hidden="true">›</b>
       </a>
+      <a className="hb-broremote" href="/ice-clash"><img src="/ice-clash/titel.webp" alt="" style={{width:88,height:88,objectFit:"cover",borderRadius:20}}/><span><strong>Bro Ice Clash</strong><small>Bleib auf dem Eis. Online mit 2–4 Pinguinen.</small></span><b aria-hidden="true">›</b></a>
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
