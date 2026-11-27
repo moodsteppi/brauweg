@@ -13,7 +13,7 @@ import {
 } from '@brauweg/game-tafelrunde';
 import { describe, expect, it } from 'vitest';
 
-import type { Kaempferstand, Kampfereignis } from '../minispiele/tafelrunde/KampfAnzeige';
+import type { Kaempferstand, Kampfereignis } from '../minispiele/tafelrunde/kampfbericht';
 import type {
   EigeneSicht,
   FremdeSicht,

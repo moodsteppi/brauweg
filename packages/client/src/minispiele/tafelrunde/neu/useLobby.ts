@@ -1,7 +1,7 @@
 /**
  * Alles vor dem Tisch: Schnellsuche, Bot-Tisch, verabredeter Tisch, Beitreten.
  *
- * DIE LOGIK IST DIE VON screens/Tafelrunde.tsx, und zwar mit Absicht als
+ * DIE LOGIK STAMMT AUS screens/Tafelrunde.tsx (am 28.11.2026 entfernt), und zwar als
  * Uebernahme und nicht als gemeinsame Funktion: Das alte Tafelrunde bleibt
  * bis zur Abnahme unangetastet der Standard (docs/TAFELRUNDE-NEU-UMSETZUNG.md,
  * Abschnitt 7) und wird danach entfernt (Abschnitt 11). Ein Umbau des alten

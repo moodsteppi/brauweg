@@ -7,7 +7,7 @@
  */
 
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
-import type { Synergie } from '../Synergien';
+import type { Synergie } from '../marken';
 
 export const KATALOG: Record<string, Einheit> = {
   dorfwache: { id: 'dorfwache', name: 'Pinguinwache', kosten: 1, preis: 2, rolle: 'wache', marken: ['krieger', 'waechter'], leben: 600, angriff: 40, tempo: 1, reichweite: 1, ruestung: 20 },

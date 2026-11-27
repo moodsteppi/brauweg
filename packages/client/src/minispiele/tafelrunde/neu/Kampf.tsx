@@ -12,7 +12,7 @@
  * DIE UHR: `requestAnimationFrame` treibt sie, neu gezeichnet wird aber nur,
  * wenn ein Ereignis faellig war oder eine Viertelsekunde um ist (Effekte und
  * Zustaende laufen ab). Die Bildfolgen der Figuren schiebt der Takt direkt am
- * Element — dieselbe Ueberlegung wie in KampfAnzeige.tsx: Ein Bildwechsel ist
+ * Element — dieselbe Ueberlegung wie in der alten Kampfanzeige: Ein Bildwechsel ist
  * keine Aenderung des Kampfes.
  *
  * DER NULLPUNKT gilt fuer die ganze Runde (`nullpunkt`), nicht fuer den
@@ -30,7 +30,7 @@ import {
   gezeichneterPlatz,
   meineSeite,
   startVersatz,
-} from '../KampfAnzeige';
+} from '../kampfbericht';
 import type { Einheit, Faehigkeit } from '../sicht';
 import { einheitName, tz } from '../text';
 import { rastermass, wabenLage } from '../zuege';

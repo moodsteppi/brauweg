@@ -4,17 +4,16 @@
  *
  * Es steht ueber der Arena, sobald der EIGENE Kampf sein Ende-Ereignis
  * erreicht hat, und bleibt, bis der Server die Phase wechselt — die Dauer der
- * Schaupause bestimmt der Server, nicht dieses Bild (KampfAnzeige.tsx, „Wann
- * es zurueckgeht").
+ * Schaupause bestimmt der Server, nicht dieses Bild.
  *
  * Die verlorenen Leben sind `schaden` aus dem Bericht, der Zwischenstand die
  * Leben aus der Sicht. Ein Abbild (Geist) verliert nichts; wer gegen eins
- * verliert, zahlt trotzdem (siehe `ergebniszeile` in KampfAnzeige.tsx).
+ * verliert, zahlt trotzdem (wie schon in der alten Kampfanzeige).
  */
 
 import type { ReactNode } from 'react';
 
-import type { Seite } from '../KampfAnzeige';
+import type { Seite } from '../kampfbericht';
 import { tz } from '../text';
 import { Herz } from './grafik';
 import stil from './neu.module.css';
@@ -95,7 +94,7 @@ export function Rundenende({
  * „Zuschauen" fuer den ersten laufenden Kampf und eine Zeile je Paar zum
  * Umschalten. Ob ein Paar noch laeuft, ist der Vergleich seiner Dauer aus der
  * Sicht mit der Uhr der Arena — dieselbe Bremse wie `ergebniszeile` in
- * KampfAnzeige.tsx, damit kein Ausgang vor seiner Zeit verraten wird.
+ * der alten Kampfanzeige, damit kein Ausgang vor seiner Zeit verraten wird.
  */
 export function Zuschauen({
   paarungen,

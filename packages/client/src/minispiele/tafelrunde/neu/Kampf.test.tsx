@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Kampfbericht, Kampfereignis, Kampfpaarung } from '../KampfAnzeige';
+import type { Kampfbericht, Kampfereignis, Kampfpaarung } from '../kampfbericht';
 import { Abschluss } from './Abschluss';
 import { Kampf } from './Kampf';
 import { Rundenende } from './Rundenende';

@@ -2863,3 +2863,15 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* Die Striche des gezeichneten Rollenzeichens (`RollenZeichen` in grafik.tsx).
+   Bis zum 28.11.2026 stand die Regel in styles.css beim alten Tafelrunde;
+   sie gilt ueberall, wo das Zeichen steht — auch in Blaettern ausserhalb des
+   Tisches —, deshalb global. */
+:global(.tr-rolle) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

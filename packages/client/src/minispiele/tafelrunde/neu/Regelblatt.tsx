@@ -18,7 +18,7 @@
 import { useState } from 'react';
 
 import type { Einheit, Faehigkeit } from '../sicht';
-import { type Synergie, bonusSatz } from '../Synergien';
+import { type Synergie, bonusSatz } from '../marken';
 import {
   einheitName,
   faehigkeitName,

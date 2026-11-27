@@ -22,9 +22,8 @@
 /**
  * Ein Sitz, so weit ihn die Leiste braucht.
  *
- * Strukturell und nicht als Import aus screens/Tafelrunde.tsx: Dort ist die
- * Sicht abgeschrieben (der Client kennt die Spielmodule nicht), und ein
- * Import in die Gegenrichtung wäre ein Kreis. Sowohl `EigeneSicht` als auch
+ * Strukturell und nicht als Import aus sicht.ts: Die Sicht beschreibt sich
+ * mit Hilfe dieser Datei, ein Import in die Gegenrichtung wäre ein Kreis. Sowohl `EigeneSicht` als auch
  * `FremdeSicht` passen auf diese Form.
  */
 export interface Sitzstand {
@@ -74,7 +73,7 @@ export function nochDabei(plaetze: readonly Leistenplatz[]): number {
 
 /**
  * Ein angesetzter Kampf, so weit ihn diese Datei braucht — dieselbe Form wie
- * `Kampfpaarung` in KampfAnzeige.tsx, nur ohne das Protokoll.
+ * `Kampfpaarung` in kampfbericht.ts, nur ohne das Protokoll.
  */
 export interface Paarung {
   a: number;

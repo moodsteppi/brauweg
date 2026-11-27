@@ -45,7 +45,11 @@ alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
 noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
 Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
 (es wäre ein Paar aus 19 Plätzen). Weil man das einer Liste nicht ansieht,
-sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
+sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`. Seit dem 27.11.2026 hat
+Tafelrunde Fähigkeiten mit Mana und Markeneffekte (`faehigkeiten.ts`,
+`synergien.ts`), jede Einheit zählt für eine Marke nur einmal, und es gibt
+weder Neuwürfeln noch Aufstieg (Feldplätze folgen der Runde). Die Oberfläche
+ist seit dem 28.11.2026 nur noch `screens/TafelrundeNeu.tsx`.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und

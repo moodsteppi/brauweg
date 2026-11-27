@@ -75,7 +75,7 @@ const VERGLEICHSBILD = join(WURZEL, 'docs', 'bilder', 'tafelrunde-kamerawinkel.w
  * Ordner einer Wegwerf-Probe liegt, faellt beim naechsten Aufraeumen um; das
  * hier ist dieselbe Datei, nur an einem Platz, der ihr gehoert.
  */
-const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt');
+const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt'); // seit 28.11.2026 entfernt, siehe unten
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
@@ -1306,6 +1306,20 @@ const probeName = argument('--name') ?? 'probe';
 const probeOrdner = argument('--modelle');
 const probeAusgabe = argument('--ausgabe');
 if ((probeModell || probeOrdner) && !probeAusgabe) throw new Error('--modell/--modelle braucht --ausgabe <ordner>');
+/*
+ * SEIT DEM 28.11.2026 GIBT ES DIE ALTEN BLAETTER NICHT MEHR. Das alte
+ * Tafelrunde ist entfernt, mit ihm die fuenf KayKit-Blaetter unter
+ * public/tafelrunde/figuren3d/ und ihre Lizenzdatei. Was dieses Skript ohne
+ * `--modell`/`--modelle` tut (KayKit holen, Rollenblaetter schreiben,
+ * Vergleichsbild), steht noch darunter, wuerde aber in einen Ordner
+ * schreiben, den der Client nicht mehr liest. Die neuen Figuren entstehen
+ * ueber `--modelle` (docs/ASSETS-TAFELRUNDE-NEU.md, serie-final.sh).
+ */
+if (!probeModell && !probeOrdner) {
+  throw new Error(
+    'Die KayKit-Blaetter des alten Tafelrunde gibt es nicht mehr. Aufruf: --modelle <ordner> --ausgabe <ordner> (siehe docs/ASSETS-TAFELRUNDE-NEU.md).',
+  );
+}
 
 // Fester Name statt `mkdtemp`: Die 17,6 MB Originale sollen beim zweiten Lauf
 // nicht noch einmal aus dem Netz kommen (`hole()` ueberspringt, was schon da

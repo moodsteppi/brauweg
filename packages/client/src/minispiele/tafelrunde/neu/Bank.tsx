@@ -8,7 +8,7 @@
  */
 
 import type { Einheit } from '../sicht';
-import { markenFarbe } from '../Synergien';
+import { markenFarbe } from '../marken';
 import { tz } from '../text';
 import { type Kaempfer, type Ort, gleicherOrt, ortSchluessel } from '../zuege';
 import type { Zeigerrufe } from '../ziehen';

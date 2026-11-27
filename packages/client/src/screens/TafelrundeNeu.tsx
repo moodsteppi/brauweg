@@ -24,7 +24,7 @@ import {
   zeichenBild,
 } from '../figuren3d/grafik-neu';
 import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../minispiele/tafelrunde/sicht';
-import type { Synergie } from '../minispiele/tafelrunde/Synergien';
+import type { Synergie } from '../minispiele/tafelrunde/marken';
 import type { BotLevel } from '../protocol';
 import { BeitretenSeite, EinstiegSeite, ErstellenSeite } from '../minispiele/tafelrunde/neu/Einstieg';
 import { ROLLEN, figurBlatt } from '../minispiele/tafelrunde/neu/grafik';

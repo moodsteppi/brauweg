@@ -46,7 +46,7 @@ const NACHGELADEN = [
   'Runner',
   'SkatTable',
   'Table',
-  'Tafelrunde',
+  'TafelrundeNeu',
   'WizardTable',
 ];
 
@@ -80,8 +80,8 @@ describe('Paketaufteilung von App.tsx', () => {
 
   /*
    * Der Suchparameter des geteilten Tischlinks wird beim Start gelesen, noch
-   * bevor irgendein Bildschirm feststeht. Kaeme er wie frueher aus
-   * `screens/Tafelrunde`, zoege diese eine Zeichenkette den ganzen Schirm ins
+   * bevor irgendein Bildschirm feststeht. Kaeme er aus dem Schirm
+   * (`screens/TafelrundeNeu`), zoege diese eine Zeichenkette den ganzen Schirm ins
    * Hauptpaket zurueck und die Aufteilung waere fuer Tafelrunde aufgehoben.
    */
   it('holt den Tischlink aus dem eigenen kleinen Modul, nicht aus dem Schirm', () => {
@@ -103,19 +103,18 @@ describe('Paketaufteilung von App.tsx', () => {
   });
 
   /*
-   * Tafelrunde wartet beim Antippen auf sein Paket UND auf 23 Bilder. Bis zum
-   * 6.9.2026 waren das zwei Vorhaenge hintereinander: der Lade-Pinguin fuer
-   * das Paket, danach der Ladebildschirm mit dem Balken fuer die Bilder.
-   * Faellt der Rueckfall wieder auf `AppLaedt` zurueck, sieht man den ersten
-   * Teil der Wartezeit erneut als Spinner ohne Fortschritt — und der Balken
-   * danach unterschlaegt ihn. Der Import muss statisch bleiben: Ein
-   * nachgeladener Rueckfall ist keiner.
+   * Tafelrunde wartet beim Antippen auf sein Paket. Bis zum 6.9.2026 waren
+   * das zwei Vorhaenge hintereinander: der Lade-Pinguin fuer das Paket,
+   * danach ein Ladebildschirm fuer die Bilder. Faellt der Rueckfall wieder auf
+   * `AppLaedt` zurueck, sieht man den ersten Teil der Wartezeit erneut als
+   * Spinner. Der Import muss statisch bleiben: Ein nachgeladener Rueckfall ist
+   * keiner. (Seit dem 28.11.2026 das Ladebild der neuen Oberflaeche — der
+   * alte Ladevorhang ging mit dem alten Tafelrunde.)
    */
-  it('zeigt beim Nachladen von Tafelrunde seinen Ladebildschirm, nicht den Spinner', () => {
-    expect(APP).toMatch(/^import \{ Ladevorhang \} from '\.\/minispiele\/tafelrunde\/Ladevorhang';$/m);
-    expect(APP).toContain('<Ladevorhang onAbbrechen=');
+  it('zeigt beim Nachladen von Tafelrunde sein Ladebild, nicht den Spinner', () => {
+    expect(APP).toMatch(/^import \{ Ladebild \} from '\.\/minispiele\/tafelrunde\/neu\/Ladebild';$/m);
     // Und zwar an BEIDEN Wegen zum Schirm: Spielauswahl und Lobby/Tisch.
-    expect(APP.split('<Ladevorhang onAbbrechen=')).toHaveLength(3);
+    expect(APP.split('<Suspense fallback={<Ladebild onAbbrechen=')).toHaveLength(3);
   });
 
   /*

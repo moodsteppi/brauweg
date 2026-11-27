@@ -145,7 +145,18 @@ nichts.
 | #125 | Suche: wer im Tischbau nachfragt, sucht noch | überholt — `imBau` ist seit dem 07.09. im Stand unten beschrieben |
 | #58 | Tafelrunde: Zeitraffer ×2, 14 Startleben | überholt — beides steht in `regeln.ts`; der Zweig liegt auf der alten Historie und darf so nicht gemerged werden |
 
-**Tafelrunde ruht seit dem 26.09.2026.** Die letzte inhaltliche Änderung am
+**Tafelrunde ist am 27./28.11.2026 neu gebaut** (PRs #429 bis #432 und das
+Entfernen des alten Bildschirms). Oberfläche nur noch
+`packages/client/src/screens/TafelrundeNeu.tsx` und
+`minispiele/tafelrunde/neu/`. Figuren je Einheit (Pinguin-Helden und Freunde,
+`docs/ASSETS-TAFELRUNDE-NEU.md`). Fähigkeiten mit Mana und Markeneffekte im
+Regelkern (`docs/TAFELRUNDE-FAEHIGKEITEN.md`). Kein Neuwürfeln und kein
+Aufstieg mehr: Die Feldplätze folgen der Runde (2 bis 7), Preise 2/3/4. Jede
+Einheit zählt für eine Marke nur einmal. Plan und Entscheidungen:
+`docs/TAFELRUNDE-NEU-UMSETZUNG.md`. In der App steht das Spiel weiter auf
+„Bald“. Der Absatz darunter beschreibt den Stand davor.
+
+**Tafelrunde ruhte vom 26.09. bis zum 27.11.2026.** Die letzte inhaltliche Änderung am
 Modul ist #271 (die Bot-Bewertung `staerke` sagt die Rangfolge im Kampf nicht
 vorher). Seitdem hat der Bildschirm nur Querschnittsarbeit gesehen: den neuen
 Look der Einstiege (#283), den Gast-Hinweis (#288), die iOS-Ersatzfarben und

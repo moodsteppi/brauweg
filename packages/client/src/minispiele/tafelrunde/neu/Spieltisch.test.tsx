@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Kampfpaarung } from '../KampfAnzeige';
+import type { Kampfpaarung } from '../kampfbericht';
 import { type Aktion, Spieltisch } from './Spieltisch';
 import { FAEHIGKEITEN, KATALOG, STUFENWERTE, TABELLE, ruestsicht } from './testdaten';
 
