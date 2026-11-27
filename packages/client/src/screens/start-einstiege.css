@@ -331,30 +331,12 @@
   font: 400 clamp(15px, 4vw, 18px)/1 var(--hb-anz);
 }
 
-/* Das quadratische Browort-Motiv nutzt die gesamte Kachel; die Beschriftung
-   bleibt über dem dunklen Bildfuß lesbar. */
+/* Wie der Lern-Pinguin: freigestelltes Motiv, gleiche Größe und freier Textbereich. */
 .hb .start-browort > .start-kachel-szene {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  max-width: none;
-  height: 100%;
   border: 0;
   border-radius: 0;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
-  filter: none;
-}
-.hb .start-browort::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(transparent 45%, #0c201c99 73%, #0c201ce8);
-}
-.hb .start-browort .start-rahmen-ecken {
-  z-index: 2;
 }
 .hb .hb-weiter.start-holzrahmen {
   min-height: 92px;

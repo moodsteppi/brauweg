@@ -13,3 +13,9 @@ Die Nutzerkorrektur ersetzt den großen Spielen-Banner durch ein Vierer-Mosaik m
 Zusätzliche Grafiken: `play.webp` (rundes Walnussholz-/Messingmedaillon, grünes Emaillefeld, goldenes Play-Dreieck) und `lernen.webp` (Pinguinlehrer mit Buch und Spielkarten). Beide freigestellt, ohne eingebrannte Schrift. Originale im Unterordner `wappen`, Spielszene im Unterordner `szene`. Die ursprüngliche Spielszene bleibt für den Spiele-Einstieg bei eingeschränktem Umfang verfügbar. Neue Originale bleiben bis zur Veröffentlichungsfreigabe lokal.
 
 Feinschliff: Play ohne sichtbaren Text (zugänglicher Name bleibt), dezente Vergrößerung und Goldschein bei Maus-Hover sowie Druckeffekt beim Tippen. Reduzierte Bewegung wird respektiert. Browort verwendet das vorhandene quadratische Staging-Motiv flächig mit dunklem Textbereich. Soziale Kanäle stehen nach den eigenen Spielen ganz am Seitenende. Weiterspielen erhält denselben flexiblen Holz-/Messingrahmen.
+
+## Browort und Kategorienregister
+
+Nutzerkorrektur: Das Bravo-Motiv entfällt im Startmosaik. Neues freigestelltes Browort-Icon im gleichen Format wie der Lern-Pinguin: kleines hölzernes Worträtsel, fünf Buchstabensteine „WORTE“, Pinguin mit Lupe. Keine Hintergrundszene, kein eingebrannter Spieltitel, echter Alphakanal. Original lokal im Unterordner `wappen`, WebP `hub/start-einstiege/browort.webp`.
+
+Games und Collection erhalten gemeinsame horizontale Register mit zurückhaltender Walnussholz-Textur, kleinen eckigen Bildfassungen, Messingkante und grüner aktiver Fläche mit goldener Unterstreichung. Vorhandene SVG-Kategoriesymbole werden für die Games-Register wiederverwendet; Filterlogik und übrige Spielkacheln bleiben erhalten. Texturbrief: dunkles Holz, feine horizontale Maserung, gleichmäßiges Licht, keine Rahmen, Nägel, Texte oder Gegenstände. Original lokal `art/kategorie-register`, ausgeliefert als `hub/register/walnuss.webp`.

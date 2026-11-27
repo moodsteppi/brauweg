@@ -145,7 +145,7 @@ export function StartNeu({
             className="start-kachel-szene"
             src={
               onBrowort
-                ? '/hub/startkacheln/browort.webp'
+                ? '/hub/start-einstiege/browort.webp'
                 : '/hub/start-einstiege/spielen.webp'
             }
             alt=""
