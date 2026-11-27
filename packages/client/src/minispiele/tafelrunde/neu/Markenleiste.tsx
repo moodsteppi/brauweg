@@ -16,7 +16,7 @@ import { type Synergie, type Synergiestand, bonusSatz, markenFarbe, traegerVon }
 import type { Einheit } from '../sicht';
 import { einheitName, markeName, markeStufeText, markeWirkung, tz } from '../text';
 import { Blatt } from './Blatt';
-import { Figur, MarkeZeichen, kostenStufe } from './grafik';
+import { Figur, Kurzname, MarkeZeichen, kostenStufe } from './grafik';
 import stil from './neu.module.css';
 
 export function Markenleiste({
@@ -136,7 +136,7 @@ export function Markenpopup({
               <span className={stil.traegerBild}>
                 <Figur einheit={e} klasse={stil.portraetFigur} />
               </span>
-              <span className={stil.traegerName}>{einheitName(e)}</span>
+              <Kurzname name={einheitName(e)} klasse={stil.traegerName} />
               {aufBrett.has(e.id) && <em>{tz('neu.marke.aufFeld')}</em>}
               {!aufBrett.has(e.id) && aufBank.has(e.id) && <em>{tz('neu.marke.aufBank')}</em>}
             </button>

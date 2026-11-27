@@ -1730,6 +1730,7 @@
 .karte {
   position: relative;
   aspect-ratio: 0.7;
+  container-type: inline-size;
   --rahmen: var(--tn-kontur);
 }
 
@@ -1860,22 +1861,33 @@
   box-shadow: 0 0 0 1.5px var(--tn-gold), 0 0 8px var(--tn-gold);
 }
 
+/* Lange Namen eine Stufe kleiner (`data-lang` ab 13 Zeichen). */
+.karteName[data-lang] {
+  font-size: clamp(7.5px, 12.5cqw, 10px);
+}
+
 .karteName {
   position: absolute;
   left: 6%;
   right: 6%;
   bottom: 11%;
   padding: 10px 1px 2px;
-  font-size: 10px;
+  /* Mit der Karte kleiner (Container-Einheit, `.karte` misst sich selbst),
+     zweizeilig mit Silbentrennung — lange Einzelwoerter wurden sonst mitten
+     im Buchstaben abgeschnitten. Siehe `Kurzname` in grafik.tsx. */
+  font-size: clamp(8px, 14.5cqw, 11px);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.08;
   text-align: center;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: anywhere;
   background: linear-gradient(180deg, transparent, rgba(7, 19, 47, 0.92) 55%);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  z-index: 3;
+  z-index: 3
 }
 
 .kartePreis {
@@ -2145,11 +2157,19 @@
   border-radius: 8px;
 }
 
+.traegerName[data-lang] {
+  font-size: 9px;
+}
+
 .traegerName {
+  max-width: 100%;
   font-size: 10px;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.08;
   text-align: center;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: anywhere
 }
 
 /* ------------------------------------------------------------------------ */
