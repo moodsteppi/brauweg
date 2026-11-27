@@ -1,14 +1,14 @@
 /* Einheitliche Spielformate, auch für Solo, Sammlungen und angekündigte Spiele. */
-.hb-einheitlich .hb-reihe { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; overflow:visible; }
-.hb-einheitlich .hb-sk { display:flex; flex-direction:column; width:100%; min-width:0; max-width:none; text-decoration:none; color:inherit; text-align:left; overflow:hidden; }
-.hb-einheitlich .hb-sk-bild { display:block; flex:none; width:100%; height:auto; aspect-ratio:1; background-size:cover; background-position:center; }
-.hb-einheitlich .hb-sk strong { overflow-wrap:anywhere; }
-.hb-einheitlich .hb-sk small { margin-top:auto; }
-.hb-einheitlich .hb-blk>.hb-sk { width:calc((100% - 24px)/3); max-width:180px; }
-.hb-einheitlich .hb-liste { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
-.hb-einheitlich .hb-bald { display:flex; flex-direction:column; gap:0; padding:0 0 10px; border:1px solid #405678; border-radius:16px; overflow:hidden; background:#182b50; }
-.hb-einheitlich .hb-bald-flaeche { display:flex; flex-direction:column; width:100%; padding:0; text-align:left; }
-.hb-einheitlich .hb-bald-bild { width:100%; height:auto; aspect-ratio:1; flex:none; border-radius:0; background-size:cover; background-position:center; }
-.hb-einheitlich .hb-bald-text { padding:10px; }
-.hb-einheitlich .hb-bald .hb-kn,.hb-einheitlich .hb-bald>.hb-bald-marke { margin:0 10px; align-self:stretch; text-align:center; }
-@media(max-width:500px) { .hb-einheitlich .hb-reihe,.hb-einheitlich .hb-liste { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .hb-einheitlich .hb-sk strong { font-size:14px; } .hb-einheitlich .hb-sk small { font-size:11px; } .hb-einheitlich .hb-bald-text strong { font-size:13px; } .hb-einheitlich .hb-bald-text small { font-size:10px; } .hb-einheitlich .hb-bald .hb-kn { min-width:0; padding:8px 3px; font-size:11px; } }
+.hb .hb-einheitlich .hb-reihe { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; overflow:visible; }
+.hb .hb-einheitlich .hb-sk { display:flex; flex-direction:column; width:100%; min-width:0; max-width:none; text-decoration:none; color:inherit; text-align:left; overflow:hidden; }
+.hb .hb-einheitlich .hb-sk-bild { display:block; flex:none; width:100%; height:auto; aspect-ratio:1; background-size:cover; background-position:center; }
+.hb .hb-einheitlich .hb-sk strong { overflow-wrap:anywhere; }
+.hb .hb-einheitlich .hb-sk small { margin-top:auto; }
+.hb .hb-einheitlich .hb-blk>.hb-sk { width:calc((100% - 24px)/3); max-width:180px; }
+.hb .hb-einheitlich .hb-liste { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+.hb .hb-einheitlich .hb-bald { display:flex; flex-direction:column; gap:0; padding:0 0 10px; border:1px solid #405678; border-radius:16px; overflow:hidden; background:#182b50; }
+.hb .hb-einheitlich .hb-bald-flaeche { display:flex; flex-direction:column; width:100%; padding:0; text-align:left; }
+.hb .hb-einheitlich .hb-bald-bild { width:100%; height:auto; aspect-ratio:1; flex:none; border-radius:0; background-size:cover; background-position:center; }
+.hb .hb-einheitlich .hb-bald-text { padding:10px; }
+.hb .hb-einheitlich .hb-bald .hb-kn,.hb .hb-einheitlich .hb-bald>.hb-bald-marke { margin:0 10px; align-self:stretch; text-align:center; }
+@media(max-width:500px) { .hb .hb-einheitlich .hb-reihe,.hb .hb-einheitlich .hb-liste { grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; } .hb .hb-einheitlich .hb-sk strong { font-size:14px; } .hb .hb-einheitlich .hb-sk small { font-size:11px; } .hb .hb-einheitlich .hb-bald-text strong { font-size:13px; } .hb .hb-einheitlich .hb-bald-text small { font-size:10px; } .hb .hb-einheitlich .hb-bald .hb-kn { min-width:0; padding:8px 3px; font-size:11px; } }
