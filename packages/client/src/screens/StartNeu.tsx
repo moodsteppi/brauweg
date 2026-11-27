@@ -145,7 +145,7 @@ export function StartNeu({
             className="start-kachel-szene"
             src={
               onBrowort
-                ? '/hub/browort-hero.webp'
+                ? '/hub/startkacheln/browort.webp'
                 : '/hub/start-einstiege/spielen.webp'
             }
             alt=""
@@ -163,16 +163,13 @@ export function StartNeu({
             alt=""
             fetchPriority="high"
           />
-          <strong>{t('start.spielen.titel')}</strong>
         </button>
       </section>
-
-      <SozialeKanaele kompakt />
 
       {activeTable && inAppSichtbar(activeTable.gameId) && (
         <button
           type="button"
-          className="hb-weiter"
+          className="hb-weiter start-holzrahmen"
           onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
         >
           <span
@@ -195,6 +192,7 @@ export function StartNeu({
           <span className="hb-weiter-los" aria-hidden="true">
             ›
           </span>
+          <RahmenEcken />
         </button>
       )}
 
@@ -233,6 +231,7 @@ export function StartNeu({
           )}
         </div>
       </section>
+      <SozialeKanaele kompakt />
     </div>
   );
 }
