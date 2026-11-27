@@ -1,0 +1,24 @@
+/* Neun Segmente statt eines gestreckten Bildes: Ecken bleiben bei jeder
+   Kachelbreite gleich groß. Die transparente Mitte verdeckt keine Inhalte. */
+.hb.hb :is(.hb-sk, .hb-startkachel, .hb-social-link, .sam-bereichskachel, .sam-design, .markt-angebot, .markt-held, .hb-quer, .hb-party) {
+  position: relative;
+  --rahmen-ecke: 19px;
+  border-radius: 17px;
+  border-color: transparent;
+}
+.hb.hb :is(.hb-sk, .hb-startkachel, .hb-social-link, .sam-bereichskachel, .sam-design, .markt-angebot, .markt-held, .hb-quer, .hb-party)::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: var(--rahmen-ecke, 12px) solid transparent;
+  border-image: url('/hub/rahmen/holz-gold.webp') 13% / var(--rahmen-ecke, 12px) / 0 stretch;
+  pointer-events: none;
+  z-index: 5;
+}
+.hb.hb .hb-social-link { --rahmen-ecke: 15px; border-radius: 13px; }
+.hb.hb .hb-sk-bild { border-bottom: 1px solid #bf9241; }
+.hb.hb .sam-design.ist-aktiv { outline: 2px solid #ffe194; outline-offset: 2px; }
+.hb.hb :is(.hb-sk, .hb-startkachel, .hb-social-link):focus-visible {
+  outline: 3px solid #ffe194;
+  outline-offset: 3px;
+}

@@ -29,7 +29,7 @@
 .sammlung-neu .sam-hinweis {
   font-size: 12px;
   line-height: 1.5;
-  color: #a9bedc;
+  color: #bdcdb8;
   margin: 14px 0 18px;
 }
 .sammlung-neu .sam-spiel {
@@ -55,7 +55,7 @@
   font:
     700 10px/1.4 "Nunito Variable",
     sans-serif;
-  color: #94abc9;
+  color: #b0c5a9;
   margin-top: 3px;
 }
 .sammlung-neu .sam-bereichskacheln {
@@ -73,16 +73,16 @@
   padding: 10px 8px 12px;
   min-width: 0;
   text-align: left;
-  border: 1px solid #47638c;
+  border: 1px solid #58765c;
   border-radius: 18px;
-  background: linear-gradient(150deg, #233e61, #10233f 85%);
-  box-shadow: 0 5px 0 #07152b66;
+  background: linear-gradient(150deg, #2c4b38, #142c20 85%);
+  box-shadow: 0 5px 0 #071b1066;
   color: #f4f7ff;
   cursor: pointer;
 }
 .sammlung-neu .sam-bereichskachel:hover {
   border-color: #e6c479;
-  background: linear-gradient(150deg, #2a496c, #132b48);
+  background: linear-gradient(150deg, #365b40, #1a3828);
 }
 .sammlung-neu .sam-bereichskachel:focus-visible,
 .sammlung-neu .sam-design:focus-visible,
@@ -115,7 +115,7 @@
   display: block;
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid #d1e7ff15;
+  border-top: 1px solid #d9edd115;
 }
 .sammlung-neu .sam-ausgeruestet small {
   display: block;
@@ -142,7 +142,7 @@
   margin: 7px 0;
   overflow: hidden;
   border-radius: 12px;
-  background: radial-gradient(ellipse at 50% 75%, #46739455, transparent 70%);
+  background: radial-gradient(ellipse at 50% 75%, #5a865155, transparent 70%);
 }
 .sammlung-neu .sam-vorschau img {
   display: block;
@@ -163,13 +163,13 @@
   position: absolute;
   inset: 0;
   border-radius: 6px;
-  border: 1px solid #a0bbd3;
-  background: linear-gradient(135deg, #465f7d, #152d4b);
+  border: 1px solid #9cb58f;
+  background: linear-gradient(135deg, #4a6846, #1a3524);
   transform: rotate(-18deg) translate(-8px, 2px);
 }
 .sammlung-neu .sam-kartenfaecher > i:nth-child(2) {
   transform: rotate(10deg) translate(7px, 2px);
-  background: #234464;
+  background: #294c32;
 }
 .sammlung-neu .sam-musterkarte {
   position: absolute;
@@ -268,13 +268,13 @@
   height: 48px;
   flex-basis: 48px;
   padding: 9px;
-  background: #223958;
-  border: 1px solid #536984;
+  background: #294332;
+  border: 1px solid #607454;
   border-radius: 14px;
 }
 .sammlung-neu .sam-detailtitel small {
   font-size: 11px;
-  color: #a8bddb;
+  color: #bdcdb8;
 }
 .sammlung-neu .sam-detailtitel h2 {
   font:
@@ -293,16 +293,16 @@
   gap: 6px;
   min-height: 44px;
   padding: 8px 10px;
-  border: 1px solid #47638c;
+  border: 1px solid #58765c;
   border-radius: 12px;
-  color: #becfe9;
+  color: #c6d6bd;
   font-size: 12px;
   font-weight: 800;
-  background: #132844;
+  background: #1b3527;
 }
 .sammlung-neu .sam-bereichwechsel button[aria-pressed="true"] {
   background: #ffce5e;
-  color: #142947;
+  color: #183124;
   border-color: #ffe08b;
 }
 .sammlung-neu .sam-bereichwechsel button[aria-pressed="true"] .sam-icon {
