@@ -109,7 +109,7 @@ function Symbol({ children }: { children: React.ReactNode }): React.JSX.Element 
  * für beide Plattformen fragen können.
  */
 export function chipsFuer(spielbar: readonly string[], app: boolean): readonly { id: string; titel: string }[] {
-  const belegt = KATEGORIEN.filter((k) => spielbar.some((id) => k.spiele.includes(id)));
+  const belegt = KATEGORIEN.filter((k) => k.id === 'denken' || spielbar.some((id) => k.spiele.includes(id)));
   const chips = [{ id: 'broremote', titel: 'BroRemote' }, ...belegt.map((k) => ({ id: k.id, titel: t(k.titel) }))];
   return app ? [...chips, { id: 'bald', titel: t('spielwahl.kategorie.bald') }] : chips;
 }
@@ -290,7 +290,6 @@ export function SpieleNeu({
       <header className="hb-kopfzeile">
         <h1 className="hb-titel">{t('spielwahl.titel')}</h1>
       </header>
-      {filter === 'alle' && <a className="hb-broremote" href="/ice-clash"><img src="/ice-clash/titel.webp" alt="" style={{width:88,height:88,objectFit:"cover",borderRadius:20}}/><span><strong>Bro Ice Clash</strong><small>Bleib auf dem Eis. Online mit 2–4 Pinguinen.</small></span><b aria-hidden="true">›</b></a>}
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-chips" role="tablist" aria-label={t('spielwahl.kategorien')}>
         {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
@@ -317,7 +316,7 @@ export function SpieleNeu({
           const liste = spielbar
             .filter((g) => k.spiele.includes(g.id))
             .sort((a, b) => k.spiele.indexOf(a.id) - k.spiele.indexOf(b.id));
-          if (liste.length === 0 || !zeige(k.id)) return null;
+          if ((liste.length === 0 && k.id !== 'denken') || !zeige(k.id)) return null;
           if (k.id === 'trink') {
             const party = liste[0]!;
             return (
@@ -370,9 +369,9 @@ export function SpieleNeu({
               <h2 className="hb-ab">
                 <Symbol>{k.icon}</Symbol>
                 {t(k.titel)}
-                <span className="hb-ab-zusatz">{liste.length}</span>
+                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 1 : 0)}</span>
               </h2>
-              <div className="hb-reihe">{liste.map(karte)}</div>
+              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{liste.map(karte)}</div>
             </section>
           );
         })}

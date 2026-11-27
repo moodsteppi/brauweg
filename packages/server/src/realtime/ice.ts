@@ -89,7 +89,7 @@ export class IceGateway {
         host: r.host,
         offen: r.offen,
         warte: Math.max(0, 30 - Math.floor((Date.now() - r.seit) / 1000)),
-        ...r.spiel.sicht(),
+        ...r.spiel.sicht(id),
       });
   }
   private auffuellen(r: Raum) {
@@ -128,6 +128,10 @@ export class IceGateway {
           return;
         }
         if (!raum) {
+          if (n.version !== 2)
+            throw Error(
+              "Bitte lade Ice Clash neu. Die neue Version verwendet Planungszüge.",
+            );
           if (n.art === "weiter") {
             const r = this.raeume.get(String(n.code));
             const sitz = r?.schluessel.get(String(n.token));
@@ -194,21 +198,23 @@ export class IceGateway {
           }
           raum.abmeldungen.delete(id);
           raum.leitungen.set(id, ws);
-          raum.spiel.eingabe(id, 0, 0, false, false);
+
           raum.spiel.spieler.find((p) => p.id === id)!.verbunden = true;
           this.verteilen(raum);
           return;
         }
         if (raum.leitungen.get(id) !== ws) return;
         const p = raum.spiel.spieler.find((p) => p.id === id)!;
-        if (n.art === "eingabe")
-          raum.spiel.eingabe(
+        if (n.art === "plan")
+          raum.spiel.planen(
             id,
+            Number(n.zug),
             Number(n.x),
             Number(n.y),
-            n.laden === true,
+            n.fest === true,
             n.item === true,
           );
+        if (n.art === "emote") raum.spiel.emote(id, String(n.emote));
         if (n.art === "bereit" && raum.spiel.phase === "lobby")
           p.bereit = n.bereit === true;
         if (

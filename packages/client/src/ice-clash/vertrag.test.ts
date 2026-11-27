@@ -10,7 +10,7 @@ describe("Ice-Clash-Sichtvertrag", () => {
     p.starten();
     for (let i = 0; i < 100; i++) p.schritt();
     const s = pruefeSicht(p.sicht());
-    expect(s.phase).toBe("spiel");
+    expect(s.phase).toBe("planung");
     expect(s.spieler).toHaveLength(4);
     expect(s.geschosse).toEqual([]);
     expect(s.radius).toBe(260);
