@@ -444,8 +444,21 @@ function rasterVon(bewegungen) {
   return { je, spalten, zeilen: zeile };
 }
 
-/** Kantenlaenge eines Einzelbildes im fertigen Sheet. */
-const KANTE = 128;
+/** Wert eines Schalters `--name wert` aus der Befehlszeile, sonst undefined. */
+function argument(name) {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+/**
+ * Kantenlaenge eines Einzelbildes im fertigen Sheet.
+ *
+ * `--kante` gilt nur fuer die Stilprobe (siehe `probeModell`): Die neuen
+ * Figuren sollen 192 oder 256 Pixel bekommen, und das entscheidet sich am
+ * gerenderten Blatt. Die heutigen fuenf Blaetter bleiben bei 128, solange
+ * figuren3d.ts (FIGUREN3D_KANTE) nichts anderes sagt.
+ */
+const KANTE = Number(argument('--kante') ?? 128);
 
 /**
  * Gerendert wird doppelt so gross und danach halbiert.
@@ -1258,6 +1271,24 @@ async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
 
 const nurVergleich = process.argv.includes('--vergleich');
 
+/**
+ * Betriebsart C, die Stilprobe "Tafelrunde neu" (docs/ASSETS-TAFELRUNDE-NEU.md):
+ *
+ *   node bildfolgen-rendern.mjs --modell figur.glb --name dorfwache \
+ *        --ausgabe <ordner> [--kante 256]
+ *
+ * Nimmt EIN fertig gerigtes Modell, dessen fuenf Clips schon so heissen wie
+ * die Bewegungen (stand, lauf, schlag, getroffen, tod) und das einen Knochen
+ * `hips` hat, und legt das Blatt in einen beliebigen Ordner — NICHT unter
+ * `public/`. Die Kamera, das Licht und der Ausschnitt sind dieselben wie fuer
+ * die Blaetter im Spiel; genau deshalb laeuft die Probe hier durch und nicht
+ * durch einen eigenen Renderer.
+ */
+const probeModell = argument('--modell');
+const probeName = argument('--name') ?? 'probe';
+const probeAusgabe = argument('--ausgabe');
+if (probeModell && !probeAusgabe) throw new Error('--modell braucht --ausgabe <ordner>');
+
 // Fester Name statt `mkdtemp`: Die 17,6 MB Originale sollen beim zweiten Lauf
 // nicht noch einmal aus dem Netz kommen (`hole()` ueberspringt, was schon da
 // ist). Wer wirklich frisch laden will, loescht den Ordner.
@@ -1265,8 +1296,12 @@ const zwischen = join(tmpdir(), 'brauweg-figuren3d');
 await mkdir(zwischen, { recursive: true });
 console.log(`Zwischenstand: ${zwischen}`);
 
-const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
-await baueModelle(zwischen, gebraucht);
+if (probeModell) {
+  await writeFile(join(zwischen, `${probeName}.glb`), await readFile(resolve(probeModell)));
+} else {
+  const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
+  await baueModelle(zwischen, gebraucht);
+}
 
 const { server, port } = await starteServer(SEITE, zwischen);
 const { chromium } = await ladePaket('playwright');
@@ -1589,7 +1624,30 @@ async function baueVergleich() {
 // Los
 // ---------------------------------------------------------------------------
 
-if (nurVergleich) {
+/**
+ * Die Stilprobe: ein Blatt als WebP und als PNG (das PNG fuer die Vorschau,
+ * die daraus bewegte Bilder schneidet), dazu die Zahlen, die figuren3d.ts
+ * spaeter braucht, als JSON daneben.
+ */
+async function baueProbe() {
+  await mkdir(resolve(probeAusgabe), { recursive: true });
+  const ausschnitt = await messeAusschnitt(seite, [probeName], {
+    grad: KAMERA_GRAD,
+    drehungGrad: DREHUNG_GRAD,
+  });
+  const { png, raster, laengen, fusspunkt } = await rendereBlatt(seite, sharp, probeName, ausschnitt);
+  const basis = join(resolve(probeAusgabe), probeName);
+  await writeFile(`${basis}.png`, png);
+  await sharp(png).webp({ quality: 70, alphaQuality: 100, effort: 6 }).toFile(`${basis}.webp`);
+  const groesse = (await readFile(`${basis}.webp`)).byteLength;
+  const angaben = { kante: KANTE, raster, bewegungen: BEWEGUNGEN, laengen, fusspunkt, groesse };
+  await writeFile(`${basis}.json`, JSON.stringify(angaben, null, 2));
+  console.log(`${probeName}: ${basis}.webp (${kb(groesse)}), Raster ${raster.spalten} x ${raster.zeilen} zu ${KANTE} px`);
+}
+
+if (probeModell) {
+  await baueProbe();
+} else if (nurVergleich) {
   await baueVergleich();
 } else {
   await baueBlaetter();
