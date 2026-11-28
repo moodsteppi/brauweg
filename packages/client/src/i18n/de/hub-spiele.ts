@@ -118,4 +118,13 @@ export default {
   'sammlung.verstanden': 'Verstanden',
   'sammlung.nichtBesessen': 'Dieses Design gehört dir noch nicht. Im Shop findest du deine persönlichen Tagesangebote. Die Auswahl wechselt täglich um 0 Uhr deutscher Zeit.',
   'sammlung.zumShopJa': 'Zum Shop',
+  // „Deine Spiele" ganz oben im Reiter und das Herz der Spielseite (28.11.2026)
+  'spielwahl.deine.titel': 'Deine Spiele',
+  'spielwahl.deine.favoriten': 'Favoriten',
+  'spielwahl.deine.zuletzt': 'Zuletzt gespielt',
+  'spielwahl.deine.solo': 'Solo',
+  'spielwahl.deine.arena': 'Online-Arena',
+  'spielwahl.favorit.marke': 'Favorit',
+  'spielwahl.favorit.knopf': '{spiel} als Favorit',
+  'spielwahl.favorit.fehler': 'Der Favorit ließ sich nicht speichern. Versuch es gleich noch mal.',
 } satisfies Woerterbuch;

@@ -351,11 +351,12 @@ test('Abstimmung: eine Stimme pro Konto und Spiel, nach neuem Abruf erhalten', a
   assert.ok(offen.json().every((g: { meineStimme: boolean }) => !g.meineStimme));
 });
 
-test('alle 18 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
+test('alle 17 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', async t => {
   const s = await setup(); t.after(() => s.close());
   const bald = (await spiele(s, 'app')).filter(g => g.availability === 'preview' && g.id !== 'partykiste');
   // 18 seit dem 04.11.2026: Die Vorschau „Drecksau“ ist als DreckBro spielbar geworden.
-  assert.equal(bald.length, 18);
+  // 17 seit dem 28.11.2026: Der Mehrkampf ist als BroweG-Bock spielbar (src/bock/).
+  assert.equal(bald.length, 17);
   for (const spiel of bald) {
     assert.equal(spiel.abstimmbar, true, spiel.id);
     const res = await s.app.inject({ method: 'POST', url: `/api/games/${spiel.id}/vote`, headers: s.anna('app') });
@@ -367,12 +368,15 @@ test('alle 18 sichtbaren Bald-Einträge der App sind kontogebunden abstimmbar', 
     assert.equal(anna.find((g: {id: string}) => g.id === spiel.id).meineStimme, true, spiel.id);
     assert.equal(ben.find((g: {id: string}) => g.id === spiel.id).meineStimme, false, spiel.id);
   }
-  for (const id of ['prosubway', 'mehrkampf']) {
-    const res = await s.app.inject({ method: 'POST', url: `/api/games/${id}/vote`, headers: s.anna('app') });
+  {
+    const res = await s.app.inject({ method: 'POST', url: '/api/games/prosubway/vote', headers: s.anna('app') });
     assert.equal(res.statusCode, 200);
     const liste = (await s.app.inject({ method: 'GET', url: '/api/games', headers: s.anna('app') })).json();
-    assert.equal(liste.find((g: {id: string}) => g.id === id).votes, 1);
+    assert.equal(liste.find((g: {id: string}) => g.id === 'prosubway').votes, 1);
   }
+  // Der Mehrkampf ist als BroweG-Bock spielbar: keine Stimme mehr.
+  const bock = await s.app.inject({ method: 'POST', url: '/api/games/mehrkampf/vote', headers: s.anna('app') });
+  assert.equal(bock.statusCode, 400);
   const web = await s.app.inject({ method: 'POST', url: '/api/games/prosubway/vote', headers: s.anna('web') });
   assert.equal(web.statusCode, 400, 'Im Web ist der Runner schon spielbar');
 });
@@ -392,11 +396,13 @@ test('jedes in der App freigegebene Tischspiel startet mit Bots', async () => {
   }
 });
 
-test('Webseite: jede sichtbare Vorschau samt Mehrkampf ist kontogebunden abstimmbar, Pro-Subway nicht', async t => {
+test('Webseite: jede sichtbare Vorschau ist kontogebunden abstimmbar, Pro-Subway und Mehrkampf nicht', async t => {
   const s = await setup(); t.after(() => s.close());
   const web = await spiele(s, 'web');
   const bald = web.filter(g => g.availability === 'preview');
-  assert.ok(bald.some(g => g.id === 'mehrkampf'), 'Mehrkampf fehlt auf der Webseite');
+  // Der Mehrkampf ist seit dem 28.11.2026 als BroweG-Bock spielbar und steht
+  // nicht mehr zur Wahl — sein Einstieg ist im Hub, nicht in der Spielliste.
+  assert.equal(web.find(g => g.id === 'mehrkampf'), undefined);
   // Pro-Subway laeuft auf der Webseite schon, es steht dort nicht zur Wahl.
   assert.equal(web.find(g => g.id === 'prosubway'), undefined);
   for (const spiel of bald) {
@@ -425,15 +431,16 @@ test('Webseite: eine Stimme fuer ein Spiel, das in der App noch angekuendigt ist
 
 test('abstimmModiFuer: der Umfang wirkt auf beiden Plattformen', () => {
   const nur = (...frei: string[]) => ({ alles: false, frei: new Set(frei) });
-  assert.deepEqual(abstimmModiFuer('web').map(m => m.id), ['mehrkampf']);
-  assert.deepEqual(abstimmModiFuer('app').map(m => m.id), ['prosubway', 'mehrkampf']);
+  // Der Mehrkampf ist seit dem 28.11.2026 als BroweG-Bock spielbar — kein angekuendigter Modus mehr.
+  assert.deepEqual(abstimmModiFuer('web').map(m => m.id), []);
+  assert.deepEqual(abstimmModiFuer('app').map(m => m.id), ['prosubway']);
   // Ohne Abstimmung im Umfang ist nichts angekuendigt, weder hier noch dort.
   assert.deepEqual(abstimmModiFuer('web', nur('doppelkopf', 'prosubway')), []);
   assert.deepEqual(abstimmModiFuer('app', nur('doppelkopf', 'prosubway')), []);
   // Jeder Modus braucht seine eigene Kennung, wie jedes Vorschau-Spiel.
   assert.deepEqual(abstimmModiFuer('app', nur('abstimmung')), []);
-  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'mehrkampf')).map(m => m.id), []);
   assert.deepEqual(abstimmModiFuer('app', nur('abstimmung', 'prosubway')).map(m => m.id), ['prosubway']);
   // Pro-Subway laeuft auf der Webseite schon — dort nie angekuendigt.
-  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway', 'mehrkampf')).map(m => m.id), ['mehrkampf']);
+  assert.deepEqual(abstimmModiFuer('web', nur('abstimmung', 'prosubway', 'mehrkampf')).map(m => m.id), []);
 });

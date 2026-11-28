@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, SLOTS, WAPPEN, type Kauftruhe, type Slot, type WarView, type WegGrad, type WegStufe } from '../../api';
+import { ApiError, api, SLOTS, WAPPEN, type ActiveTable, type Kauftruhe, type Me, type Schnellspielstand, type Slot, type Suchstand, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
 import { useSprache } from '../../i18n/useSprache';
 import { probeKonto } from '../../screens/probe-konto';
@@ -391,6 +391,124 @@ if (typeof window !== 'undefined' && PROBE.get('tipp')) {
 /* Sprachwahl ohne Server: Speichern gelingt immer, sonst stuende der Fehlersatz im Bild. */
 api.setSprache = async () => ({ ok: true });
 
+/*
+ * Startseiten-Umbau (28.11.2026): Weiterspielen, Quick-Play, Zahnrad,
+ * Favoriten und „Zuletzt gespielt" ohne Server.
+ *
+ *   &tisch=laeuft|wartet|pausiert|keiner   der Tisch, nach dem die Pop-ups fragen
+ *   &schnell=suche|tisch|arena|keins|fehler  was Quick-Play antwortet
+ *   &neu                                     Konto ohne Favoriten und Verlauf
+ *   &bock                                    Bock-Kachel verdrahtet (sonst „Bald")
+ *
+ * Der Stand liegt hier statt im Konto der Probe, weil `api.me` ihn frisch
+ * liefern muss — so prüft die Probe auch das Auffrischen vor dem Pop-up.
+ */
+const TISCH_ART = PROBE.get('tisch') ?? 'laeuft';
+const probeStand: {
+  tisch: ActiveTable | null;
+  favoriten: string[];
+  schnellspiel: string[] | null;
+  zuletzt: { spiel: string; am: string }[];
+} = {
+  tisch:
+    TISCH_ART === 'keiner'
+      ? null
+      : {
+          tableId: 'probe-tisch',
+          gameId: 'doppelkopf',
+          status: TISCH_ART === 'wartet' ? 'waiting' : 'running',
+          paused: TISCH_ART === 'pausiert',
+          visibility: 'public',
+          maxRounds: 8,
+          seats: 4,
+        },
+  favoriten: PROBE.has('neu') ? [] : ['doppelkopf', 'tanks-online'],
+  schnellspiel: null,
+  zuletzt: PROBE.has('neu')
+    ? []
+    : ['skat', 'browort', 'doppelkopf', 'ice-clash', 'filler', 'kartenmanufaktur'].map((spiel, i) => ({
+        spiel,
+        am: new Date(Date.now() - i * 3600000).toISOString(),
+      })),
+};
+function probeVorlieben(): Pick<Me, 'activeTable' | 'vorlieben' | 'zuletzt'> {
+  return {
+    activeTable: probeStand.tisch,
+    vorlieben: { favoriten: [...probeStand.favoriten], schnellspiel: probeStand.schnellspiel },
+    zuletzt: probeStand.zuletzt,
+  };
+}
+api.leaveTable = async () => {
+  probeStand.tisch = null;
+  return { ok: true };
+};
+api.favoritSetzen = async (spiel, an) => {
+  probeStand.favoriten = an ? [...probeStand.favoriten.filter((id) => id !== spiel), spiel] : probeStand.favoriten.filter((id) => id !== spiel);
+  return { favoriten: [...probeStand.favoriten] };
+};
+api.schnellspielKandidaten = async () => ({
+  kandidaten: [
+    { id: 'doppelkopf', art: 'tisch' as const, wartende: 3 },
+    { id: 'skat', art: 'tisch' as const, wartende: 0 },
+    { id: 'filler', art: 'tisch' as const, wartende: 1 },
+    { id: 'brochess', art: 'tisch' as const, wartende: 0 },
+    { id: 'dreckbro', art: 'tisch' as const, wartende: 0 },
+    { id: 'tanks-online', art: 'arena' as const, wartende: 2 },
+    { id: 'ice-clash', art: 'arena' as const, wartende: 0 },
+  ],
+});
+api.schnellspielAuswahl = async (spiele) => {
+  probeStand.schnellspiel = spiele;
+  return { schnellspiel: spiele };
+};
+/* Eine Suche, in die nach drei und sieben Sekunden jemand einläuft; nach 30 s steht der Tisch. */
+let sucheSeit = 0;
+const sucheJetzt = (): Suchstand => {
+  const vergangen = Date.now() - sucheSeit;
+  const wartende = [
+    { id: 'a1', name: 'Eisvogel', bildUrl: null },
+    ...(vergangen > 3000 ? [{ id: 'x1', name: 'Kiebitz', bildUrl: null }] : []),
+    ...(vergangen > 7000 ? [{ id: 'x2', name: 'Zaunkönig', bildUrl: null }] : []),
+  ];
+  return {
+    sucht: vergangen < 30000,
+    suchende: wartende.length,
+    restMs: Math.max(0, 30000 - vergangen),
+    tischId: vergangen >= 30000 ? 'probe-tisch-schnell' : null,
+    wartende,
+  };
+};
+api.schnellspielStarten = async (): Promise<Schnellspielstand> => {
+  const art = PROBE.get('schnell') ?? 'suche';
+  if (art === 'tisch') return { art: 'tisch', gameId: 'skat', tableId: 'probe-tisch-skat' };
+  if (art === 'arena') return { art: 'arena', arena: 'tanks-online' };
+  if (art === 'keins') throw new ApiError('kein_spiel', 'fehler.kein_spiel', 409);
+  if (art === 'fehler') throw new Error('Probe: Quick-Play scheitert');
+  sucheSeit = Date.now();
+  return { art: 'suche', gameId: 'doppelkopf', stand: sucheJetzt() };
+};
+api.sucheStand = async () => sucheJetzt();
+api.sucheAbbrechen = async () => ({ ok: true });
+let probeKontoJetzt: Me | null = null;
+api.me = async () => ({ ...probeKontoJetzt!, ...probeVorlieben() });
+/* Ohne lokalen Server stünde der Spiele-Reiter leer da — dann eine Auswahl wie in der App. */
+const gamesEcht = api.games;
+api.games = async () => {
+  try {
+    return await gamesEcht();
+  } catch {
+    return ['doppelkopf', 'skat', 'filler', 'brochess', 'dreckbro', 'brobluff', 'wizard', 'tafelrunde'].map((id) => ({
+      id,
+      nameKey: `game.${id}`,
+      availability: 'playable' as const,
+      seatCounts: id === 'doppelkopf' ? [4, 5] : id === 'skat' ? [3] : id === 'brochess' ? [2] : [2, 4],
+      votes: 0,
+    }));
+  }
+};
+const rankingEcht = api.ranking;
+api.ranking = async (spiel) => rankingEcht(spiel).catch(() => []);
+
 export function ProbeHub(): React.JSX.Element {
   // Wie die Wurzel App: Umschalten zeichnet das ganze Hub neu.
   useSprache();
@@ -411,16 +529,12 @@ export function ProbeHub(): React.JSX.Element {
     // `&ohneclan`: die Clansuche statt der Halle.
     clubs: PROBE.has('ohneclan') ? [] : [{ id: 'probe-clan', name: 'Die Stichhaltigen' }],
     themes: { doppelkopf: { cardDeck: 'klassisch', tableScene: 'stube', cardBack: '' } },
-    activeTable: {
-      tableId: 'probe-tisch',
-      gameId: 'doppelkopf',
-      status: 'running',
-      paused: false,
-      visibility: 'public',
-      maxRounds: 8,
-      seats: 4,
-    },
+    ...probeVorlieben(),
   }));
+  // `/api/me` der Probe: das Konto mit dem Stand von oben (Tisch, Favoriten).
+  probeKontoJetzt = me;
+  /* Wie reload() in App.tsx: Nach Verlassen, Favorit oder Zahnrad kommt der neue Stand. */
+  const neuLaden = (): void => setMe((alt) => ({ ...alt, ...probeVorlieben() }));
   const nichts = (): void => undefined;
   const suche = new URLSearchParams(window.location.search);
   const anfangsTab = (suche.get('tab') as Tab | null) ?? undefined;
@@ -437,7 +551,9 @@ export function ProbeHub(): React.JSX.Element {
     if (!document.getElementById('probe-iphone')) {
       const stil = document.createElement('style');
       stil.id = 'probe-iphone';
-      stil.textContent = '.hb{right:auto;width:390px;max-width:390px;margin:0}';
+      // min(): Bei 375 pt (iPhone SE/mini) stünde die Probe sonst 15 pt über
+      // den Rand, und alles am rechten Rand (Seitensymbole) wäre abgeschnitten.
+      stil.textContent = '.hb{right:auto;width:min(390px,100vw);max-width:390px;margin:0}';
       document.head.appendChild(stil);
     }
   }
@@ -452,7 +568,8 @@ export function ProbeHub(): React.JSX.Element {
       onSolo={nichts}
       onResume={nichts}
       onThemeChange={(spiel, teil) => setMe(alt => ({ ...alt, themes: { ...alt.themes, [spiel]: { ...(alt.themes[spiel] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' }), ...teil } } }))}
-      onAvatarChange={nichts}
+      onAvatarChange={neuLaden}
+      onBock={PROBE.has('bock') ? nichts : undefined}
       onShowProfile={nichts}
       onSignOut={nichts}
       onDeleted={nichts}

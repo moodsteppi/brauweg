@@ -12,7 +12,10 @@ import { spiele } from '../klang';
 import { HubBildIcon, type HubMotiv } from './HubBildIcon';
 
 /**
- * Der Rahmen des neuen Hubs: Kopf, Online-Zeile, Inhalt, Reiterleiste.
+ * Der Rahmen des neuen Hubs: Kopf, Inhalt, Reiterleiste.
+ *
+ * Die Online-Zeile („5 Spieler gerade am Tisch") ist seit dem 28.11.2026 weg
+ * (Robin, Startseiten-Umbau): Der Kopf zeigt nur noch Spieler und Guthaben.
  *
  * Zustand, Wisch-Geste und alle Blätter bleiben in GameSelect — dieser
  * Rahmen zeichnet nur. So geht beim Umbau keine Funktion verloren: Was das
@@ -34,7 +37,6 @@ export function NeuerRahmen<T extends Reiter>({
   me,
   tab,
   tabFolge,
-  online,
   trophies,
   onWeg,
   kaufbar,
@@ -46,7 +48,6 @@ export function NeuerRahmen<T extends Reiter>({
   me: Me;
   tab: T;
   tabFolge: T[];
-  online: number | null;
   trophies: number;
   onWeg: () => void;
   /** Der Münz-Shop ist erreichbar; Echtgeldpakete gehören nicht in diesen Reiter. */
@@ -121,17 +122,6 @@ export function NeuerRahmen<T extends Reiter>({
           )}
         </div>
       </header>
-      {/* Gezaehlt wird, wer gerade an einem Tisch sitzt (`/api/aktiv`), nicht
-          wer die App offen hat — „online" hiess es trotzdem, und wer sie
-          oeffnete, las „0 Spieler online", waehrend er selbst online war. Bei
-          null steht die Zeile gar nicht da: Eine Null ist keine Auskunft,
-          sondern sieht nach leerem Laden aus. */}
-      {online !== null && online > 0 && (
-        <div className="hb-online">
-          <span className="hb-punkt" aria-hidden="true" />
-          {tf('rahmen.online', { n: zahl(online) })}
-        </div>
-      )}
     </>
   );
   return (
