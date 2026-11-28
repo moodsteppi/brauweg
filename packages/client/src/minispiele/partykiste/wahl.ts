@@ -420,6 +420,15 @@ export function regelsatzAus(
   const paket = wirksamesPaket(vorgabe, wahl);
   if (paket !== null) config['paket'] = paket === PAKET_ALLES ? null : paket;
   const modus = wirksamerModus(vorgabe, wahl);
-  if (modus !== null) config['modus'] = modus;
+  if (modus !== null) {
+    config['modus'] = modus;
+    /*
+     * Der Modus ist zugleich die Spielart (`GameMeta.spielarten`, seit dem
+     * 28.11.2026) — mit derselben Kennung als `variante`, wie in jeder
+     * Spielart des Moduls. Die Schlange topft danach: Wer ueber Quick-Play
+     * an einen Partykiste-Tisch kommt, landet im selben Modus.
+     */
+    config['variante'] = modus;
+  }
   return config;
 }

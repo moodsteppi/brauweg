@@ -14,6 +14,9 @@ const { sucheStarten, createTable, defaults } = vi.hoisted(() => ({
 }));
 
 vi.mock('../api', () => ({
+  // Ohne Spielarten vom Server: Der Bildschirm legt `variante` dann selbst
+  // auf die Vorgabe — derselbe Regelsatz wie die Spielart des Moduls.
+  spielartenApi: { liste: () => Promise.reject(new Error('ohne Spielarten')) },
   api: {
     sucheStarten,
     sucheStand: vi.fn(() => new Promise(() => {})),

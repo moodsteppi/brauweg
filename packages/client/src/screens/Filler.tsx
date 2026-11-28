@@ -4,6 +4,7 @@ import { api, type Suchstand } from '../api';
 import { Einladung } from '../minispiele/partykiste/Einladung';
 import { AnfragenLeiste } from '../tisch/Anfragen';
 import { AuswahlRaster } from '../hub';
+import { useSpielarten } from '../spielarten/useSpielarten';
 import { t } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { FARBEN, GRAUTOENE, farbeVon, farbzahlAus } from '../minispiele/filler/farben';
@@ -381,6 +382,21 @@ export function Filler({
    */
   const { holen: holeVorgabe, vorgabe } = useSpielVorgabe('filler');
 
+  /*
+   * Seit dem 28.11.2026 stehen die vier Spielarten auch als
+   * `GameMeta.spielarten` im Modul. Der Regelsatz einer Spielart kommt dann
+   * fertig von dort; die Vorgabe mit `variante` darauf bleibt der Rueckfall,
+   * solange die Antwort fehlt — dasselbe Ergebnis, nur selbst gelegt.
+   * Gezeichnet wird weiter das Vorschaubrett, Reihenfolge und Wischen bleiben
+   * an `SPIELARTEN` hier (vertrag/spielarten.test.ts haelt beide gleich).
+   */
+  const { spielarten } = useSpielarten('filler');
+  const regelsatzFuer = useCallback(
+    async (v: Variante): Promise<Record<string, unknown>> =>
+      spielarten?.find((art) => art.id === v)?.config ?? { ...(await holeVorgabe()), variante: v },
+    [spielarten, holeVorgabe],
+  );
+
   const tisch = useTable<FillerSicht>(tischId, 'filler');
   const sicht = tisch.view?.view ?? null;
   /**
@@ -415,11 +431,7 @@ export function Filler({
     setFehler(null);
     setSucht(true);
     try {
-      const stand = await api.sucheStarten(
-        'filler',
-        { ...(await holeVorgabe()), variante },
-        sitzzahl,
-      );
+      const stand = await api.sucheStarten('filler', await regelsatzFuer(variante), sitzzahl);
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
@@ -427,7 +439,7 @@ export function Filler({
     } finally {
       setSucht(false);
     }
-  }, [holeVorgabe, variante, sitzzahl]);
+  }, [regelsatzFuer, variante, sitzzahl]);
 
   /**
    * Nachfragen, solange gesucht wird.
@@ -518,7 +530,7 @@ export function Filler({
       try {
         const { id } = await api.createTable({
           gameId: 'filler',
-          config: { ...(await holeVorgabe()), variante },
+          config: await regelsatzFuer(variante),
           seats: bots ? sitzzahl : 4,
           rounds: 1,
           visibility: 'on_request',
@@ -531,7 +543,7 @@ export function Filler({
         setSucht(false);
       }
     },
-    [holeVorgabe, variante, sitzzahl],
+    [regelsatzFuer, variante, sitzzahl],
   );
   const starteBot = useCallback((): Promise<void> => starteTisch(true), [starteTisch]);
   const starteFreunde = useCallback((): Promise<void> => starteTisch(false), [starteTisch]);
