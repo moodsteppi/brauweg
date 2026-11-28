@@ -19,8 +19,14 @@ const { createTable, joinTable, tables, leaveTable, me } = vi.hoisted(() => ({
   me: vi.fn(),
 }));
 
+const { spielartenListe } = vi.hoisted(() => ({
+  spielartenListe: vi.fn(() => Promise.resolve({ spielarten: [] as unknown[] })),
+}));
+
 vi.mock('../api', () => ({
   api: { createTable, joinTable, tables, leaveTable, me },
+  // Die Kurse als Spielarten (seit dem 28.11.2026); hier ohne, ausser wo eigens geprueft.
+  spielartenApi: { liste: () => spielartenListe() },
 }));
 
 let tischStand: unknown = null;
@@ -69,7 +75,7 @@ describe('Golf auf Englisch', () => {
   it('Menü und Gegen-Bots-Ansicht sprechen Englisch, Zahlen mit Einzahl und Mehrzahl', async () => {
     render(<Golf onBack={() => {}} />);
     await durchatmen();
-    expect(screen.getByRole('button', { name: 'Play online' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Quick Play/ })).toBeInTheDocument();
     expect(screen.getByText(/Minigolf from above/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Against bots' }));
