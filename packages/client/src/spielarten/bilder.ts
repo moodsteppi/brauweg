@@ -30,7 +30,34 @@ const BILD_NAME: Readonly<Record<string, string>> = {
  * Gepflegt von der Bildstrecke; die Probe `bilder.test.ts` haelt die Liste
  * gegen den Ordner.
  */
-export const SPIELART_BILDER_VORHANDEN: ReadonlySet<string> = new Set<string>([]);
+export const SPIELART_BILDER_VORHANDEN: ReadonlySet<string> = new Set<string>([
+  // 28.11.2026: alle 25 bestellten, 256 × 256, zusammen 672 kB.
+  'doppelkopf-anfaenger',
+  'doppelkopf-normal',
+  'doppelkopf-standard',
+  'doppelkopf-hart',
+  'skat-normal',
+  'skat-klassisch',
+  'skat-hart',
+  'zauberer-normal',
+  'zauberer-profi',
+  'zauberer-chaos',
+  'cambio-normal',
+  'cambio-hart',
+  'poker-locker',
+  'poker-abend',
+  'poker-hoch',
+  'eiland-klar',
+  'eiland-nebel',
+  'brochess-bullet',
+  'brochess-blitz',
+  'brochess-schnell',
+  'brochess-spezial',
+  'partykiste-turnier',
+  'partykiste-eskalation',
+  'partykiste-themenabend',
+  'partykiste-team',
+]);
 
 /** Das Bild einer Spielart, oder null — dann zeichnet die Karte das Banner. */
 export function spielartBild(gameId: string, spielartId: string): string | null {

@@ -225,11 +225,13 @@ export class Vermittlung {
   /**
    * Dort einreihen, wo in diesem Spiel schon die meisten warten — mit deren
    * Regelsatz und Sitzzahl (`vollsterTopf` in schlange.ts). Wartet niemand,
-   * gilt die Vorgabe, wie bei `betritt` ohne Angaben.
+   * gilt `ersatz` (Quick-Play: die Vorgabe-Spielart), ohne ihn die Vorgabe
+   * des Moduls, wie bei `betritt` ohne Angaben.
    */
-  async betrittBeiDenWartenden(gameId: GameId, accountId: string): Promise<Suchstand> {
+  async betrittBeiDenWartenden(gameId: GameId, accountId: string, ersatz: unknown = null): Promise<Suchstand> {
     const topf = this.schlange.vollsterTopf(gameId, accountId);
-    return this.betritt(gameId, accountId, topf?.config ?? null, topf?.sitze ?? null);
+    if (!topf) return this.betritt(gameId, accountId, ersatz, null);
+    return this.betritt(gameId, accountId, topf.config ?? null, topf.sitze ?? null);
   }
 
   /** Alles, was jetzt losgehen kann, an Tische setzen. */
