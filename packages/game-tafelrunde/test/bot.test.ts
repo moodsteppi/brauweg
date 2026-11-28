@@ -816,11 +816,22 @@ describe('Bot: das fertige Heer', () => {
             for (const sitz of lebendeSitze(p)) {
               const heer = p.heere[sitz]!;
               const belegt = heer.brett.filter((k) => k !== null).length;
-              assert.equal(
-                belegt,
-                feldplaetze(heer.level),
-                `Saat ${saat}, Runde ${runde}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)} Feldplaetzen`,
-              );
+              /*
+               * Seit dem 28.11.2026 verschmelzen zwei Kopien, und ein Kauf
+               * kann auf dem vollen Brett eine Kette ausloesen, die einen
+               * Platz FREI macht (Saat c, Runde 5: Kauf mit 3 Gold, danach
+               * 1 Gold und fuenf von sechs). Das ist kein Leerstand aus
+               * Geiz. Verboten bleibt der Platz, den der Bot haette fuellen
+               * koennen: eine Einheit auf der Bank oder Gold fuer die
+               * billigste Einheit (Preis 2).
+               */
+              if (belegt < feldplaetze(heer.level)) {
+                const aufBank = heer.bank.filter((k) => k !== null).length;
+                assert.ok(
+                  aufBank === 0 && heer.gold < 2,
+                  `Saat ${saat}, Runde ${runde}, Sitz ${sitz}: ${belegt} von ${feldplaetze(heer.level)} Feldplaetzen, ${aufBank} auf der Bank, ${heer.gold} Gold`,
+                );
+              }
             }
           }
           if (p.phase === 'kampf') p = loeseKampfAuf(p);

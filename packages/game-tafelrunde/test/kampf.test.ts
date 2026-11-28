@@ -675,10 +675,16 @@ describe('Kampf — der Ausgang', () => {
     );
     // Mehr Ueberlebende kosten mehr — die Teilung darf die Ordnung nicht
     // einebnen, sonst waere eine knappe Niederlage so teuer wie eine klare.
-    assert.ok(
-      schadenFuerVerlierer([stand(0, 1), stand(1, 1), stand(2, 1), stand(3, 1)]) >
-        schadenFuerVerlierer([stand(0, 1)]),
-    );
+    // Seit dem Teiler 6 (28.11.2026) kosten einer und vier einfache
+    // Ueberlebende gleich viel; die Ordnung gilt ueber eine Teilerbreite
+    // hinweg: ein Ueberlebender gegen T + 1 (bei 6 sind das sieben, ein volles
+    // Feld).
+    const viele = Array.from({ length: T + 1 }, (_, i) => stand(i, 1));
+    assert.ok(schadenFuerVerlierer(viele) > schadenFuerVerlierer([stand(0, 1)]));
+    // Und nie weniger: Mehr Ueberlebende kosten mindestens gleich viel.
+    for (let n = 1; n < T + 1; n++) {
+      assert.ok(schadenFuerVerlierer(viele.slice(0, n + 1)) >= schadenFuerVerlierer(viele.slice(0, n)));
+    }
   });
 
   /**
