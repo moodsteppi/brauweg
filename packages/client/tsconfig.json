@@ -45,6 +45,7 @@
     "baseUrl": ".",
     "paths": {
       "@brauweg/building-kern": ["../building-kern/src/index.ts"],
+      "@brauweg/broremote-kern/tanks/*": ["../broremote-kern/src/tanks/*"],
       "@brauweg/broremote-kern": ["../broremote-kern/src/index.ts"],
       "@brauweg/game-wuerfelglanz": ["../game-wuerfelglanz/src/index.ts"],
       "@brauweg/game-brobluff": ["../game-brobluff/src/index.ts"],

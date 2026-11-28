@@ -1,0 +1,482 @@
+/* Unterseiten teilen das Zierwerk des Hubs. Bildrahmen behalten ihre Ecken,
+   die Inhalte wachsen mit Textgröße, Sprache und Gerätebreite mit. */
+.hb.hb .sam-icon.sam-bildicon {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  background-image: url('/hub/zierwerk/sammel-icons.webp');
+  background-size: 200% 200%;
+  background-repeat: no-repeat;
+}
+.hb.hb
+  :is(
+    .sam-zurueck,
+    .sam-bereichwechsel button,
+    .hb-sp-designwahl button,
+    .hb-sp-sammlung
+  ) {
+  border: 7px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 7px;
+  border-radius: 3px;
+  background:
+    linear-gradient(#304b38e8, #192d22ef),
+    var(--zier-holz) center/auto 100%;
+  color: #f9eac7;
+  padding: 6px 10px;
+  min-height: 44px;
+  box-shadow: 0 3px 5px #0b120b66;
+  transition:
+    filter 0.15s,
+    translate 0.15s;
+}
+.hb.hb .sam-zurueck {
+  width: fit-content;
+  margin: 12px 0 16px;
+}
+.hb.hb .sam-detailtitel {
+  gap: 12px;
+  margin: 16px 0;
+}
+.hb.hb .sam-detailtitel > .sam-bildicon {
+  width: 62px;
+  height: 62px;
+  flex-basis: 62px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+.hb.hb .sam-kachelkopf .sam-bildicon {
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+}
+.hb.hb .sam-kachelkopf {
+  flex-wrap: wrap;
+  justify-content: center;
+  text-align: center;
+}
+.hb.hb .sam-bereichwechsel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.hb.hb .sam-bereichwechsel:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.hb.hb .sam-bereichwechsel button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 4px;
+  text-align: center;
+  font-size: 12px;
+}
+.hb.hb .sam-bereichwechsel .sam-bildicon {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+}
+.hb.hb .sam-bereichwechsel button[aria-pressed='true'] {
+  background:
+    linear-gradient(#6e7845ed, #435433f5),
+    var(--zier-holz) center/cover;
+  color: #fff0b7;
+  outline: 2px solid #f1cf82;
+  outline-offset: 1px;
+}
+.hb.hb .sam-design {
+  padding: 16px 12px;
+  gap: 10px;
+}
+.hb.hb .sam-design .sam-vorschau {
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 75%, #b5944d35, #10251d55 75%);
+}
+.hb.hb .sam-design > small {
+  padding: 7px 8px;
+  background: #0d1d16a6;
+  border: 1px solid #8f845650;
+  border-radius: 3px;
+  min-height: 30px;
+}
+.hb.hb .sam-design.ist-aktiv > small {
+  background: #415533;
+  color: #ffe6a5;
+}
+.hb.hb .sam-design.ist-zu > small {
+  color: #c8cdb9;
+}
+.hb.hb .sam-vorschau.ist-figuren {
+  background: radial-gradient(ellipse at 50% 80%, #af944d40, transparent 70%);
+}
+.hb.hb .sam-koenig {
+  color: #f4e5ba;
+  text-shadow:
+    0 3px #78592d,
+    0 7px 10px #000a;
+}
+
+/* Sound: derselbe native Regler bleibt für Touch, Tastatur und VoiceOver
+   bedienbar. Nur die Schiene und der Griff bekommen die Spielmaterialien. */
+.hb.hb .hb-einst .hb-einst-karte {
+  border: 9px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 9px;
+  border-radius: 4px;
+  padding: 14px;
+  background:
+    linear-gradient(#273d2dec, #14261df5),
+    var(--zier-holz) center/cover;
+}
+.hb.hb .hb-einst .hb-regler {
+  padding: 8px 0 12px;
+  gap: 12px;
+}
+.hb.hb .hb-einst .hb-regler + .hb-regler {
+  border-color: #a48c4c55;
+  padding-top: 18px;
+}
+.hb.hb .hb-einst .hb-regler-kopf img {
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(0 3px 4px #0008);
+}
+.hb.hb .hb-einst .hb-regler-wert {
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  background: #12241a;
+  padding: 4px 7px;
+  min-width: 46px;
+  text-align: center;
+  font-size: 17px;
+}
+.hb.hb .hb-regler input[type='range'] {
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.hb.hb .hb-regler input[type='range']::-webkit-slider-runnable-track {
+  height: 12px;
+  border: 2px solid #977a40;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #d7b45d 0 var(--hb-regler-anteil),
+    #132419 var(--hb-regler-anteil) 100%
+  );
+  box-shadow: inset 0 2px 3px #0008;
+}
+.hb.hb .hb-regler input[type='range']::-webkit-slider-thumb {
+  width: 30px;
+  height: 30px;
+  margin-top: -11px;
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  border-radius: 3px;
+  background: linear-gradient(#f6de98, #c29544);
+  box-shadow: 0 2px 5px #000b;
+}
+.hb.hb .hb-regler input[type='range']::-moz-range-track {
+  height: 10px;
+  border: 2px solid #977a40;
+  border-radius: 3px;
+  background: #132419;
+}
+.hb.hb .hb-regler input[type='range']::-moz-range-progress {
+  height: 10px;
+  border-radius: 0;
+  background: #d7b45d;
+}
+.hb.hb .hb-regler input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  border-radius: 3px;
+  background: linear-gradient(#f6de98, #c29544);
+}
+.hb.hb .hb-einst-sprachetitel {
+  gap: 10px;
+}
+.hb.hb .hb-einst-sprachetitel img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.hb.hb .hb-sprachwahl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.hb.hb .hb-sprachwahl .hb-kn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 7px 12px;
+  min-height: 58px;
+  text-align: left;
+}
+.hb.hb .hb-sprachmarke {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 14px;
+  font-weight: 900;
+  color: inherit;
+}
+.hb.hb .hb-sprachmarke img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+.hb.hb .hb-sprachhaken {
+  margin-left: auto;
+}
+.hb.hb .hb-sprache > p {
+  margin-top: 14px;
+  line-height: 1.5;
+}
+
+/* Spielname → Start → Ausrüstung → Fortschritt. Die Startaktion und die
+   echte Designvorschau passen so gemeinsam auf einen normalen Handybildschirm. */
+.hb.hb .hb-sp-kopf {
+  height: calc(112px + var(--hb-oben));
+  background-position: center 40%;
+  border-bottom: 1px solid #9d834d;
+}
+.hb.hb .hb-sp-kopf::after {
+  background:
+    linear-gradient(90deg, #10231bea, #10231b65),
+    linear-gradient(0deg, #10231bf5, transparent 80%);
+}
+.hb.hb .hb-sp-titel {
+  position: relative;
+  z-index: 1;
+  padding: calc(var(--hb-oben) + 30px) 18px 14px 76px;
+}
+.hb.hb .hb-sp-titel h1 {
+  font-size: 28px;
+  line-height: 1.05;
+  text-shadow: 0 2px 4px #000;
+}
+.hb.hb .hb-sp-titel > span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #e1d8bd;
+}
+.hb.hb .hb-sp-inhalt {
+  margin-top: 0;
+  padding: 12px 16px 32px;
+  gap: 14px;
+}
+.hb.hb .hb-sp-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 3px 12px;
+  font-size: 22px;
+}
+.hb.hb .hb-sp-start > img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.hb.hb .hb-sp-ausstattung {
+  margin: 0;
+}
+.hb.hb .hb-sp-ausstattung > .hb-ab {
+  font-size: 17px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 9px;
+}
+.hb.hb .hb-sp-sammlung {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 4px 6px;
+  margin-left: auto;
+}
+.hb.hb .hb-sp-sammlung .hub-bildicon {
+  width: 24px;
+  height: 24px;
+}
+.hb.hb .hb-sp-kartenvorschau {
+  padding: 12px 10px 8px;
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px;
+  border-radius: 4px;
+  margin: 0 0 9px;
+}
+.hb.hb .hb-sp-probekarten {
+  gap: 7px;
+}
+.hb.hb .hb-sp-probekarten .pc {
+  flex-basis: 55px;
+  width: 55px;
+}
+.hb.hb .hb-sp-probetext {
+  padding-top: 7px;
+  font-size: 11px;
+}
+.hb.hb .hb-sp-designwahl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.hb.hb .hb-sp-designwahl button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  min-width: 0;
+}
+.hb.hb .hb-sp-designwahl .sam-bildicon {
+  width: 34px;
+  height: 34px;
+}
+.hb.hb .hb-sp-designwahl button > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+.hb.hb .hb-sp-designwahl small {
+  font-size: 10px;
+  color: #cbd2ba;
+}
+.hb.hb .hb-sp-designwahl strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb.hb .hb-sp-status {
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px;
+  border-radius: 4px;
+  background: #192e24e8;
+  padding: 14px;
+}
+.hb.hb .hb-sp-werte > span {
+  background: #0f2018aa;
+  border-radius: 3px;
+}
+.hb.hb .hb-sp-figurenauswahl {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 20px;
+  border: 9px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 9px;
+  background: radial-gradient(at 25% 70%, #9c854c44, transparent 65%), #1b3024;
+  border-radius: 4px;
+  padding: 18px;
+  color: #f9e7b8;
+}
+.hb.hb .hb-sp-figurenauswahl > span:last-child {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+}
+.hb.hb .hb-sp-figurenauswahl .sam-vorschau {
+  display: grid;
+  place-items: center;
+  flex: 0 1 120px;
+  height: 130px;
+}
+.hb.hb .hb-sp-figurenauswahl .sam-vorschau img {
+  max-width: 100%;
+  max-height: 130px;
+  object-fit: contain;
+}
+.hb.hb .hb-sp-figurenauswahl .sam-koenig {
+  font-size: 95px;
+}
+.hb.hb
+  :is(
+    .sam-zurueck,
+    .sam-bereichwechsel button,
+    .hb-sp-designwahl button,
+    .hb-sp-sammlung,
+    .hb-sp-figurenauswahl,
+    .hb-regler input
+  ):focus-visible {
+  outline: 3px solid #ffe0a0;
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .hb.hb
+    :is(
+      .sam-zurueck,
+      .sam-bereichwechsel button,
+      .hb-sp-designwahl button,
+      .hb-sp-sammlung,
+      .hb-sp-figurenauswahl
+    ):enabled:hover {
+    filter: brightness(1.15);
+  }
+}
+@media (max-height: 700px) {
+  .hb.hb .hb-sp-kopf {
+    height: calc(86px + var(--hb-oben));
+  }
+  .hb.hb .hb-sp-titel {
+    padding-top: calc(var(--hb-oben) + 15px);
+  }
+  .hb.hb .hb-sp-inhalt {
+    gap: 10px;
+    padding-top: 8px;
+  }
+  .hb.hb .hb-sp-start {
+    min-height: 52px;
+  }
+  .hb.hb .hb-sp-probekarten .pc {
+    flex-basis: 45px;
+    width: 45px;
+  }
+  .hb.hb .hb-sp-kartenvorschau {
+    padding: 8px 10px;
+  }
+  .hb.hb .hb-sp-designwahl .sam-bildicon {
+    width: 24px;
+    height: 24px;
+  }
+}
+@media (max-width: 359px) {
+  .hb.hb .hb-sp-titel h1 {
+    font-size: 25px;
+  }
+  .hb.hb .hb-sp-ausstattung > .hb-ab {
+    font-size: 15px;
+  }
+  .hb.hb .hb-sp-sammlung .hub-bildicon {
+    display: none;
+  }
+  .hb.hb .sam-bereichwechsel {
+    gap: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb.hb
+    :is(
+      .sam-zurueck,
+      .sam-bereichwechsel button,
+      .hb-sp-designwahl button,
+      .hb-sp-sammlung
+    ) {
+    transition: none;
+  }
+}

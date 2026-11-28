@@ -1,3 +1,4 @@
+import { HubBildIcon } from './HubBildIcon';
 import { useEffect, useRef, useState } from "react";
 import { api, type Me, type Shop, type RegalWare } from "../api";
 import { decksFor, RUECKEN } from "../decks";
@@ -25,6 +26,7 @@ export function SammlungNeu({
   onShop,
   spiel = "alle",
   onSpiel,
+  einstieg,
 }: {
   me: Me;
   onThemeChange: (
@@ -33,6 +35,7 @@ export function SammlungNeu({
   ) => void;
   onShop?: (spiel: string, artikel?: string) => void;
   spiel?: string;
+  einstieg?: { spiel: string; art: SammelBereich | null } | null;
   onSpiel?: (spiel: string) => void;
   onGekauft?: () => void;
   details?: (gameId: string, zurueck: () => void) => React.ReactNode;
@@ -63,6 +66,14 @@ export function SammlungNeu({
     setFilter(spiel === "pinguin" ? "alle" : spiel);
     setOffen(null);
   }, [spiel]);
+  useEffect(() => {
+    if (!einstieg) return;
+    // Ein Designknopf am Spieleinstieg öffnet genau diesen Bereich, auch
+    // wenn die Collection schon einmal für dasselbe Spiel geöffnet war.
+    setFilter(einstieg.spiel);
+    setOffen(einstieg.art ? { spiel: einstieg.spiel, art: einstieg.art } : null);
+    position.current = 0;
+  }, [einstieg]);
   useEffect(() => {
     void api
       .games()
@@ -188,7 +199,7 @@ export function SammlungNeu({
           className="sam-shoplink"
           onClick={() => onShop?.(offen?.spiel ?? filter)}
         >
-          {t("sammlung.zumShop")}
+          <HubBildIcon motiv="shop" />{t("sammlung.zumShop")}
         </button>
       </header>
       <div

@@ -10,6 +10,8 @@ import { starteKlang } from './klang';
 import './styles.css';
 import './app-hintergrund.css';
 import './screens/hub-holzrahmen.css';
+import './screens/hub-zierwerk.css';
+import './screens/hub-details.css';
 
 // Vor dem ersten Bild: Die Tonsitzung muss als "ambient" angemeldet sein,
 // bevor irgendetwas klingt, sonst haelt iOS beim ersten Ton die Musik in
@@ -179,6 +181,7 @@ const ProbeDreckBro = lazy(() =>
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
+const TanksOnline = lazy(() => import('./tanks-online/TanksOnline'));
 /* `lazy` wie die anderen Proben: Szene (rund 60 kB JSON) und Bausteine der
    neuen Tafelrunde gehoeren nicht in das Stueck, das jeder Spieler laedt. */
 const ProbeTafelrundeNeu = lazy(() =>
@@ -223,7 +226,7 @@ const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
 
 createRoot(root).render(
   <StrictMode>
-    {window.location.pathname === '/ice-clash' ? (<Suspense fallback={<p>Die Eisscholle wird geladen…</p>}><IceClash /></Suspense>) : window.location.pathname === '/broremote' ? (
+    {window.location.pathname === '/tanks-online' ? (<Suspense fallback={<p>BroTanks Online wird geladen…</p>}><TanksOnline /></Suspense>) : window.location.pathname === '/ice-clash' ? (<Suspense fallback={<p>Die Eisscholle wird geladen…</p>}><IceClash /></Suspense>) : window.location.pathname === '/broremote' ? (
       <Suspense fallback={<p className="muted">BroRemote wird geladen…</p>}><BroRemote /></Suspense>
     ) : werkzeug ? (
       <Suspense fallback={<p className="muted">Werkzeug wird geladen…</p>}>{werkzeug}</Suspense>

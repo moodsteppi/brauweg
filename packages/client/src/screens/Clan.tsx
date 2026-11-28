@@ -292,7 +292,7 @@ function Halle({
   const offen = detail?.requests.length ?? 0;
   // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
   // Routen sperrt der Server dann ohnehin.
-  const mitChat = !inApp && imUmfang('clanchat');
+  const mitChat = imUmfang('clanchat');
   const mitKrieg = imUmfang('clankrieg');
 
   if (voll === 'chat' && detail && mitChat) {
@@ -820,7 +820,7 @@ function Suche({
   if (neu) {
     return (
       <div className="hb-clan">
-        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/zierwerk/halle.webp)' }}>
           <h1>{t('clan.clans')}</h1>
           <small>{t('clan.suche.untertitel')}</small>
         </div>
@@ -999,7 +999,7 @@ function Gruenden({
       <div className="hb-clan">
         {/* Oben steht schon, wie der Clan aussehen wird: Wappen, Name,
             Wahlspruch wandern beim Tippen mit — wie die Halle danach. */}
-        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+        <div className="hb-clan-held is-kurz" style={{ backgroundImage: 'url(/hub/zierwerk/halle.webp)' }}>
           <div className="hb-clan-zurueck">
             <Zurueck onClick={onAbbruch} label={t('clan.gruenden.zurueckAria')} />
           </div>
@@ -1123,7 +1123,7 @@ function ClanFelder({
 
   if (neu) {
     return (
-      <div className="hb-felder">
+      <div className="hb-felder clan-regeln">
         <label className="hb-feldzeile">
           <span>{t('clan.feld.name')}</span>
           <input
@@ -1308,7 +1308,7 @@ function ClanFelder({
  * Die Clanhalle im neuen Hub (Entwurf „Nachtblau & Gold", Fassung 4).
  *
  * Dieselben Funktionen wie `Halle`, nur neu angeordnet: Wappen und Name auf
- * der Burghalle, oben rechts Chat (nur Web), Anfragen (Leitung) und die
+ * der Burghalle, oben rechts Chat (Web und App), Anfragen (Leitung) und die
  * Clanregeln, darunter der Clankrieg mit Stand, dann die Mitglieder.
  * Mitglieds-, Anfragen- und Regelblatt sind dieselben wie in der alten Halle
  * (dieselben Aufrufe und Rückfragen), nur als Blatt des neuen Hubs (`neu`).
@@ -1357,7 +1357,7 @@ function HalleNeu({
   const offen = detail?.requests.length ?? 0;
   // Chat und Krieg nur, wenn die Ausgabe sie anbietet (umfang.ts) — die
   // Routen sperrt der Server dann ohnehin.
-  const mitChat = !inApp && imUmfang('clanchat');
+  const mitChat = imUmfang('clanchat');
   const mitKrieg = imUmfang('clankrieg');
 
   if (voll === 'chat' && detail && mitChat) {
@@ -1382,7 +1382,7 @@ function HalleNeu({
 
   return (
     <div className="hb-clan">
-      <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/bg-clanhalle.webp)' }}>
+      <div className="hb-clan-held" style={{ backgroundImage: 'url(/hub/zierwerk/halle.webp)' }}>
         <div className="hb-clan-knoepfe">
           {mitChat && (
             <button type="button" className="hb-rund" onClick={() => setVoll('chat')} aria-label={t('clan.chatAria')}>

@@ -1,5 +1,5 @@
-/* Ruhige Register aus dunklem Holz statt runder Filter-Pillen. Nur Games
-   und Collection verwenden diese Leiste; Shop und Spielsteuerung bleiben separat. */
+/* Ruhige Register aus dunklem Holz statt runder Filter-Pillen. Games, Shop
+   und Collection teilen diese Leiste; Spielsteuerungen bleiben separat. */
 .hb.hb .hb-chips.kategorie-register {
   gap: 8px;
   padding: 6px 16px 13px;

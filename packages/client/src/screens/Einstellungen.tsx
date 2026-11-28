@@ -133,7 +133,7 @@ export function EinstellungenBlatt({
           </section>
 
           <section className="hb-blk">
-            <h2 className="hb-ab">{t('sprache.titel')}</h2>
+            <h2 className="hb-ab hb-einst-sprachetitel"><img src="/hub/zierwerk/sprache.webp" alt="" />{t('sprache.titel')}</h2>
             <div className="hb-karte hb-einst-karte">
               <SprachWahl neu />
             </div>
@@ -275,7 +275,9 @@ function SprachWahl({ neu = false }: { neu?: boolean }): React.JSX.Element {
             }
             onClick={() => waehle(o)}
           >
-            {name(o)}
+            {neu && <span className="hb-sprachmarke" aria-hidden="true">{o === 'auto' ? <img src="/hub/zierwerk/sprache.webp" alt="" /> : o.toUpperCase()}</span>}
+            <span>{name(o)}</span>
+            {neu && o === wahl && <span className="hb-sprachhaken" aria-hidden="true">✓</span>}
           </button>
         ))}
       </div>

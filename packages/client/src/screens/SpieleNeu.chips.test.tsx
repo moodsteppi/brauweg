@@ -111,3 +111,13 @@ it('Ice Clash steht als quadratische Kachel unter Denken, auch ohne Kartenmodule
   expect(link).toHaveClass('hb-sk');
   expect(document.querySelector('.hb-broremote[href="/ice-clash"]')).toBeNull();
 });
+
+it('BroTanks Online steht in Strategie und Online-Arena, BroRemote bleibt separat', async () => {
+  render(<SpieleNeu me={{stats:[]} as unknown as Me} offen={null} onOeffne={vi.fn()} onPick={vi.fn()} onSolo={vi.fn()} onBald={vi.fn()} onSammlung={vi.fn()}/>);
+  const links = await screen.findAllByRole('link', {name:/BroTanks Online/});
+  expect(links).toHaveLength(2);
+  links.forEach(link => expect(link).toHaveAttribute('href','/tanks-online'));
+  expect(links[1].closest('section')).toHaveTextContent('Online-Arena');
+  fireEvent.click(screen.getByRole('tab',{name:'Denken'}));
+  expect(screen.getByRole('link',{name:/BroTanks Online/})).toHaveAttribute('href','/tanks-online');
+});

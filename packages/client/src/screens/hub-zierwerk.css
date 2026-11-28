@@ -1,0 +1,515 @@
+/* Echtes Bildmaterial in neun Segmenten: feste Ecken, dehnbare Kanten.
+   Die Schrift bleibt HTML, damit Sprache, Zoom und längere Namen passen. */
+.hb.hb {
+  --zier-rahmen: url('/hub/zierwerk/rahmen.webp');
+  --zier-holz: url('/hub/register/walnuss.webp');
+}
+.hb.hb
+  :is(
+    .markt-knopf,
+    .sam-shoplink,
+    .hb-kn,
+    .hb-rund,
+    .hb-leise-knopf,
+    .clan-feld .lobby-chip,
+    .clan-regeln .hb-chip,
+    .clan-chat-eingabe .primary,
+    .clan-voll .hub-zurueck
+  ) {
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px / 0 stretch;
+  border-radius: 4px;
+  background:
+    linear-gradient(#49634bdf, #20382bec),
+    var(--zier-holz) center / auto 100%;
+  color: #fff0c6;
+  box-shadow: 0 3px 5px #080e0b70;
+  min-height: 44px;
+  padding: 5px 10px;
+  text-shadow: 0 1px 2px #06150f;
+  transition:
+    filter 0.15s,
+    translate 0.15s;
+}
+.hb.hb :is(.markt-knopf:not(.ist-eigen), .hb-kn.is-gold) {
+  background:
+    linear-gradient(#f5d78dcc, #c89240e8),
+    var(--zier-holz) center / auto 100%;
+  color: #2b2114;
+  text-shadow: 0 1px #ffe6b666;
+}
+.hb.hb
+  :is(
+    .markt-knopf,
+    .sam-shoplink,
+    .hb-kn,
+    .hb-rund,
+    .hb-leise-knopf,
+    .clan-feld .lobby-chip,
+    .clan-regeln .hb-chip,
+    .clan-chat-eingabe .primary
+  ):disabled {
+  background:
+    linear-gradient(#343c32eb, #222b24ed),
+    var(--zier-holz) center / auto 100%;
+  color: #bdc4ad;
+  opacity: 0.8;
+  box-shadow: none;
+  cursor: not-allowed;
+  text-shadow: none;
+}
+.hb.hb
+  :is(
+    .markt-knopf,
+    .sam-shoplink,
+    .hb-kn,
+    .hb-rund,
+    .hb-leise-knopf,
+    .clan-feld .lobby-chip,
+    .clan-regeln .hb-chip
+  ):focus-visible {
+  outline: 3px solid #ffe5a3;
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .hb.hb
+    :is(
+      .markt-knopf,
+      .sam-shoplink,
+      .hb-kn,
+      .hb-rund,
+      .hb-leise-knopf,
+      .clan-feld .lobby-chip,
+      .clan-regeln .hb-chip
+    ):enabled:hover {
+    filter: brightness(1.15);
+    translate: 0 -1px;
+  }
+}
+.hb.hb :is(.markt-knopf, .sam-shoplink, .hb-kn, .hb-rund):enabled:active {
+  translate: 0 1px;
+}
+.hb.hb .hb-kn.is-gefahr {
+  color: #ffc5b3;
+  background-color: #542b21;
+}
+.hb.hb .sam-shoplink {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  font-size: 12px;
+}
+.hb.hb .sam-shoplink .hub-bildicon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+.hb.hb .hb-pill {
+  min-height: 44px;
+  border: 5px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 5px / 0 stretch;
+  border-radius: 3px;
+  padding: 3px 5px;
+  background:
+    linear-gradient(#142921dc, #101c17ed),
+    var(--zier-holz) center/auto 100%;
+  color: #ffe6aa;
+  box-shadow: 0 2px 4px #0008;
+}
+
+/* Laden: Geschenke stehen auf eigenen Vitrinen, Zeit und Guthaben auf Tafeln. */
+.hb.hb .tages-shop .markt-held > img {
+  aspect-ratio: 2.5;
+}
+.hb.hb .tages-shop .markt-held > div {
+  padding: 8px 20px 20px;
+}
+.hb.hb .tages-shop .markt-held p {
+  color: #d0d8c2;
+}
+.hb.hb .markt-wechsel {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  column-gap: 10px;
+  position: relative;
+  min-height: 92px;
+  margin: 16px 0 28px;
+  padding: 12px 18px;
+  border: 9px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 9px / 0 stretch;
+  border-radius: 4px;
+  background:
+    linear-gradient(110deg, #263c27e0, #15221bef),
+    var(--zier-holz) center/cover;
+}
+.hb.hb .markt-wechsel > img {
+  grid-row: 1 / 3;
+  width: 58px;
+  height: 66px;
+  object-fit: contain;
+}
+.hb.hb .markt-wechsel > span {
+  font-size: 11px;
+  color: #d5d9c5;
+}
+.hb.hb .markt-wechsel b {
+  color: #d5d9c5;
+  font-weight: 600;
+}
+.hb.hb .markt-wechsel > strong {
+  grid-column: 2;
+  font-size: 19px;
+  line-height: 1.5;
+  color: #ffe09b;
+}
+.hb.hb .markt-guthaben {
+  padding: 8px 11px;
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  background: #17271e;
+}
+.hb.hb .markt-bereich > h2,
+.hb.hb .markt-spiel > h3 {
+  color: #fff1ce;
+}
+.hb.hb .markt-geschenke {
+  gap: 14px;
+}
+.hb.hb .markt-geschenke > div {
+  position: relative;
+  padding: 16px 12px 14px;
+  gap: 8px;
+  border: 9px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 9px;
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse at 50% 22%, #92703b55, transparent 60%),
+    linear-gradient(#21382be8, #111e18f5),
+    var(--zier-holz) center/cover;
+}
+.hb.hb .markt-geschenke > div > img {
+  width: 92px;
+  height: 86px;
+}
+.hb.hb .markt-geschenke strong {
+  text-align: center;
+  color: #ffe3a0;
+}
+.hb.hb .markt-geschenke small {
+  text-align: center;
+  color: #d2d7c4;
+}
+.hb.hb .markt-geschenke .markt-knopf {
+  margin-top: auto;
+}
+.hb.hb .markt-verdeckt > img {
+  width: 100%;
+  height: 110px;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 7px #060e0a90);
+}
+.hb.hb .markt-verdeckt {
+  min-height: 190px;
+  gap: 5px;
+}
+.hb.hb .markt-angebot {
+  padding: 15px 10px 13px;
+  background:
+    linear-gradient(#2b3b2eea, #15231cf5),
+    var(--zier-holz) center/cover;
+}
+.hb.hb .markt-angebot.stufe-selten {
+  background: radial-gradient(at 50% 20%, #42786275, transparent 65%), #15271d;
+}
+.hb.hb .markt-angebot.stufe-episch {
+  background: radial-gradient(at 50% 20%, #775a7d90, transparent 65%), #21231b;
+}
+.hb.hb .markt-angebot .markt-knopf {
+  font-size: 11px;
+  padding: 6px 3px;
+}
+.hb.hb .markt-angebot .markt-art {
+  color: #bfcbb9;
+}
+.hb.hb .markt-seltenheit {
+  color: #efdcad;
+}
+.hb.hb .markt-regulaer {
+  gap: 12px;
+}
+.hb.hb .markt-bild {
+  background: radial-gradient(ellipse, #70805a30, #0c1b1155);
+  border-radius: 4px;
+}
+.hb.hb .tages-shop .kategorie-register {
+  margin: 12px -4px 20px;
+}
+.hb.hb .tages-shop .kategorie-register .hub-bildicon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+/* Angekündigte Spiele bleiben übersichtlich und haben dieselben Materialien. */
+.hb.hb .hb-einheitlich .hb-bald {
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px;
+  border-radius: 4px;
+  padding: 0 0 7px;
+  background: linear-gradient(#284237, #162a20);
+}
+.hb.hb .hb-einheitlich .hb-bald-flaeche {
+  gap: 0;
+}
+.hb.hb .hb-einheitlich .hb-bald-text {
+  padding: 10px 6px;
+}
+.hb.hb .hb-einheitlich .hb-bald-bild {
+  filter: none;
+  opacity: 0.9;
+}
+.hb.hb .hb-einheitlich .hb-bald .hb-kn {
+  margin: auto 4px 0;
+  min-height: 44px;
+}
+.hb.hb .hb-bald-marke {
+  background: #3a412a;
+  color: #ead7a0;
+  border-color: #8e7648;
+  border-radius: 3px;
+}
+.hb.hb .hb-kommt-bald .hb-ab-knopf {
+  padding: 12px 14px;
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px;
+  background:
+    linear-gradient(#273b2ce6, #13241dec),
+    var(--zier-holz) center/cover;
+}
+
+/* Profil und Clan teilen die neue warme Gildenhalle statt blauer Kästen. */
+.hb.hb .hb-profilkopf {
+  padding: 25px 18px;
+  min-height: 142px;
+  border-radius: 5px;
+  border: 11px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 11px;
+  background:
+    linear-gradient(90deg, #14251bb0, #14251b55),
+    url('/hub/zierwerk/halle.webp') center/cover;
+}
+.hb.hb .hb-profil-schrank {
+  border: 10px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 10px;
+  border-radius: 4px;
+  padding: 15px;
+  background:
+    linear-gradient(90deg, #17251c30, #13221bd9),
+    url('/hub/zierwerk/halle.webp') center/cover;
+}
+.hb.hb
+  :is(
+    .hb-profil .hb-karte:not(.hb-profilkopf),
+    .hb-profil .hb-einstieg,
+    .hb-profil .hb-liste,
+    .hb-clan .hb-liste,
+    .hb-clan .hb-zeile,
+    .hb-clan .hb-krieg
+  ) {
+  border: 8px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 8px;
+  border-radius: 4px;
+  background:
+    linear-gradient(#24392fef, #14251cf5),
+    var(--zier-holz) center/cover;
+}
+.hb.hb .hb-clan-held {
+  border-radius: 0;
+  border-bottom: 1px solid #9d814a;
+  background-position: center;
+}
+.hb.hb .hb-clan-held::before {
+  background: linear-gradient(#10211925 10%, #102119bd 58%, #102119 100%);
+}
+.hb.hb .hb-clan .hb-kz {
+  color: #e6d5ac;
+}
+.hb.hb .hb-clan .hb-mg {
+  border-color: #6e775d55;
+}
+.hb.hb .hb-clan .hb-mg.is-du {
+  background: #49634455;
+}
+.hb.hb .hb-clan .hb-clanwort-bild {
+  background: transparent;
+}
+.hb.hb .hb-clanwort-bild i {
+  background: #304e35;
+  color: #ffe7a2;
+  border-color: #b09250;
+}
+.hb.hb .clan-feld :is(input, select),
+.hb.hb .clan-chat-eingabe input {
+  background: #13261e;
+  border-color: #718060;
+  color: #f6ebd2;
+}
+.hb.hb .clan-feld .lobby-chips {
+  gap: 12px;
+}
+.hb.hb :is(.clan-feld .lobby-chip, .clan-regeln .hb-chip) {
+  flex: 1;
+}
+.hb.hb :is(.clan-feld .lobby-chip, .clan-regeln .hb-chip).is-an {
+  background:
+    linear-gradient(#6b7747e8, #405332ee),
+    var(--zier-holz) center/cover;
+  outline: 2px solid #f6ce7a;
+  outline-offset: 2px;
+}
+.hb.hb .clan-wappen {
+  background: #1c3328;
+  border-color: #5e7257;
+  border-radius: 5px;
+}
+.hb.hb .clan-wappen.is-an {
+  background: #3c5130;
+  border-color: #f8d580;
+}
+
+/* Ein fixed-Element liegt im transformierten Wisch-Track am Anfang aller
+   Tabs. Absolut im jeweiligen Reiterplatz bleibt der Chat im Clan sichtbar. */
+.hb.hb .hb-reiterplatz .clan-voll {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  min-height: 0;
+  background:
+    linear-gradient(#10251be8, #10221af5),
+    url('/hub/zierwerk/halle.webp') center/cover;
+}
+.hb.hb .clan-voll-kopf {
+  background: #14261eef;
+  border-color: #8a7547;
+  padding: 12px;
+}
+.hb.hb .clan-chat-spur {
+  min-height: 0;
+  padding: 16px;
+}
+.hb.hb .clan-chat-blase {
+  background: #2b4337;
+  border: 1px solid #6a7c5b;
+  border-radius: 10px 10px 10px 2px;
+  color: #f3ebd8;
+}
+.hb.hb .is-eigen .clan-chat-blase {
+  background: #435537;
+  border-color: #aa975c;
+  border-radius: 10px 10px 2px 10px;
+}
+.hb.hb .clan-chat-eingabe {
+  background: #102219;
+  padding: 12px;
+  border-top: 1px solid #78683f;
+}
+.hb.hb .clan-chat-eingabe input {
+  min-width: 0;
+}
+.hb.hb .clan-chat-eingabe .primary {
+  flex: none;
+}
+.hb.hb .clan-chat-system {
+  color: #d1c69c;
+}
+@media (max-width: 359px) {
+  .hb.hb .hb-pill {
+    gap: 2px;
+    padding: 3px;
+    font-size: 11px;
+  }
+  .hb.hb .markt-geschenke {
+    gap: 8px;
+  }
+  .hb.hb .markt-geschenke > div {
+    padding: 12px 7px;
+  }
+  .hb.hb .markt-sonder {
+    gap: 6px;
+  }
+  .hb.hb .markt-angebot {
+    padding: 14px 7px 12px;
+  }
+  .hb.hb .sam-shoplink {
+    padding: 4px;
+    font-size: 11px;
+  }
+  .hb.hb .sam-shoplink .hub-bildicon {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb.hb :is(.markt-knopf, .sam-shoplink, .hb-kn, .hb-rund) {
+    transition: none;
+    translate: none;
+  }
+}
+
+.hb.hb .hb-kz > span {
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  border-radius: 3px;
+  background:
+    linear-gradient(#294333eb, #14261ff2),
+    var(--zier-holz) center/cover;
+  color: #d6d9bc;
+  padding: 7px 4px;
+}
+.hb.hb .hb-kz b {
+  color: #ffdf98;
+}
+.hb.hb .hb-stufe {
+  border: 6px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 6px;
+  border-radius: 3px;
+  background: #3b5133;
+  color: #ffe4a2;
+}
+.hb.hb .hb-kr-balken {
+  background: #694a39;
+}
+.hb.hb .hb-kr-balken > span {
+  background: linear-gradient(90deg, #bd944b, #f2db8b);
+}
+
+.hb.hb .clan-regeln .hb-wappenknopf {
+  border: 5px solid transparent;
+  border-image: var(--zier-rahmen) 13% / 5px;
+  background: #1a3024;
+  border-radius: 3px;
+}
+.hb.hb .clan-regeln .hb-wappenknopf.is-an {
+  outline: 2px solid #ffe19a;
+  outline-offset: 1px;
+}
+.hb.hb .clan-regeln .hb-feld {
+  border-radius: 5px;
+  border-color: #7e805b;
+  background: #13231b;
+}
+.hb.hb .clan-regeln .hb-chips {
+  gap: 12px;
+}
+
+.hb.hb .clan-regeln .hb-chip[aria-pressed='true']::after {
+  content: '✓';
+  margin-left: 8px;
+  color: #ffe29c;
+}
+.hb.hb .hb-profil .hb-mg {
+  border-color: #66765b55;
+}
+.hb.hb .hb-profil .hb-mg.is-du {
+  background: #415c3a66;
+}

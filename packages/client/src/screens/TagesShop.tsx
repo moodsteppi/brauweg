@@ -8,6 +8,9 @@ import { FundBlatt } from './Aufgaben';
 import { useRueckfrage } from './HbBlatt';
 import { MarktBild, marktName, marktArt } from './MarktBild';
 import './tagesmarkt.css';
+import './kategorie-register.css';
+import { HubBildIcon } from './HubBildIcon';
+import { bannerFuer } from './StartNeu';
 
 // Spielnamen sind Eigennamen; nur „Alle" und „Pinguin" werden beim Zeichnen übersetzt (`markt.filter.*`).
 const NAMEN: Record<string, string | null> = { alle: null, doppelkopf: 'Doppelkopf', skat: 'Skat', brochess: 'BroChess', allgemein: null };
@@ -77,7 +80,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
     {a.stufe && <span className="markt-seltenheit">{t(`markt.stufe.${a.stufe}`)} <b>−{a.rabatt}%</b></span>}
     {a.leer ? <div className="markt-leer"><span aria-hidden="true">✓</span><strong>{t('markt.leer.titel')}</strong><small>{t('markt.leer.text')}</small></div>
       : !a.aufgedeckt ? <button className="markt-verdeckt" disabled={!!busy} onClick={() => { if (markt) void ausfuehren(a.id, async () => { uebernehmen(await api.marktAufdecken(a.id, markt.tag)); spiele('blatt-auf'); }); }} aria-label={t(`markt.aufdecken.aria.${a.stufe ?? ''}`)}>
-        <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M31 13h38l-9 19c24 16 30 33 26 48-4 17-68 17-72 0-4-15 2-32 26-48z" /><path d="M35 33h30" /><text x="50" y="75" textAnchor="middle">?</text></svg>
+        <img src="/hub/zierwerk/angebot.webp" alt="" draggable={false} />
         <strong>{busy === a.id ? t('markt.aufdecken.laeuft') : t('markt.aufdecken')}</strong><small>{t('markt.nurFuerDich')}</small>
       </button> : a.artikel && <>
         <MarktBild artikel={a.artikel} /><small className="markt-art">{marktArt(a.artikel)}</small><strong className="markt-artikelname">{marktName(a.artikel)}</strong>
@@ -90,7 +93,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
     <header className="hb-kopfzeile"><h1 className="hb-titel">{t('markt.titel')}</h1><span className="markt-guthaben"><img src="/hub/muenze.png" alt="" />{zahl(me.coins)}</span></header>
     <div className="hb-spiele-rolle markt-rolle">
       <section className="markt-held"><img src="/hub/shop-tagesmarkt.webp" alt={t('markt.held.alt')} /><div><span>{t('markt.held.label')}</span><h2>{t('markt.held.titel')}</h2><p>{t('markt.held.text')}</p></div></section>
-      <div className="markt-wechsel"><span>{t('markt.wechsel.label')} <b>{tf('markt.wechsel.zeit', { zeit: '00:00' })}</b></span><strong>{markt ? tf('markt.wechsel.rest', { zeit: `${String(stunden).padStart(2, '0')}:${String(minuten).padStart(2, '0')}` }) : t('markt.laden')}</strong></div>
+      <div className="markt-wechsel"><img src="/hub/zierwerk/uhr.webp" alt="" draggable={false} /><span>{t('markt.wechsel.label')} <b>{tf('markt.wechsel.zeit', { zeit: '00:00' })}</b></span><strong>{markt ? tf('markt.wechsel.rest', { zeit: `${String(stunden).padStart(2, '0')}:${String(minuten).padStart(2, '0')}` }) : t('markt.laden')}</strong></div>
       {fehler && <p className="markt-fehler" role="alert">{fehler}<button onClick={() => void laden()}>{t('markt.erneut')}</button></p>}
       {markt && <>
         <section className="markt-bereich"><h2>{t('markt.geschenk.titel')}</h2><div className="markt-geschenke">
@@ -99,7 +102,7 @@ export function TagesShop({ me, ziel, onGuthaben, onSammlung }: {
         </div></section>
         <section className="markt-bereich"><h2>{t('markt.sonder.titel')}</h2><p>{t('markt.sonder.text')}</p><div className="markt-sonder">{markt.angebote.filter(a => a.stufe).map(angebot)}</div></section>
         <section className="markt-bereich"><h2>{t('markt.auswahl.titel')}</h2><p>{t('markt.auswahl.text')}</p>
-          <div className="hb-chips" role="tablist" aria-label={t('markt.kategorien')}>{Object.keys(NAMEN).map(id => <button key={id} role="tab" aria-selected={filter === id} className={`hb-chip${filter === id ? ' is-an' : ''}`} onClick={() => setFilter(id)}>{filterName(id)}</button>)}</div>
+          <div className="hb-chips kategorie-register" role="tablist" aria-label={t('markt.kategorien')}>{Object.keys(NAMEN).map(id => <button key={id} role="tab" aria-selected={filter === id} className={`hb-chip${filter === id ? ' is-an' : ''}`} onClick={() => setFilter(id)}>{id === 'alle' ? <HubBildIcon motiv="collection" /> : <img src={id === 'allgemein' ? '/hub/pinguin/pinguin-basis.webp' : bannerFuer(id)} alt="" draggable={false} />}{filterName(id)}</button>)}</div>
           {ziel.artikel && <p className="markt-wunsch">{t('markt.wunsch')}</p>}
           {Object.keys(NAMEN).filter(id => id !== 'alle' && (filter === 'alle' || filter === id)).map(id => <section key={id} className="markt-spiel"><h3>{filterName(id)}</h3><div className="markt-regulaer">{markt.angebote.filter(a => !a.stufe && a.spiel === id).map(angebot)}</div></section>)}
         </section>

@@ -33,7 +33,7 @@ export interface AppVerknuepfung {
 }
 
 /** Tisch-Einladungen und BroRemote-QRs öffnen die installierte iOS-App. */
-export const APP_LINK_PFADE = ['/beitritt/*', '/broremote', '/ice-clash'] as const;
+export const APP_LINK_PFADE = ['/beitritt/*', '/broremote', '/ice-clash', '/tanks-online'] as const;
 
 const TEAM_ID = /^[A-Z0-9]{10}$/;
 const FINGERABDRUCK = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;

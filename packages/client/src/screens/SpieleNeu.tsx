@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type GameSummary, type Me, type RankingEntry } from '../api';
-import { deckForGame, rueckenBild } from '../decks';
+import { deckForGame, rueckenBild, RUECKEN } from '../decks';
 import { CardFront, CardBack } from '../CardFace';
 import { t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
@@ -14,6 +14,8 @@ import './spielraster.css';
 import './kategorie-register.css';
 import { BRO_SPIELE } from '../broremote/spiele';
 import { bannerFuer } from './StartNeu';
+import { SammelIcon, SammlungVorschau, type SammelBereich } from './SammlungVorschau';
+import { HubBildIcon } from './HubBildIcon';
 
 /**
  * Der Reiter „Spiele" im neuen Hub und die Spielseite davor
@@ -147,7 +149,7 @@ export function SpieleNeu({
   onPick: (gameId: string) => void;
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
-  onSammlung: () => void;
+  onSammlung: (art?: SammelBereich) => void;
   /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
 }): React.JSX.Element {
@@ -228,7 +230,6 @@ export function SpieleNeu({
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
-
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
   // kein Banner. `bannerFuer` zeigte auf eine fehlende Datei, und statt des
@@ -346,9 +347,9 @@ export function SpieleNeu({
               <h2 className="hb-ab">
                 <Symbol>{k.icon}</Symbol>
                 {t(k.titel)}
-                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 1 : 0)}</span>
+                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 2 : 0)}</span>
               </h2>
-              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{liste.map(karte)}</div>
+              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{k.id === 'denken' && <a className="hb-sk" href="/tanks-online" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/broremote/ausbau/tanks.webp)'}}/><strong>BroTanks Online</strong><small>{tf('spielwahl.spieler', { spanne: '2–4' })}</small></a>}{liste.map(karte)}</div>
             </section>
           );
         })}
@@ -362,7 +363,7 @@ export function SpieleNeu({
           </section>
         )}
 
-        {zeige('echtzeit') && <section className="hb-blk"><h2 className="hb-ab">Online-Arena</h2><div className="hb-reihe"><a className="hb-sk" href="/ice-clash"><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 Spieler</small></a></div></section>}
+        {zeige('echtzeit') && <section className="hb-blk"><h2 className="hb-ab">Online-Arena</h2><div className="hb-reihe"><a className="hb-sk" href="/ice-clash"><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 Spieler</small></a><a className="hb-sk" href="/tanks-online" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/broremote/ausbau/tanks.webp)'}}/><strong>BroTanks Online</strong><small>{tf('spielwahl.spieler', { spanne: '2–4' })}</small></a></div></section>}
         {zeige('solo') && soloDa && <section className="hb-blk"><h2 className="hb-ab">{t('spielwahl.allein')}</h2><div className="hb-reihe">
           {!inApp && mitProSubway && <button className="hb-sk" onClick={() => onSolo('prosubway')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/banner-prosubway.webp)'}}/><strong>{t('modus.prosubway')}</strong><small>Solo</small></button>}
           {mitManufaktur && <button className="hb-sk" onClick={() => onSolo('kartenmanufaktur')}><span className="hb-sk-bild" style={{backgroundImage:'url(/manufaktur/werkstatt-hero.webp)'}}/><strong>Kartenmanufaktur</strong><small>Solo</small></button>}
@@ -469,7 +470,7 @@ function SpielSeite({
   me: Me;
   onZurueck: () => void;
   onZumSpiel: () => void;
-  onSammlung: () => void;
+  onSammlung: (art?: SammelBereich) => void;
   onLernen?: () => void;
 }): React.JSX.Element {
   const [rangliste, setRangliste] = useState<RankingEntry[] | null>(null);
@@ -519,12 +520,55 @@ function SpielSeite({
             <path d="M15 5l-7 7 7 7" />
           </Symbol>
         </button>
-      </div>
-      <div className="hb-sp-inhalt">
         <div className="hb-sp-titel">
           <h1>{t(game.nameKey)}</h1>
           <span>{unterzeile}</span>
         </div>
+      </div>
+      <div className="hb-sp-inhalt">
+        <button type="button" className="hb-kn is-gold is-haupt is-breit hb-sp-start" onClick={onZumSpiel}>
+          <img src="/hub/start-einstiege/play.webp" alt="" draggable={false} />
+          {t('spielwahl.seite.zumSpiel')}
+        </button>
+
+        {MIT_THEMEN.has(game.id) && (
+          <section className="hb-blk hb-sp-ausstattung">
+            <h2 className="hb-ab">
+              {tf('spielwahl.seite.deinSpiel', { spiel: t(game.nameKey) })}
+              <button type="button" className="hb-ab-mehr hb-sp-sammlung" onClick={() => onSammlung()}>
+                <HubBildIcon motiv="collection" />{t('spielwahl.seite.sammlung')}
+              </button>
+            </h2>
+            <div className="hb-sp-kartenvorschau" role="group" aria-label={t('spielwahl.seite.vorschau')} style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
+              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label={t('spielwahl.seite.ruecken')}><CardBack deck={rueckenDeck} /></span></span>
+              <span className="hb-sp-probetext">{t(deck.nameKey)} · {szene.name}</span>
+            </div>
+            <div className="hb-sp-designwahl">
+              {([
+                ['blatt', t('spielwahl.seite.blatt'), t(deck.nameKey)],
+                ['szene', t('spielwahl.seite.tisch'), szene.name],
+                ['ruecken', t('sammlung.ruecken'), RUECKEN.find(r => r.id === thema?.cardBack)?.name ?? RUECKEN[0]!.name],
+              ] as const).map(([art, name, wert]) => (
+                <button key={art} type="button" aria-label={`${name}: ${wert}`} onClick={() => onSammlung(art)}>
+                  <SammelIcon art={art} /><span><small>{name}</small><strong>{wert}</strong></span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {game.id === 'brochess' && (
+          <button type="button" className="hb-sp-figurenauswahl" onClick={() => onSammlung('blatt')}>
+            <SammlungVorschau art="blatt" spiel="brochess" wert={thema?.cardDeck ?? 'text'} />
+            <span><SammelIcon art="figuren" /><strong>{t('sammlung.figuren')}</strong><small>{t('spielwahl.seite.sammlung')}</small></span>
+          </button>
+        )}
+        {onLernen && (
+          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
+            {t('spielwahl.seite.lernen')}
+          </button>
+        )}
+
 
         <div className="hb-sp-status">
           <div className="hb-sp-zahl">
@@ -572,48 +616,6 @@ function SpielSeite({
             </span>
           </div>
         </div>
-
-        {MIT_THEMEN.has(game.id) && (
-          <section className="hb-blk">
-            <h2 className="hb-ab">
-              {tf('spielwahl.seite.deinSpiel', { spiel: t(game.nameKey) })}
-              <button type="button" className="hb-ab-mehr" onClick={onSammlung}>
-                {t('spielwahl.seite.sammlung')}
-              </button>
-            </h2>
-            <div className="hb-sp-kartenvorschau" role="group" aria-label={t('spielwahl.seite.vorschau')} style={{ backgroundImage: `linear-gradient(#08162f33,#08162f44),url(${szeneBild(szene.id)})` }}>
-              <span className="hb-sp-probekarten">{vorschaukarten.map(karte => <span className="pc" key={karte.id}><CardFront card={karte} deck={deck} /></span>)}<span className="pc ist-ruecken" aria-label={t('spielwahl.seite.ruecken')}><CardBack deck={rueckenDeck} /></span></span>
-              <span className="hb-sp-probetext">{t(deck.nameKey)} · {szene.name}</span>
-            </div>
-            <div className="hb-mein">
-              <button type="button" className="hb-mn is-blatt" onClick={onSammlung}>
-                <span className="hb-mn-bild hb-mn-karte"><span className="pc"><CardFront card={vorschaukarten[0]!} deck={deck} /></span></span>
-                <span className="hb-mn-text">
-                  <small>{t('spielwahl.seite.blatt')}</small>
-                  <strong>{t(deck.nameKey)}</strong>
-                </span>
-              </button>
-              <button type="button" className="hb-mn" onClick={onSammlung}>
-                <span className="hb-mn-bild" style={{ backgroundImage: `url(${szeneBild(szene.id)})` }} />
-                <span className="hb-mn-text">
-                  <small>{t('spielwahl.seite.tisch')}</small>
-                  <strong>{szene.name}</strong>
-                </span>
-              </button>
-            </div>
-          </section>
-        )}
-
-        <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onZumSpiel}>
-          {t('spielwahl.seite.zumSpiel')}
-        </button>
-        {onLernen && (
-          <button type="button" className="hb-kn is-stimme is-haupt is-breit" onClick={onLernen}>
-            {t('spielwahl.seite.lernen')}
-          </button>
-        )}
-
-
 
         <section className="hb-blk">
           <h2 className="hb-ab">

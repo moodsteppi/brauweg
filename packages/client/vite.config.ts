@@ -14,6 +14,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@brauweg/building-kern': fileURLToPath(new URL('../building-kern/src/index.ts', import.meta.url)),
+      '@brauweg/broremote-kern/tanks': fileURLToPath(new URL('../broremote-kern/src/tanks', import.meta.url)),
       '@brauweg/broremote-kern': fileURLToPath(new URL('../broremote-kern/src/index.ts', import.meta.url)),
       '@brauweg/game-wuerfelglanz': fileURLToPath(new URL('../game-wuerfelglanz/src/index.ts', import.meta.url)),
       '@brauweg/game-brobluff': fileURLToPath(new URL('../game-brobluff/src/index.ts', import.meta.url)),

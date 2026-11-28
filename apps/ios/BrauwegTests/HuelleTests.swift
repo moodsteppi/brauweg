@@ -45,6 +45,7 @@ final class HuelleTests: XCTestCase {
         let host = "staging.brauweg-spielen.de"
         XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/ice-clash?raum=ab12cd34"), serverHost: host), "/ice-clash?raum=AB12CD34")
         XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/ice-clash?raum=ungueltig"), serverHost: host), "/ice-clash")
+        XCTAssertEqual(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/tanks-online?raum=ab12cd34"), serverHost: host), "/tanks-online?raum=AB12CD34")
         XCTAssertNil(Huelle.pfadFuerLink(URL(string: "https://staging.brauweg-spielen.de/ice-clash?raum=AB12CD34"), serverHost: "www.brauweg-spielen.de"))
     }
 

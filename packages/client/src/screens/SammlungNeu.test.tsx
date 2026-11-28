@@ -251,3 +251,19 @@ it("verwendet im Zauberer eine vorhandene Zahlenkarte statt einer fehlenden Dame
     ),
   ).toHaveAttribute("src", "/karten/zauberwald/herz_13.webp");
 });
+
+it("öffnet einen gezielten Bereich erneut und lässt dort weiter auswählen", async () => {
+  const thema = vi.fn();
+  const eigenschaften = { me: probeKonto(), onThemeChange: thema, spiel: 'skat' };
+  const { rerender } = render(<SammlungNeu {...eigenschaften} einstieg={{ spiel:'skat', art:'szene' }} />);
+  expect(await screen.findByRole('heading', { name:'Tisch' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name:/Stube/ }));
+  expect(thema).toHaveBeenCalledWith('skat', { tableScene:'stube' });
+  fireEvent.click(screen.getByRole('button', { name:/Zur Übersicht/ }));
+  expect(screen.queryByRole('heading', { name:'Tisch' })).not.toBeInTheDocument();
+  rerender(<SammlungNeu {...eigenschaften} einstieg={{ spiel:'skat', art:'szene' }} />);
+  expect(await screen.findByRole('heading', { name:'Tisch' })).toBeInTheDocument();
+  rerender(<SammlungNeu {...eigenschaften} spiel="brochess" einstieg={{ spiel:'brochess', art:'blatt' }} />);
+  expect(await screen.findByRole('heading', { name:'Figuren' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name:'Tisch' })).not.toBeInTheDocument();
+});

@@ -89,6 +89,7 @@ import { SpieleNeu } from './SpieleNeu';
 import { TrophaeenwegNeu } from './TrophaeenwegNeu';
 import { HeuteNeu } from './HeuteNeu';
 import { SammlungNeu } from './SammlungNeu';
+import type { SammelBereich } from './SammlungVorschau';
 import { TagesShop } from './TagesShop';
 import { HbBlatt, HbSymbol, ImHub, Schliessen, Zurueck, useEscape, useRueckfrage } from './HbBlatt';
 import { bannerFuer } from './StartNeu';
@@ -164,6 +165,7 @@ export function GameSelect({
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
   const [sammlungSpiel, setSammlungSpiel] = useState('alle');
+  const [sammlungEinstieg, setSammlungEinstieg] = useState<{ spiel: string; art: SammelBereich | null } | null>(null);
   const [shopZiel, setShopZiel] = useState<{ spiel: string; artikel?: string }>({ spiel: 'alle' });
   const zumTagesShop = (spiel: string, artikel?: string): void => { setShopZiel({ spiel: ['doppelkopf', 'skat', 'brochess', 'allgemein'].includes(spiel) ? spiel : 'alle', artikel }); setSchrankOffen(false); setTab('shop'); };
   /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
@@ -274,7 +276,7 @@ export function GameSelect({
             onPick={onPick}
             onSolo={soloStarten}
             onBald={setBald}
-            onSammlung={() => { setSammlungSpiel(spielseite ?? 'doppelkopf'); setTab('blatt'); }}
+            onSammlung={(art) => { const spiel = spielseite ?? 'doppelkopf'; setSammlungSpiel(spiel); setSammlungEinstieg({ spiel, art: art ?? null }); setTab('blatt'); }}
             onLernen={oeffneLernen}
           />
         );
@@ -303,6 +305,7 @@ export function GameSelect({
           <SammlungNeu
             me={me}
             spiel={sammlungSpiel}
+            einstieg={sammlungEinstieg}
             onSpiel={setSammlungSpiel}
             onShop={zumTagesShop}
             onThemeChange={onThemeChange}

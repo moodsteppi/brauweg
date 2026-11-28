@@ -19,6 +19,7 @@ import { appInhaltAusUmgebung, umfangKennungen } from './games/registry.js';
 import { umfangAusUmgebung, umfangZeile } from './umfang.js';
 import { appVerknuepfungAusUmgebung } from './http/app-verknuepfung.js';
 import { Gateway } from './realtime/gateway.js';
+import { TanksOnlineGateway } from './realtime/tanks-online.js';
 import { IceGateway } from './realtime/ice.js';
 import { BroRemoteGateway } from './realtime/broremote.js';
 import { PartyRuntime } from './runtime/party.js';
@@ -199,11 +200,12 @@ async function main(): Promise<void> {
   });
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
+  const tanksOnline = new TanksOnlineGateway(app.server, config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
   const ice = new IceGateway(app.server, config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
   const broremote = new BroRemoteGateway(app.server,
     config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
   app.server.on('upgrade', (anfrage, socket) => {
-    if (!['/ws', '/ws/broremote', '/ws/ice'].includes(anfrage.url?.split('?')[0] ?? '')) {
+    if (!['/ws', '/ws/broremote', '/ws/ice', '/ws/tanks-online'].includes(anfrage.url?.split('?')[0] ?? '')) {
       socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
     }
   });
@@ -287,6 +289,7 @@ async function main(): Promise<void> {
     pushVersand.schliessen();
     await broremote.close();
     await ice.close();
+    await tanksOnline.close();
     await gateway.close();
     await app.close();
     // Nach `app.close`, damit auch die letzten Anfragen noch mitzaehlen, und

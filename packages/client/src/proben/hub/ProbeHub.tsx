@@ -198,6 +198,24 @@ api.club = async () => ({
   requests: [MITGLIED('r1', 'Stieglitz', 'member', 310), MITGLIED('r2', 'Dohle', 'member', 245)],
   defaultRuleSetId: null,
 });
+// Der lokale Gestaltungs-Chat bleibt vollständig in dieser Probe, ohne echte Nachrichten.
+const probeNachrichten: import('../../api').ChatMessage[] = [{
+  id: 'probe-nachricht', kind: 'text', accountId: 'a2', displayName: 'Kiebitz',
+  hasAvatar: false, body: 'Willkommen in unserer Clanhalle!', deleted: false,
+  createdAt: new Date().toISOString(),
+}];
+api.clubMessages = async (_id, seit) => ({ messages: probeNachrichten.filter(n => !seit || n.createdAt > seit) });
+api.postClubMessage = async (_id, body) => {
+  const nachricht: import('../../api').ChatMessage = { id: `probe-${probeNachrichten.length}`, kind: 'text',
+    accountId: 'a1', displayName: 'Eisvogel', hasAvatar: false, body, deleted: false, createdAt: new Date().toISOString() };
+  probeNachrichten.push(nachricht);
+  return nachricht;
+};
+api.deleteClubMessage = async (_id, id) => {
+  const nachricht = probeNachrichten.find(n => n.id === id);
+  if (nachricht) { nachricht.deleted = true; nachricht.body = null; }
+  return { ok: true };
+};
 /*
  * Kriegsstand je nach `&krieg=`: laeuft (Standard), suche, angefragt, keiner,
  * anfrage (ein anderer Clan fordert heraus) — die vier Zustände aus
