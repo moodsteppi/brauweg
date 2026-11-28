@@ -319,6 +319,11 @@ function WeiterGross({
  * Social und das Mosaik verdecken — aus einer Runde soll man eigentlich gar
  * nicht weg (Robin). Verlassen ist ein rotes X (Robin, 28.11.2026), kein
  * Textknopf neben „Zurück", damit es nicht aus Versehen getroffen wird.
+ *
+ * Der GANZE Streifen ist der Zurück-Knopf („Doppelkopf — zurück an den
+ * Tisch"), das X steht außen daneben (Robin, 28.11.2026: „dann ist der ganze
+ * Button das Zurück und nicht dieses kleine Zurück"). Zwei getrennte Knöpfe
+ * statt eines Knopfs im Knopf — sonst löste das X auch das Zurück aus.
  */
 function WeiterKlein({
   tisch,
@@ -334,23 +339,30 @@ function WeiterKlein({
   const name = t(`game.${tisch.gameId}`);
   return (
     <div className="start-weiter-klein" role="region" aria-label={tf('weiter.klein.aria', { spiel: name })}>
-      <span
-        className="start-weiter-klein-bild"
-        style={{ backgroundImage: `url(${bannerFuer(tisch.gameId)})` }}
-        aria-hidden="true"
-      />
-      <span className="start-weiter-klein-text">
-        <strong>{name}</strong>
-        <small>{t(`weiter.zustand.${zustandVon(tisch)}`)}</small>
-        {fehler && (
-          <small className="start-weiter-fehler" role="alert">
-            {t('weiter.verlassen.fehler')}
-          </small>
-        )}
-      </span>
-      <button type="button" className="hb-kn is-gold is-klein start-weiter-zurueck" onClick={onZurueck}>
-        {t('weiter.klein.zurueck')}
+      <button
+        type="button"
+        className="start-weiter-klein-knopf"
+        onClick={onZurueck}
+        aria-label={`${name}: ${t(`weiter.klein.zu.${zustandVon(tisch)}`)}`}
+      >
+        <span
+          className="start-weiter-klein-bild"
+          style={{ backgroundImage: `url(${bannerFuer(tisch.gameId)})` }}
+          aria-hidden="true"
+        />
+        <span className="start-weiter-klein-text">
+          <strong>{name}</strong>
+          <small>{t(`weiter.klein.zu.${zustandVon(tisch)}`)}</small>
+        </span>
+        <span className="start-weiter-klein-pfeil" aria-hidden="true">
+          ›
+        </span>
       </button>
+      {fehler && (
+        <small className="start-weiter-fehler" role="alert">
+          {t('weiter.verlassen.fehler')}
+        </small>
+      )}
       <button type="button" className="start-weiter-x" onClick={onVerlassen} aria-label={t('weiter.klein.verlassen')}>
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
           <path d="M7 7l10 10M17 7L7 17" />

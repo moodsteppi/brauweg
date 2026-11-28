@@ -317,8 +317,9 @@ describe('Weiterspielen', () => {
     fireEvent.click(knopf('Nein, später'));
     expect(screen.queryByRole('dialog', { name: 'Du bist noch in einer Runde' })).toBeNull();
     const klein = screen.getByRole('region', { name: 'Deine Runde: Doppelkopf' });
-    expect(within(klein).getByText('Läuft gerade')).toBeInTheDocument();
-    fireEvent.click(within(klein).getByRole('button', { name: 'Zurück' }));
+    // Der ganze Streifen ist der Zurück-Knopf (Robin, 28.11.2026), das X
+    // steht als eigener Knopf daneben.
+    fireEvent.click(within(klein).getByRole('button', { name: 'Doppelkopf: Zurück an den Tisch' }));
     expect(onResume).toHaveBeenCalledWith('doppelkopf', 't1');
   });
 
