@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import TanksOnline from './TanksOnline';
+import { TanksOnlineRaum } from '@brauweg/broremote-kern/tanks/online';
 import { api, ApiError, type Me } from '../api';
 vi.mock('../api', async () => ({
   ...(await vi.importActual<typeof import('../api')>('../api')),
@@ -172,4 +173,22 @@ it('gibt nicht angemeldeten Gästen automatisch einen Gastnamen', async () => {
   });
   expect(screen.getByText('Gast')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Quick Play/ })).toBeEnabled();
+});
+
+it('zeigt die gemeinsame Planungsphase, Bestätigungen und den großen Abschuss-Countdown', async () => {
+  await act(async () => { render(<TanksOnline />); });
+  fireEvent.click(screen.getByRole('button', { name: 'Freundeslobby erstellen' }));
+  const leitung = Leitung.alle[0]; act(() => leitung.onopen?.());
+  const r = new TanksOnlineRaum('AB12CD34', 42, false, 0);
+  r.hinzufuegen('a', 'Anna', true); r.hinzufuegen('b', 'Ben', true); r.starten('a');
+  for (let i = 0; i < 60; i++) r.schritt(i * 50);
+  act(() => leitung.nachricht(r.sicht('a', 3000)));
+  expect(screen.getByText(/Schuss einstellen und festlegen/)).toHaveTextContent('0/2 bereit');
+  for (const id of ['a', 'b']) r.eingabe(id, 1, { art: 'feuer', zug: 1, winkel: 90, staerke: 50, waffe: 0 });
+  act(() => leitung.nachricht(r.sicht('a', 3000)));
+  expect(screen.getByRole('status', { name: 'Countdown' })).toHaveTextContent('3');
+  expect(screen.getByRole('button', { name: 'Festgelegt ✓' })).toBeDisabled();
+  for (let i = 0; i < 20; i++) r.schritt(4000 + i * 50);
+  act(() => leitung.nachricht(r.sicht('a', 5000)));
+  expect(screen.getByRole('status', { name: 'Countdown' })).toHaveTextContent('2');
 });

@@ -27,7 +27,7 @@ export type Effekt =
 
 export type Buehnenbild = {
   karte?: number; gelaende: Gelaende; gelaendeSchluessel: string; meer: number; wind: number;
-  bros: readonly BroSicht[]; amZug?: string; zielen: boolean;
+  bros: readonly BroSicht[]; amZug?: string; schiessende?: string[]; zielen: boolean;
   /** Abgespielter Flug und die Flugzeit in s, bis zu der er gezeigt wird. */
   flug?: { bahn: Flugbahn; t: number };
   effekte: readonly Effekt[]; jetzt: number; wackeln: number; ruhe: boolean;
@@ -228,7 +228,7 @@ export function zeichneBuehne(canvas: HTMLCanvasElement, bild: Buehnenbild): boo
     const alt = winkel.get(b.id) ?? ziel;
     const neu = bild.ruhe ? ziel : alt + (ziel - alt) * .18;
     winkel.set(b.id, neu);
-    bro(c, b, mx(b.x), my(b.y), s, b.id === bild.amZug && !bild.flug, neu, !bild.ruhe && b.id===bild.amZug && bild.flug ? Math.max(0,1-bild.flug.t/.28) : 0);
+    bro(c, b, mx(b.x), my(b.y), s, b.id === bild.amZug && !bild.flug, neu, !bild.ruhe && (bild.schiessende ? bild.schiessende.includes(b.id) : b.id===bild.amZug) && bild.flug ? Math.max(0,1-bild.flug.t/.28) : 0);
   }
 
   // Zielhilfe: gestrichelter Strahl in Rohrrichtung, Länge = Stärke. Bewusst NICHT die Bahn.

@@ -512,3 +512,22 @@
     filter: brightness(1.15);
   }
 }
+
+/* Große, getrennte Trefferflächen: ein Druck entspricht exakt einem Schritt. */
+.to-feinregler { min-width: 0; color: #f8e4bc; font-size: 12px; }
+.to-feinregler > span { display: flex; justify-content: space-between; gap: 4px; }
+.to-feinregler > div { display: grid; grid-template-columns: 44px minmax(18px, 1fr) 44px; align-items: center; gap: 2px; }
+.to-steuerung .to-feinregler button { min-height: 44px; min-width: 44px; padding: 0; font-size: 25px; color: #ffe4a3; background: #332819; border: 2px solid #bb9355; border-radius: 8px; touch-action: manipulation; }
+.to-feinregler output { text-align: center; font-variant-numeric: tabular-nums; }
+.to-countdown { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; z-index: 5; color: #ffe5a1; text-shadow: 0 4px 0 #61421c, 0 0 30px #000; }
+.to-countdown strong { font: clamp(84px, 24vh, 160px)/1 'Lilita One', sans-serif; animation: to-count 1s ease-out both; }
+.to-countdown span { background: #14252be6; padding: 6px 16px; border: 1px solid #b79559; border-radius: 8px; }
+@keyframes to-count { from { transform: scale(1.2); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .to-countdown strong { animation: none; } }
+
+@media (max-width: 750px) and (orientation: landscape) {
+  .to-zielen { grid-template-columns: 1fr; gap: 3px; }
+  .to-feinregler { display: grid; grid-template-columns: 38px minmax(106px, 1fr); align-items: center; gap: 3px; }
+  .to-feinregler > span b { display: none; }
+  .to-feinregler > div { grid-template-columns: 44px minmax(18px, 1fr) 44px; }
+}
