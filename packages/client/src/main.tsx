@@ -202,6 +202,7 @@ const ProbeDreckBro = lazy(() =>
 const ProbeBroChess = lazy(() =>
   import('./proben/brochess/ProbeBroChess').then((m) => ({ default: m.ProbeBroChess })),
 );
+const TanksOnline = lazy(() => import('./tanks-online/TanksOnline'));
 const IceClash = lazy(() => import('./ice-clash/IceClash'));
 const BroRemote = lazy(() => import('./broremote/BroRemote').then(m => ({ default: m.BroRemote })));
 
@@ -243,7 +244,7 @@ const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
 
 createRoot(root).render(
   <StrictMode>
-    {window.location.pathname === '/ice-clash' ? (<Suspense fallback={<p>Die Eisscholle wird geladen…</p>}><IceClash /></Suspense>) : window.location.pathname === '/broremote' ? (
+    {window.location.pathname === '/tanks-online' ? (<Suspense fallback={<p>BroTanks Online wird geladen…</p>}><TanksOnline /></Suspense>) : window.location.pathname === '/ice-clash' ? (<Suspense fallback={<p>Die Eisscholle wird geladen…</p>}><IceClash /></Suspense>) : window.location.pathname === '/broremote' ? (
       <Suspense fallback={<p className="muted">BroRemote wird geladen…</p>}><BroRemote /></Suspense>
     ) : werkzeug ? (
       <Suspense fallback={<p className="muted">Werkzeug wird geladen…</p>}>{werkzeug}</Suspense>

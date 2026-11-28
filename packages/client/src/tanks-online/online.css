@@ -1,0 +1,514 @@
+.to-menue,
+.to-partie {
+  --to-rahmen: url('/hub/zierwerk/rahmen.webp');
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: #fff0cf;
+  background: #10231e;
+}
+.to-menue {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background:
+    linear-gradient(#0a1d18a6, #0a1819ed),
+    url('/broremote/welten/inseln.webp') center/cover fixed;
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+.to-menue-innen {
+  width: min(100%, 760px);
+  margin: auto;
+}
+.to-menue button,
+.to-partie button,
+.to-titel a {
+  border: 7px solid transparent;
+  border-image: var(--to-rahmen) 13% / 7px;
+  border-radius: 3px;
+  background: linear-gradient(#334d38ee, #152e21f5);
+  color: #fff0cf;
+  font: inherit;
+  font-weight: 800;
+  min-height: 46px;
+  padding: 7px 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.to-menue button:disabled,
+.to-partie button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.to-menue button:focus-visible,
+.to-partie button:focus-visible,
+.to-menue input:focus-visible,
+.to-partie input:focus-visible {
+  outline: 3px solid #ffe39c;
+  outline-offset: 2px;
+}
+.to-titel {
+  position: relative;
+  min-height: 230px;
+  display: flex;
+  align-items: end;
+  border: 10px solid transparent;
+  border-image: var(--to-rahmen) 13% / 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.to-titel > img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: center 40%;
+}
+.to-titel > div {
+  position: relative;
+  padding: 55px 20px 18px;
+  width: 100%;
+  background: linear-gradient(transparent, #0a1a17f5);
+}
+.to-titel h1 {
+  margin: 5px 0;
+  font-size: clamp(26px, 6vw, 40px);
+}
+.to-titel p {
+  margin: 0;
+}
+.to-titel a {
+  position: absolute;
+  z-index: 1;
+  left: 10px;
+  top: 10px;
+}
+.to-titel small {
+  letter-spacing: 0.14em;
+  color: #ffdb85;
+}
+.to-tafel {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+  border: 10px solid transparent;
+  border-image: var(--to-rahmen) 13% / 10px;
+  background: #162b23f5;
+}
+.to-tafel h2,
+.to-tafel p {
+  margin: 0;
+}
+.to-tafel > label:not(.to-botwahl) {
+  display: grid;
+  gap: 6px;
+}
+.to-menue input:not([type='checkbox']) {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  border: 1px solid #c7a969;
+  border-radius: 3px;
+  background: #0d1e19;
+  color: #fff0cf;
+  font: inherit;
+  padding: 10px;
+}
+.to-botwahl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #827c50;
+  background: #253d2b;
+  min-height: 48px;
+  cursor: pointer;
+}
+.to-botwahl input {
+  accent-color: #d5b566;
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.to-menue .to-haupt {
+  background: linear-gradient(#f4d993, #bd913f);
+  color: #192b23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 68px;
+  font-size: 20px;
+}
+.to-haupt img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.to-haupt small {
+  display: block;
+  font-weight: 600;
+  font-size: 12px;
+}
+.to-freunde {
+  display: grid;
+  gap: 12px;
+}
+.to-freunde form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.to-hinweis {
+  font-size: 13px;
+  color: #c5cfbc;
+  line-height: 1.6;
+}
+.to-lobbykopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.to-lobbykopf b {
+  white-space: nowrap;
+  color: #9fe1b9;
+  font-size: 13px;
+}
+.to-suche {
+  text-align: center;
+  padding: 16px;
+  background: radial-gradient(ellipse, #ab954b30, transparent);
+}
+.to-suche strong {
+  font-size: clamp(30px, 8vw, 48px);
+  color: #ffdc8a;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.to-suche p {
+  font-size: 13px;
+  margin-top: 8px;
+}
+.to-lobbyspieler {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.to-lobbyspieler > div {
+  border-left: 4px solid;
+  background: #0b1c18;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.to-lobbyspieler img {
+  width: 52px;
+  height: 48px;
+  object-fit: contain;
+}
+.to-lobbyspieler span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.to-lobbyspieler small {
+  display: block;
+  color: #b6c9ba;
+  font-size: 11px;
+}
+.to-fehler {
+  color: #ffe2bd;
+  border: 1px solid #d6976b;
+  background: #512f22;
+  padding: 12px;
+}
+/* Die Partie ist eine feste Fläche. Keine Hub-Leiste und kein nach unten
+   ausgelagerter Controller; die Bedienelemente liegen im Wasser-/Himmelrand. */
+.to-partie {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
+.to-leinwand {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.to-hud {
+  position: absolute;
+  z-index: 7;
+  inset: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) auto
+    max(8px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 14px;
+  pointer-events: none;
+}
+.to-hud button {
+  pointer-events: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.to-hud > b {
+  color: #ffe0a0;
+  text-shadow: 0 2px 5px #000;
+}
+.to-hud b span {
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.to-hud > span {
+  margin-left: auto;
+  padding: 7px 12px;
+  background: #112c26df;
+  border: 1px solid #c3a459;
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.to-hud small {
+  color: #b1e8c5;
+  background: #10221ade;
+  padding: 5px;
+}
+.to-spielerstand {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  top: calc(58px + env(safe-area-inset-top));
+  display: flex;
+  gap: 5px;
+  max-width: 65%;
+}
+.to-spielerstand > span {
+  border-left: 3px solid;
+  padding: 4px 7px;
+  background: #10221ad9;
+  display: grid;
+  gap: 2px;
+  max-width: 110px;
+  font-size: 11px;
+}
+.to-spielerstand b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.to-spielerstand small {
+  color: #c4e1cb;
+}
+.to-spielerstand .ist-du {
+  box-shadow: 0 0 0 1px #fff2bd;
+}
+.to-zughinweis {
+  position: absolute;
+  right: max(12px, env(safe-area-inset-right));
+  top: calc(62px + env(safe-area-inset-top));
+  color: #ffe5a1;
+  background: #14291be6;
+  padding: 6px 10px;
+  font-weight: 800;
+  font-size: 12px;
+}
+.to-steuerung {
+  position: absolute;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(6px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 96px minmax(130px, 1fr) 156px 94px 88px;
+  gap: 10px;
+  align-items: center;
+  padding: 7px;
+  background: linear-gradient(#13261be3, #0c1d19f5);
+  border: 7px solid transparent;
+  border-image: var(--to-rahmen) 13% / 7px;
+}
+.to-steuerung button {
+  padding: 2px;
+  min-width: 0;
+  min-height: 44px;
+  border-width: 5px;
+  border-image-width: 5px;
+  touch-action: none;
+}
+.to-fahrt {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.to-fahrt img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.to-fahrt small {
+  grid-column: 1/-1;
+  text-align: center;
+  font-size: 10px;
+}
+.to-zielen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.to-zielen label {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.to-zielen input {
+  display: block;
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  accent-color: #efc564;
+  cursor: pointer;
+  touch-action: none;
+}
+.to-waffen {
+  display: flex;
+  gap: 4px;
+}
+.to-waffen button {
+  flex: 1;
+  position: relative;
+}
+.to-waffen img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.to-waffen small {
+  position: absolute;
+  bottom: 0;
+  right: 1px;
+  background: #13291a;
+  min-width: 12px;
+  font-size: 10px;
+}
+.to-waffen button[aria-pressed='true'] {
+  background: #626335;
+  outline: 2px solid #ffe7a8;
+  outline-offset: 0;
+}
+.to-items {
+  display: flex;
+  gap: 4px;
+}
+.to-items button {
+  flex: 1;
+}
+.to-items img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.to-partie .to-feuer {
+  background: linear-gradient(#f3ce79, #bb8738);
+  color: #13291c;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+}
+.to-feuer img {
+  width: 28px;
+  height: 28px;
+}
+.to-ergebnis {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: #13291af5;
+  padding: 16px 30px;
+  border: 10px solid transparent;
+  border-image: var(--to-rahmen) 13% / 10px;
+  max-height: 85%;
+}
+.to-ergebnis > img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.to-ergebnis h1 {
+  margin: 5px 0;
+  font-size: 26px;
+}
+.to-ergebnis p {
+  font-size: 13px;
+}
+.to-drehen {
+  display: none;
+}
+@media (max-width: 750px) and (orientation: landscape) {
+  .to-steuerung {
+    grid-template-columns: 78px minmax(110px, 1fr) 126px 78px 70px;
+    gap: 5px;
+    padding: 3px;
+  }
+  .to-zielen {
+    gap: 5px;
+  }
+  .to-waffen img {
+    width: 28px;
+    height: 30px;
+  }
+  .to-hud {
+    gap: 6px;
+  }
+  .to-hud > b span {
+    display: none;
+  }
+  .to-items img {
+    width: 26px;
+    height: 26px;
+  }
+}
+@media (orientation: portrait) {
+  .to-partie .to-drehen {
+    display: flex;
+    position: absolute;
+    z-index: 6;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 40px;
+    background:
+      linear-gradient(#10251de8, #10251df5),
+      url('/broremote/welten/inseln.webp') center/cover;
+  }
+  .to-drehen > span {
+    font-size: 90px;
+    color: #f4ce7a;
+  }
+  .to-partie .to-steuerung {
+    visibility: hidden;
+  }
+  .to-hud > b,
+  .to-hud > span,
+  .to-hud > small {
+    display: none;
+  }
+}
+@media (hover: hover) {
+  .to-menue button:enabled:hover,
+  .to-partie button:enabled:hover {
+    filter: brightness(1.15);
+  }
+}

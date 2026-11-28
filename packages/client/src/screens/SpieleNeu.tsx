@@ -347,9 +347,9 @@ export function SpieleNeu({
               <h2 className="hb-ab">
                 <Symbol>{k.icon}</Symbol>
                 {t(k.titel)}
-                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 1 : 0)}</span>
+                <span className="hb-ab-zusatz">{liste.length + (k.id === 'denken' ? 2 : 0)}</span>
               </h2>
-              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{liste.map(karte)}</div>
+              <div className="hb-reihe">{k.id === 'denken' && <a className="hb-sk" href="/ice-clash" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 · Geheime Züge</small></a>}{k.id === 'denken' && <a className="hb-sk" href="/tanks-online" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/broremote/ausbau/tanks.webp)'}}/><strong>BroTanks Online</strong><small>{tf('spielwahl.spieler', { spanne: '2–4' })}</small></a>}{liste.map(karte)}</div>
             </section>
           );
         })}
@@ -363,7 +363,7 @@ export function SpieleNeu({
           </section>
         )}
 
-        {zeige('echtzeit') && <section className="hb-blk"><h2 className="hb-ab">Online-Arena</h2><div className="hb-reihe"><a className="hb-sk" href="/ice-clash"><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 Spieler</small></a></div></section>}
+        {zeige('echtzeit') && <section className="hb-blk"><h2 className="hb-ab">Online-Arena</h2><div className="hb-reihe"><a className="hb-sk" href="/ice-clash"><span className="hb-sk-bild" style={{backgroundImage:'url(/ice-clash/titel.webp)'}}/><strong>Bro Ice Clash</strong><small>2–4 Spieler</small></a><a className="hb-sk" href="/tanks-online" style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:'url(/broremote/ausbau/tanks.webp)'}}/><strong>BroTanks Online</strong><small>{tf('spielwahl.spieler', { spanne: '2–4' })}</small></a></div></section>}
         {zeige('solo') && soloDa && <section className="hb-blk"><h2 className="hb-ab">{t('spielwahl.allein')}</h2><div className="hb-reihe">
           {!inApp && mitProSubway && <button className="hb-sk" onClick={() => onSolo('prosubway')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/banner-prosubway.webp)'}}/><strong>{t('modus.prosubway')}</strong><small>Solo</small></button>}
           {mitManufaktur && <button className="hb-sk" onClick={() => onSolo('kartenmanufaktur')}><span className="hb-sk-bild" style={{backgroundImage:'url(/manufaktur/werkstatt-hero.webp)'}}/><strong>Kartenmanufaktur</strong><small>Solo</small></button>}
