@@ -1,0 +1,431 @@
+/*
+ * BroweG-Bock im Hub-Stil (docs/DESIGN.md, „Das neue Hub"): Rahmen und Knöpfe
+ * kommen aus SpielEinstieg (`.spe`) und hub-neu.css, hier steht nur, was der
+ * Bock zusätzlich hat.
+ *
+ * `.bock-tafel` ist die Holztafel der Startkacheln (`.start-holzrahmen` +
+ * `.start-kachel` in start-einstiege.css): dunkles Holz außen, Goldader
+ * innen, Grün als Grund. Nachgebaut und nicht wiederverwendet, weil jene
+ * Regeln nur unter `.hb` greifen — der Bock steht wie jeder Spieleinstieg
+ * unter `.spe`. Die Werte sind dieselben, damit die Bock-Kachel auf dem
+ * Start und dieser Bildschirm aus einem Holz sind.
+ */
+.spe .bock-tafel {
+  position: relative;
+  isolation: isolate;
+  border: 5px solid #624024;
+  border-radius: 23px;
+  color: #fff7df;
+  background: radial-gradient(ellipse at 0% 100%, #35624a, transparent 75%), #142f29;
+  box-shadow:
+    0 0 0 1px #b18b4d,
+    inset 0 0 0 1px #e5bf72,
+    0 7px 18px #0003;
+  padding: 14px 14px;
+}
+.spe .bock-tafel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid #e6bd70a6;
+  border-radius: 17px;
+  pointer-events: none;
+}
+
+.spe .bock-einstieg p {
+  margin: 0 0 8px;
+  font: 700 15px/1.4 var(--hb-txt);
+}
+.spe .bock-einstieg ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 600 13px/1.35 var(--hb-txt);
+  color: #f3e3bd;
+}
+
+.spe .bock-freunde {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.spe .bock-code-zeile {
+  display: flex;
+  gap: 8px;
+}
+.spe .bock-code-feld {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+/* Suche: die Uhr in der Mitte der Tafel */
+.spe .bock-suche {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 22px 14px;
+}
+.spe .bock-suche strong {
+  font: 400 22px var(--hb-anz);
+}
+.spe .bock-uhr {
+  font: 400 44px/1 var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.spe .bock-suche small {
+  color: #f3e3bd;
+  font: 600 13px var(--hb-txt);
+}
+
+/* Lobby: der Code groß, damit man ihn vorlesen kann */
+.spe .bock-code {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+}
+.spe .bock-code small {
+  grid-column: 1 / -1;
+  font: 700 13px var(--hb-txt);
+  color: #f3e3bd;
+}
+.spe .bock-code strong {
+  font: 400 34px/1.1 var(--hb-anz);
+  letter-spacing: 0.12em;
+  color: var(--hb-gold);
+}
+
+/* Tabellen: Spieler in der Lobby, Punkte im Zwischenstand */
+.spe .bock-tabelle {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spe .bock-zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 14px;
+  border-top: 1px solid rgba(53, 81, 140, 0.45);
+  font: 700 15px var(--hb-txt);
+}
+.spe .bock-zeile:first-child {
+  border-top: none;
+}
+.spe .bock-zeile.is-ich {
+  background: rgba(245, 192, 46, 0.12);
+}
+.spe .bock-zeile.is-weg .bock-name,
+.spe .bock-zeile.is-frei .bock-name {
+  color: var(--hb-leise);
+}
+.spe .bock-zeile.is-weg .bock-name {
+  text-decoration: line-through;
+}
+.spe .bock-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spe .bock-bild {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: none;
+  background: #142f29 center / cover no-repeat;
+  border: 2px solid #624024;
+}
+.spe .bock-zeile.is-frei .bock-bild {
+  border-style: dashed;
+  border-color: var(--hb-kontur);
+  background: transparent;
+}
+.spe .bock-marke {
+  font: 800 11px var(--hb-txt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hb-gold);
+}
+.spe .bock-rang {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font: 400 15px var(--hb-anz);
+  background: var(--hb-karte-hoch, #22397a);
+  color: var(--hb-tinte);
+}
+/* Gold, Silber, Bronze — wie Medaillen, nicht wie Knöpfe */
+.spe .bock-rang.is-1 {
+  background: #f5c02e;
+  color: #3a2600;
+}
+.spe .bock-rang.is-2 {
+  background: #cfd6e6;
+  color: #1d2742;
+}
+.spe .bock-rang.is-3 {
+  background: #c9874a;
+  color: #2b1605;
+}
+.spe .bock-punkte {
+  font: 400 17px var(--hb-anz);
+  color: var(--hb-gold);
+  font-variant-numeric: tabular-nums;
+}
+.spe .bock-plus {
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-gruen);
+}
+
+/* Stationen in der Lobby */
+.spe .bock-stationen {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spe .bock-station {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+}
+.spe .bock-station .bock-station-bild {
+  grid-row: 1 / 3;
+}
+.spe .bock-station-nr {
+  font: 800 11px var(--hb-txt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hb-leise);
+}
+.spe .bock-station-wahl {
+  width: 100%;
+}
+.spe .bock-station-spiel {
+  font: 800 15px var(--hb-txt);
+}
+.spe .bock-station-bild {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--hb-karte) url('/hub/banner-mehrkampf.webp') center / cover no-repeat;
+  border: 2px solid #624024;
+}
+
+/* Stationsleiste im Zwischenstand */
+.spe .bock-leiste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+.spe .bock-leiste-punkt {
+  flex: 1 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.55;
+  text-align: center;
+}
+.spe .bock-leiste-punkt small {
+  font: 700 11px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .bock-leiste-punkt.is-fertig,
+.spe .bock-leiste-punkt.is-jetzt {
+  opacity: 1;
+}
+.spe .bock-leiste-punkt.is-fertig .bock-station-bild {
+  border-color: var(--hb-gruen);
+}
+.spe .bock-leiste-punkt.is-jetzt .bock-station-bild {
+  border-color: var(--hb-gold);
+  box-shadow: 0 0 0 3px rgba(245, 192, 46, 0.3);
+}
+
+.spe .bock-weiter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  justify-content: center;
+  text-align: center;
+}
+.spe .bock-weiter strong {
+  font: 400 19px var(--hb-anz);
+  color: var(--hb-gold);
+}
+.spe .bock-weiter span {
+  font: 700 13px var(--hb-txt);
+  color: var(--hb-leise);
+  font-variant-numeric: tabular-nums;
+}
+.spe .bock-hinweis {
+  margin: 0;
+  font: 700 14px var(--hb-txt);
+  color: var(--hb-leise);
+}
+
+/* Siegerehrung: je Platz eine Holztafel, der Sieger größer */
+.spe .bock-podest {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.spe .bock-podest-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.spe .bock-podest-zeile.is-1 {
+  padding: 16px 12px;
+  border-color: #8a5a22;
+  background: radial-gradient(ellipse at 0% 100%, #5f7a2e, transparent 75%), #1f3b1d;
+}
+.spe .bock-podest-zeile.is-1 .bock-rang {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+.spe .bock-podest-zeile.is-ich {
+  outline: 2px solid var(--hb-gold);
+  outline-offset: 2px;
+}
+.spe .bock-podest-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.spe .bock-podest-name strong {
+  font: 400 18px var(--hb-anz);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spe .bock-podest-name small {
+  font: 700 12px var(--hb-txt);
+  color: #f3e3bd;
+}
+.spe .bock-lohn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font: 400 15px var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+}
+.spe .bock-lohn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.spe .bock-lohn img {
+  width: 18px;
+  height: 18px;
+}
+.spe .bock-lohn .is-minus {
+  color: #ffb4a8;
+}
+
+.spe .bock-fehler {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.18);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  font: 700 14px var(--hb-txt);
+}
+.spe .bock-verlassen {
+  align-self: center;
+}
+
+/*
+ * Das Band über dem Tisch (BockBand): schmal, oben mittig, über jedem
+ * Tischbildschirm. Eigene Wurzel, nicht unter `.spe` — es liegt außerhalb
+ * jedes Rahmens. Die Höhe bleibt unter 44 pt Sichtfläche, die Trefferfläche
+ * erreicht sie über das Polster.
+ */
+.bock-band {
+  position: fixed;
+  z-index: 60;
+  top: calc(env(safe-area-inset-top, 0px) + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  /* Links und rechts bleiben die runden Kopfknöpfe der Tische frei (44 pt + Rand). */
+  max-width: calc(100vw - 100px);
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 3px;
+  border: 2px solid #624024;
+  border-radius: 999px;
+  background: #142f29;
+  box-shadow:
+    0 0 0 1px #b18b4d,
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  color: #fff7df;
+  font: 700 12px/1.15 'Nunito Variable', system-ui, sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bock-band::before {
+  /* Trefferfläche auf 44 pt, ohne das Band dicker zu zeichnen */
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
+}
+.bock-band img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+/* Zwei Zeilen: der Name als Versalien-Oberzeile (DESIGN.md: 11 pt nur dafür),
+   darunter Station und Rang — in einer Zeile wurde „du bist 1." abgeschnitten. */
+.bock-band-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bock-band strong {
+  color: var(--hb-gold, #f5c02e);
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bock-band-text > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
