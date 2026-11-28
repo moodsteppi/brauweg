@@ -399,6 +399,57 @@ export class Suchschlange {
   }
 
   /**
+   * Wie viele je Spiel gerade suchen, ueber alle Toepfe (Spielart, Sitzzahl)
+   * — fuer Quick-Play (seit dem 28.11.2026): „wo warten gerade Leute".
+   *
+   * Gezaehlt wird nur, wer noch lebt: Die Stillen wirft erst `faellig`
+   * hinaus, und bis dahin stuenden sie hier als Wartende, zu denen Quick-Play
+   * jemanden schickt, der dann allein vor den Bots sitzt. Wer schon im Bau
+   * ist, wartet nicht mehr — sein Tisch steht gleich. `ohne` laesst ein Konto
+   * aus (den Fragenden selbst: Er soll nicht zu sich selbst geschickt werden).
+   */
+  wartendeJeSpiel(ohne?: string): Map<GameId, number> {
+    const jetzt = this.jetzt();
+    const zahl = new Map<GameId, number>();
+    for (const fenster of this.fenster.values()) {
+      let lebende = 0;
+      for (const [accountId, gesehen] of fenster.suchende) {
+        if (accountId !== ohne && jetzt - gesehen <= this.stilleMs) lebende += 1;
+      }
+      if (lebende > 0) zahl.set(fenster.gameId, (zahl.get(fenster.gameId) ?? 0) + lebende);
+    }
+    return zahl;
+  }
+
+  /**
+   * Der Topf dieses Spiels, in dem die meisten Lebenden warten — Regelsatz und
+   * Sitzzahl, mit denen Quick-Play dort einreiht. Ohne ihn stuende ein
+   * Quick-Play-Spieler mit der Vorgabe des Moduls in einem eigenen Topf neben
+   * den Wartenden (Filler: Nebel neben Extreme), und gefunden haetten sie
+   * sich nie. Bei Gleichstand der aeltere Topf: Er geht zuerst los.
+   */
+  vollsterTopf(gameId: GameId, ohne?: string): { config: unknown | null; sitze: number | null } | null {
+    const jetzt = this.jetzt();
+    let bester: { fenster: Fenster; lebende: number } | null = null;
+    for (const fenster of this.fenster.values()) {
+      if (fenster.gameId !== gameId) continue;
+      let lebende = 0;
+      for (const [accountId, gesehen] of fenster.suchende) {
+        if (accountId !== ohne && jetzt - gesehen <= this.stilleMs) lebende += 1;
+      }
+      if (lebende === 0) continue;
+      if (
+        !bester ||
+        lebende > bester.lebende ||
+        (lebende === bester.lebende && fenster.beginn < bester.fenster.beginn)
+      ) {
+        bester = { fenster, lebende };
+      }
+    }
+    return bester ? { config: bester.fenster.config, sitze: bester.fenster.sitze } : null;
+  }
+
+  /**
    * Welche Runden jetzt losgehen — und zwar genau einmal: Die Beteiligten sind
    * mit der Rueckgabe aus der Schlange heraus.
    *

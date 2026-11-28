@@ -218,4 +218,10 @@ export default {
   // Zusatzpakete (22.09.2026, server/src/inhaltspakete.ts): Wer den Tisch
   // aufmacht, braucht das Paket — wer mitspielt, nicht.
   'error.inhaltspaketFehlt': 'Dieses Spielpaket gehört dir noch nicht. Du findest es im Shop unter „Spielpakete“ - mitspielen können alle ohne Kauf.',
+  // Quick-Play und Favoriten (28.11.2026, server/src/schnellspiel.ts).
+  'error.schnellspielLaufenderTisch': 'Du bist noch in einer Runde. Spiel sie erst zu Ende.',
+  'error.schnellspielKeinSpiel': 'Für Quick-Play ist hier gerade kein Spiel ausgewählt.',
+  'error.schnellspielLeer': 'Lass mindestens ein Spiel für Quick-Play an.',
+  'error.spielUnbekannt': 'Dieses Spiel gibt es nicht.',
+  'error.favoritenVoll': 'Mehr Favoriten passen nicht in die Reihe. Nimm erst einen heraus.',
 } satisfies Woerterbuch;

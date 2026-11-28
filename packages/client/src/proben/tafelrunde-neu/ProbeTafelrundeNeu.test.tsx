@@ -25,7 +25,7 @@ describe('Probe /probe/tafelrunde-neu', () => {
     expect(arten.has('faehigkeit')).toBe(true);
   });
 
-  it.each(['einstieg', 'suche', 'wartesaal', 'ladebild', 'ruesten', 'kampf', 'ende'])('Fall %s zeichnet', (fall) => {
+  it.each(['einstieg', 'suche', 'wartesaal', 'ladebild', 'ruesten', 'fremd', 'kampf', 'kampfladen', 'ende'])('Fall %s zeichnet', (fall) => {
     oeffne(fall);
     const { container } = render(<ProbeTafelrundeNeu />);
     expect(container.firstChild).not.toBeNull();

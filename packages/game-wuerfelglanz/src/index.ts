@@ -139,7 +139,10 @@ export function platzierungen(p: Partie): PartyStanding[] {
 }
 const codec = snapshotCodec<Partie>(1);
 export const wuerfelglanz: GameModule<Partie, Aktion, Sicht, Record<string, never>> = {
-  meta: { id: 'wuerfelglanz', nameKey: 'game.wuerfelglanz', availability: 'playable', seatCounts: [1, 2, 3, 4, 5, 6], rotationSize: () => 1, suggestedRounds: () => [1], xpBasisZaehltKarten: false, nurIos: true },
+  // suchSitze 4: Die Mitspielersuche (Quick-Play) baut Vierertische, nicht
+  // Sechsertische (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md) — fuenf Bots um
+  // einen Suchenden machen jede Runde nur laenger. Sechs bleiben der Lobby.
+  meta: { id: 'wuerfelglanz', nameKey: 'game.wuerfelglanz', availability: 'playable', seatCounts: [1, 2, 3, 4, 5, 6], suchSitze: 4, rotationSize: () => 1, suggestedRounds: () => [1], xpBasisZaehltKarten: false, nurIos: true },
   protocolVersion: 1, defaultConfig: () => ({}), validateConfig: (c, seats, rounds) => typeof c !== 'object' || c === null || Array.isArray(c) || Object.keys(c).length || ![1, 2, 3, 4, 5, 6].includes(seats) || rounds !== 1 ? [{ path: 'config', messageKey: 'ruleset.invalid', severity: 'error' }] : [],
   createParty: ({ seats, seed, seedHex }) => erstelle(seats, seed, seedHex), act: handeln, currentActor: p => p.fertig ? null : p.amZug, legalActions: erlaubt,
   isFinished: p => p.fertig, standings: platzierungen, markLeft: ausstieg, viewFor: (p, seat) => sicht(p, seat), spectatorView: p => sicht(p, null), botAction: (s, level) => bot(s, level), serialize: codec.serialize, deserialize: codec.deserialize,

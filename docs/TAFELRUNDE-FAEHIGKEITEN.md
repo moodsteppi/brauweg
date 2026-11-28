@@ -128,3 +128,29 @@ galt. Und mit 2 Startgold blieb in Runde 1 immer ein Platz leer.
 
 Offen: Die `schaetzung` der Marken für den Bot stammt noch aus den Werten vor
 dem Umbau. Die Bewertungsprobe liegt bei +0,38 (mit Deckung), Schranke 0,3.
+
+## Nachtrag 28.11.2026: zwei verschmelzen, Handel im Kampf
+
+Nach Robins zweitem Test: Zwei gleiche ergeben die nächste Stufe (vier für
+drei Sterne statt neun), und im Kampf darf man kaufen, von der Bank verkaufen
+und auf der Bank umsortieren. Dazu sucht „Mitspieler suchen“ jetzt zu viert.
+
+Gemessen je 300 Partien (Spielzeit) und 1.000 Partien (Marken) zu viert:
+
+| Stand | Partie | Runden | Marken | hart : normal |
+| --- | --- | --- | --- | --- |
+| vorher (drei verschmelzen) | 6:48 | 9 | x0,85–1,15 | – |
+| zwei verschmelzen, sonst gleich | 5:27 | 8 | x0,89–1,25 | 100 : 100 |
+| + Grundeinkommen 4 statt 5 | 5:17 | 9 | x0,90–1,08 | – |
+| + Schadensteiler 6 statt 3 | 6:37 | 10 | x0,93–1,08 | 102 : 99 |
+| **+ Startleben 16 statt 12** | **6:55** | **10** | **x0,93–1,03** | **116 : 94,7** |
+
+Genommen ist die letzte Zeile. Weniger Gold verlängert die Partie nicht. Der
+Teiler hätte es getan, aber knappe und klare Niederlagen gleich teuer gemacht.
+Dazu patzt der Bot `normal` jetzt bei 30 % der Käufe statt bei 15 %: Mit
+billigen Verschmelzungen trennten Polster und Reserve hart und normal kaum
+noch, ein normaler schlug drei harte 111 : 96,3.
+
+Bekannt und gewollt: Ein Kauf bei vollem Brett kann eine Verschmelzungskette
+auslösen, die einen Feldplatz frei macht. Fehlt danach das Gold, steht der
+Platz bis zur nächsten Runde leer (Probe in `bot.test.ts`).

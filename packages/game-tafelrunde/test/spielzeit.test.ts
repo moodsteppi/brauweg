@@ -37,6 +37,7 @@ import {
   type EinheitId,
   HOECHSTDAUER_MS,
   type Kaempferstand,
+  SCHADEN_STUFEN_TEILER,
   STANDARD_REGLER,
   type Stufe,
   erstellePartie,
@@ -541,7 +542,10 @@ describe('Spielzeit: der Kampfregler', () => {
       hoechstesLeben: 10, mana: 0, schild: 0,
     }));
     assert.ok(schadenFuerVerlierer(ueberlebende, 1) > schadenFuerVerlierer(ueberlebende, 3));
-    assert.equal(schadenFuerVerlierer(ueberlebende), schadenFuerVerlierer(ueberlebende, 3));
+    // Ohne Angabe gilt der gebaute Teiler. Bis zum 28.11.2026 war das die 3;
+    // seit zwei Kopien verschmelzen steht er auf 6 (kampf.ts), deshalb gegen
+    // die Konstante und nicht gegen eine feste Zahl.
+    assert.equal(schadenFuerVerlierer(ueberlebende), schadenFuerVerlierer(ueberlebende, SCHADEN_STUFEN_TEILER));
   });
 
   /**

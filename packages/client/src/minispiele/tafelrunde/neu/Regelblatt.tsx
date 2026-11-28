@@ -37,6 +37,13 @@ export interface Regelwissen {
   katalog: Record<string, Einheit>;
   faehigkeiten: Record<string, Faehigkeit | null>;
   synergieTabelle: readonly Synergie[];
+  /**
+   * Wie viele gleiche Einheiten verschmelzen — aus der Sicht (`verschmelzZahl`).
+   * Vor dem ersten Tisch unbekannt; dann steht der Satz ohne Zahl da, statt
+   * eine Zahl zu nennen, die das Modul inzwischen anders sieht (am 28.11.2026
+   * ging sie von drei auf zwei).
+   */
+  verschmelzZahl?: number;
 }
 
 export const KEIN_REGELWISSEN: Regelwissen = { katalog: {}, faehigkeiten: {}, synergieTabelle: [] };
@@ -76,7 +83,11 @@ export function Regelblatt({
         <ol className={stil.regelliste}>
           <li>{tz('neu.regeln.laden')}</li>
           <li>{tz('neu.regeln.ziehen')}</li>
-          <li>{tz('neu.regeln.verschmelzen')}</li>
+          <li>
+            {wissen.verschmelzZahl !== undefined
+              ? tz('neu.regeln.verschmelzenZahl', { n: wissen.verschmelzZahl })
+              : tz('neu.regeln.verschmelzen')}
+          </li>
           <li>{tz('neu.regeln.rang')}</li>
           <li>{tz('neu.regeln.faehigkeiten')}</li>
           <li>{tz('neu.regeln.marken')}</li>

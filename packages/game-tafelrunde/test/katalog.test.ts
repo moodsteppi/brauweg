@@ -108,12 +108,14 @@ describe('Sternstufen', () => {
   });
 
   it('rechnet Kartenzahl und Gesamtkosten passend zum Verschmelzen', () => {
-    assert.deepEqual([kartenZahl(1), kartenZahl(2), kartenZahl(3)], [1, 3, 9]);
+    // Seit dem 28.11.2026 verschmelzen zwei (vorher drei): Stufe 2 steckt
+    // voller zwei Karten, Stufe 3 voller vier (vorher 3 und 9).
+    assert.deepEqual([kartenZahl(1), kartenZahl(2), kartenZahl(3)], [1, 2, 4]);
     // Seit dem 27.11.2026 ueber den PREIS und nicht mehr ueber die
-    // Kostenstufe: Eine Stufe-3-Dorfwache steckt voller neun Karten zu je
-    // 2 Gold, ein Stufe-2-Sturmrufer voller drei zu je 4 Gold.
-    assert.equal(gesamtkosten('dorfwache', 3), 18);
-    assert.equal(gesamtkosten('sturmrufer', 2), 12);
+    // Kostenstufe: Eine Stufe-3-Dorfwache steckt voller vier Karten zu je
+    // 2 Gold, ein Stufe-2-Sturmrufer voller zwei zu je 4 Gold.
+    assert.equal(gesamtkosten('dorfwache', 3), 8);
+    assert.equal(gesamtkosten('sturmrufer', 2), 8);
   });
 
   /*
@@ -138,8 +140,9 @@ describe('Sternstufen', () => {
     for (const e of KATALOG) {
       assert.equal(erloes(e.id, 1), e.preis - 1, e.id);
       assert.ok(erloes(e.id, 1) >= 1, `${e.id} bringt beim Verkauf nichts`);
-      assert.equal(erloes(e.id, 2), 3 * e.preis, e.id);
-      assert.equal(erloes(e.id, 3), 9 * e.preis, e.id);
+      // Seit dem 28.11.2026 zwei bzw. vier Kopien je Stufe (vorher 3 und 9).
+      assert.equal(erloes(e.id, 2), 2 * e.preis, e.id);
+      assert.equal(erloes(e.id, 3), 4 * e.preis, e.id);
     }
   });
 });

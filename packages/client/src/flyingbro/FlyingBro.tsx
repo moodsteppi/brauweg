@@ -46,6 +46,7 @@ import { Partie, ladeRapier } from './partie';
 import type { FlyingbroAnsicht, FlyingbroErgebnisAntwort } from './sicht';
 import { zeichne, type ZeichenHilfe, type Zielbild } from './zeichnen';
 import { SCHRITT_S, abschuss, vollerZugPx, vorschau, zugAus } from './zielen';
+import { useZuletztMelden } from '../zuletzt';
 import './flyingbro.css';
 
 /**
@@ -860,6 +861,9 @@ export function FlyingBro({
   fall?: ProbeFall;
 }): React.JSX.Element {
   const quer = useQuer();
+  // „Zuletzt gespielt" (seit dem 28.11.2026) — nicht aus der Probe mit
+  // nachgestelltem Server, dort spielt niemand.
+  useZuletztMelden('flyingbro', leitung === echteLeitung);
   const [stand, setStand] = useState<FlyingbroAnsicht | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [level, setLevel] = useState<Level | null>(() => (spielFall(fall) ? (levelNach('w1-01') ?? null) : null));

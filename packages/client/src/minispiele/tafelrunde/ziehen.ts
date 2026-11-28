@@ -44,10 +44,21 @@ const ZIEHSCHWELLE = 8;
  * Test, der zieht, ein Absturz statt einer Aussage.
  */
 export function zielUnter(x: number, y: number): string | null {
+  /* Unter den unteren Bildschirmrand gezogen: Dort liegt kein Element mehr,
+     und `elementFromPoint` gibt null. Robin (28.11.2026) zieht zum Verkaufen
+     „nach unten aus dem Bildschirm" — das muss als Verkaufszone zaehlen, nicht
+     als Ziehen ins Leere. */
+  if (typeof window !== 'undefined' && y >= window.innerHeight) return VERKAUFSZIEL;
   if (typeof document.elementFromPoint !== 'function') return null;
   const unten = document.elementFromPoint(x, y);
   return (unten?.closest('[data-ziel]') as HTMLElement | null)?.dataset.ziel ?? null;
 }
+
+/**
+ * Das `data-ziel` der Verkaufszone am unteren Rand. Kein Ort (`ortLesen` gibt
+ * dafuer null), sondern ein eigenes Ziel: Wer dort loslaesst, verkauft.
+ */
+export const VERKAUFSZIEL = 'verkaufen';
 
 /** Was gerade am Finger haengt, samt Bildschirmkoordinate fuer den Schatten. */
 export interface Zug {
@@ -69,7 +80,10 @@ export interface Ziehen {
   readonly zug: Zug | null;
   /** Woher der Zug kommt — fuer `ziehtVon` an Brett und Bank. */
   readonly ziehtVon: Ort | null;
-  /** Wo die Einheit landet, wenn der Finger jetzt loslaesst — fuer `unterZeiger`. */
+  /**
+   * Wo die Einheit landet, wenn der Finger jetzt loslaesst — fuer `unterZeiger`.
+   * `VERKAUFSZIEL`, wenn sie ueber der Verkaufszone haengt und verkauft werden darf.
+   */
   readonly ablegeZiel: string | null;
   readonly zeiger: Zeigerrufe;
   /**
@@ -85,6 +99,8 @@ export function useZiehen({
   zielbar,
   tippe,
   schiebe,
+  verkaufbar,
+  verkaufe,
 }: {
   /** Darf der Spieler gerade handeln? Ohne das faengt kein Zug an. */
   darf: boolean;
@@ -94,6 +110,14 @@ export function useZiehen({
   tippe: (ort: Ort) => void;
   /** Losgelassen ueber einem Ablegeplatz. */
   schiebe: (von: Ort, nach: Ort) => void;
+  /**
+   * Darf die Einheit an `von` verkauft werden? Kommt vom Aufrufer aus der
+   * Zugliste (`verkaufen` je Ort) — der Haken prueft nichts selbst. Fehlt es,
+   * gibt es keine Verkaufszone.
+   */
+  verkaufbar?: (von: Ort) => boolean;
+  /** Losgelassen ueber der Verkaufszone (bzw. unter dem Bildschirmrand). */
+  verkaufe?: (von: Ort) => void;
 }): Ziehen {
   const [zug, setZug] = useState<{ von: Ort; x: number; y: number; zieht: boolean } | null>(null);
   const startPunkt = useRef<{ x: number; y: number } | null>(null);
@@ -177,10 +201,15 @@ export function useZiehen({
         tippe(ort);
         return;
       }
-      const ziel = ortLesen(zielUnter(ereignis.clientX, ereignis.clientY));
+      const unter = zielUnter(ereignis.clientX, ereignis.clientY);
+      if (unter === VERKAUFSZIEL) {
+        if (verkaufe && verkaufbar?.(ort)) verkaufe(ort);
+        return;
+      }
+      const ziel = ortLesen(unter);
       if (ziel) schiebe(ort, ziel);
     },
-    [tippe, schiebe],
+    [tippe, schiebe, verkaufe, verkaufbar],
   );
 
   const vorfuehren = useCallback((von: Ort, x: number, y: number): void => {
@@ -201,9 +230,10 @@ export function useZiehen({
   const laeuft = zug?.zieht === true;
   const ablegeZiel = useMemo(() => {
     if (!laeuft || !zug || ueberZiel === null) return null;
+    if (ueberZiel === VERKAUFSZIEL) return verkaufbar?.(zug.von) ? VERKAUFSZIEL : null;
     const ort = ortLesen(ueberZiel);
     return ort && zielbar(zug.von, ort) ? ueberZiel : null;
-  }, [laeuft, zug?.von, ueberZiel, zielbar]);
+  }, [laeuft, zug?.von, ueberZiel, zielbar, verkaufbar]);
 
   const zeiger = useMemo(
     () => ({ onZeigerStart, onZeigerBewegung, onZeigerEnde, onZeigerAbbruch }),

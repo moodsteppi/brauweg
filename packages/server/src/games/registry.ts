@@ -308,6 +308,21 @@ export function spieleFuer(
 }
 
 // ---------------------------------------------------------------------------
+// Quick-Play (Startseiten-Umbau, 28.11.2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tischspiele, die Quick-Play nie nimmt, obwohl sie mehr als einen Sitz haben
+ * und spielbar sind (src/schnellspiel.ts). Hier und nicht dort, weil diese
+ * Datei die einzige im Server ist, die konkrete Spiele kennt.
+ *
+ * - `feldherr`: Sein Bot gibt nur auf. Findet die Suche in 30 Sekunden
+ *   niemanden, saesse der Quick-Play-Spieler vor einem geschenkten Sieg
+ *   (docs/STARTSEITE-UMBAU-PLAN.md, „Selbst entschieden").
+ */
+export const OHNE_SCHNELLSPIEL: ReadonlySet<GameId> = new Set<GameId>(['feldherr' as GameId]);
+
+// ---------------------------------------------------------------------------
 // Rueckweg fuer die App: Partykiste ohne Trinkmodus, ohne neuen Build
 // ---------------------------------------------------------------------------
 

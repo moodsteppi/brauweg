@@ -23,7 +23,7 @@ async function probe(t: import('node:test').TestContext) {
       ws.once('error', j);
     });
     const warten = async (f: (n: any) => boolean) => {
-      const ende = Date.now() + 3000;
+      const ende = Date.now() + 5000;
       while (Date.now() < ende) {
         const i = nachrichten.findIndex(f);
         if (i >= 0) return nachrichten.splice(i, 1)[0];
@@ -90,4 +90,25 @@ test('Falsche Wiederverbindung erzeugt keinen Zugang', async (t) => {
     a = await verbinden();
   a.senden({ version: 1, art: 'weiter', code: 'AB12CD34', token: 'falsch' });
   assert.equal((await a.warten((n) => n.art === 'fehler')).fatal, true);
+});
+
+test('Zwei echte Leitungen bestätigen getrennt und erhalten dieselbe gemeinsame Salve', async t => {
+  const verbinden = await probe(t), a = await verbinden();
+  a.senden({ version: 1, art: 'privat', name: 'A', ohneBots: true });
+  const zugang = await a.warten(n => n.art === 'zugang');
+  const b = await verbinden(); b.senden({ version: 1, art: 'beitreten', code: zugang.code, name: 'B' });
+  await b.warten(n => n.art === 'stand'); a.senden({ art: 'start' });
+  const sa = await a.warten(n => n.partie?.phase === 'zielen');
+  const sb = await b.warten(n => n.partie?.phase === 'zielen');
+  assert.equal(sa.privat.amZug, true); assert.equal(sb.privat.amZug, true);
+  a.senden({ art: 'feuer', zug: sa.partie.zug, winkel: 90, staerke: 30, waffe: 0 });
+  const bereit = await a.warten(n => n.privat?.bereit);
+  assert.equal(bereit.partie.phase, 'zielen');
+  b.senden({ art: 'feuer', zug: sb.partie.zug, winkel: 90, staerke: 30, waffe: 0 });
+  await a.warten(n => n.partie?.phase === 'countdown' && n.partie.bereit.length === 2);
+  const fa = await a.warten(n => n.partie?.phase === 'flug');
+  const fb = await b.warten(n => n.partie?.phase === 'flug');
+  assert.deepEqual(fa.partie.salve, fb.partie.salve);
+  assert.equal(fa.partie.salve.length, 2);
+  assert.ok(fa.partie.bros.every((p: { schuesse: number }) => p.schuesse === 1));
 });

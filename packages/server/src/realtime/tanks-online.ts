@@ -268,6 +268,20 @@ export class TanksOnlineGateway {
       }
     });
   }
+  /**
+   * Wie viele Menschen gerade in einer offenen Online-Lobby auf Mitspieler
+   * warten — fuer Quick-Play (seit dem 28.11.2026). Dieselbe Bedingung wie
+   * die Raumwahl bei `online` oben, damit Quick-Play nur dorthin schickt, wo
+   * die Arena einen Neuen auch wirklich hineinsetzt. Gezaehlt werden
+   * Leitungen, nicht Spieler: Bots haben keine.
+   */
+  wartendeOnline(): number {
+    let zahl = 0;
+    for (const r of this.raeume.values()) {
+      if (r.kern.offen && !r.kern.partie && r.kern.spieler.length < 4) zahl += r.leitungen.size;
+    }
+    return zahl;
+  }
   async close(): Promise<void> {
     clearInterval(this.takt);
     this.server.off('upgrade', this.upgrade);

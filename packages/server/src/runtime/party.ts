@@ -46,6 +46,7 @@ import { einsatzVon, zahleAus, zieheEinsatz } from '../brojetons.js';
 import { verbucheBestleistungen } from '../bestleistung.js';
 import { spielZaehlen } from '../herkunft.js';
 import { type Ausgang, partieBeginnZaehlen, tischart, zaehle } from '../statistik.js';
+import { zuletztEintragen } from '../zuletzt.js';
 
 export interface RuntimeOptions {
   /** 60 Sekunden je Zug, serverseitig gemessen. */
@@ -494,6 +495,13 @@ export class PartyRuntime {
       config: rs.config,
       vorgabe: module.defaultConfig(),
     });
+    // „Zuletzt gespielt" mit dem Zeitpunkt der Partie, nicht nur des
+    // Hinsetzens (src/zuletzt.ts). Bots und Hausspieler zaehlen nicht.
+    await zuletztEintragen(
+      this.db,
+      seats.filter((seat) => !seat.isBot).map((seat) => seat.accountId),
+      table.gameId,
+    );
     await this.persist(liveParty);
     this.schedule(liveParty);
     this.emit(tableId);
