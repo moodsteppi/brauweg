@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { apiBase } from '../laufzeit';
 import { useTanksOnline } from './useTanksOnline';
 import { OnlineLeinwand } from './OnlineLeinwand';
@@ -8,7 +8,9 @@ import { wort } from './text';
 import './online.css';
 export default function TanksOnline() {
   const netz = useTanksOnline();
-  const [name, setName] = useState('Bro'),
+  const [name, setName] = useState<string | null>(null),
+    [nameFehler, setNameFehler] = useState(false),
+    [nameVersuch, setNameVersuch] = useState(0),
     [code, setCode] = useState(
       () => new URLSearchParams(location.search).get('raum') ?? '',
     ),
@@ -16,16 +18,22 @@ export default function TanksOnline() {
     [kopiert, setKopiert] = useState(false);
   useEffect(() => {
     let da = true;
+    setNameFehler(false);
     void api
       .me()
       .then((me) => {
         if (da) setName(me.displayName);
       })
-      .catch(() => {});
+      .catch((fehler) => {
+        if (!da) return;
+        if (fehler instanceof ApiError && fehler.status === 401)
+          setName(wort('Gast', 'Guest'));
+        else setNameFehler(true);
+      });
     return () => {
       da = false;
     };
-  }, []);
+  }, [nameVersuch]);
   const { stand, verbunden, aktiv } = netz,
     partie = stand?.partie;
   useEffect(() => {
@@ -36,8 +44,12 @@ export default function TanksOnline() {
       document.body.style.overflow = vorher;
     };
   }, [!!partie]);
-  const los = (art: string) =>
-    netz.los({ art, name, code: code.trim().toUpperCase(), ohneBots });
+  // Erst nach dem Kontoladen verbinden, damit ein schneller Tipp keinen
+  // Platz unter einem vorläufigen Namen anlegt.
+  const los = (art: string) => {
+    if (name !== null)
+      netz.los({ art, name, code: code.trim().toUpperCase(), ohneBots });
+  };
   const bots = (wert: boolean) => {
     setOhneBots(wert);
     netz.senden({ art: 'bots', ohneBots: wert });
@@ -166,16 +178,33 @@ export default function TanksOnline() {
         {!aktiv ? (
           <section className="to-tafel">
             <h2>{wort('Bereit zum Duell?', 'Ready to battle?')}</h2>
-            <label>
-              {wort('Dein Name', 'Your name')}
-              <input
-                maxLength={20}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
+            {name !== null ? (
+              <p className="to-hinweis">
+                {wort('Du spielst als', 'Playing as')} <strong>{name}</strong>
+              </p>
+            ) : nameFehler ? (
+              <div role="alert">
+                <p>
+                  {wort(
+                    'Dein Kontoname konnte nicht geladen werden.',
+                    'Your account name could not be loaded.',
+                  )}
+                </p>
+                <button onClick={() => setNameVersuch((v) => v + 1)}>
+                  {wort('Erneut versuchen', 'Try again')}
+                </button>
+              </div>
+            ) : (
+              <p role="status">
+                {wort('Kontoname wird geladen…', 'Loading account name…')}
+              </p>
+            )}
             {botWahl}
-            <button className="to-haupt" onClick={() => los('online')}>
+            <button
+              className="to-haupt"
+              disabled={name === null}
+              onClick={() => los('online')}
+            >
               <img src="/broremote/knoepfe/start.webp" alt="" />
               <span>
                 Quick Play
@@ -188,7 +217,7 @@ export default function TanksOnline() {
               </span>
             </button>
             <div className="to-freunde">
-              <button onClick={() => los('privat')}>
+              <button disabled={name === null} onClick={() => los('privat')}>
                 {wort('Freundeslobby erstellen', 'Create a friends lobby')}
               </button>
               <form
@@ -204,7 +233,9 @@ export default function TanksOnline() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                 />
-                <button disabled={!/^[A-F0-9]{8}$/.test(code.trim())}>
+                <button
+                  disabled={name === null || !/^[A-F0-9]{8}$/.test(code.trim())}
+                >
                   {wort('Beitreten', 'Join')}
                 </button>
               </form>

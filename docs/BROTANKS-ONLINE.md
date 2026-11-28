@@ -53,7 +53,7 @@ Spieler können 45 Sekunden zurückkommen, danach geben sie auf. Züge laufen
 serverseitig weiter und verfallen nach der normalen Zielzeit. Leere Räume
 werden nach zwei Minuten entfernt, jeder Raum spätestens nach einer Stunde.
 Ein Serverneustart beendet laufende Arenen. Aktuell ein Serverprozess,
-kein verteilter Raumzustand. Gastnamen sind möglich; die neue Variante
+kein verteilter Raumzustand. Der Anzeigename kommt automatisch aus dem angemeldeten Konto; neue Einstiege warten auf das Laden. Nur bei fehlender Anmeldung (401) wird „Gast“ verwendet, sonst erscheint bei Ladefehlern eine Wiederholen-Aktion. Es gibt kein Namenseingabefeld; die neue Variante
 vergibt keine Kontobelohnungen und schreibt noch keine Kontostatistik.
 
 ## Oberfläche und iOS

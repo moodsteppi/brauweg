@@ -7,7 +7,11 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import TanksOnline from './TanksOnline';
-vi.mock('../api', () => ({ api: { me: () => Promise.reject(Error('Gast')) } }));
+import { api, ApiError, type Me } from '../api';
+vi.mock('../api', async () => ({
+  ...(await vi.importActual<typeof import('../api')>('../api')),
+  api: { me: vi.fn() },
+}));
 vi.mock('../laufzeit', async () => ({
   ...(await vi.importActual<typeof import('../laufzeit')>('../laufzeit')),
   apiBase: '',
@@ -39,6 +43,9 @@ class Leitung {
 }
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.mocked(api.me)
+    .mockReset()
+    .mockResolvedValue({ displayName: 'Emile' } as Me);
   Leitung.alle = [];
   sessionStorage.clear();
   vi.stubGlobal('WebSocket', Leitung);
@@ -48,13 +55,16 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-it('Quick Play schickt Botwahl und erlaubt das Umschalten während der Suche', () => {
-  render(<TanksOnline />);
+it('Quick Play schickt Botwahl und erlaubt das Umschalten während der Suche', async () => {
+  await act(async () => {
+    render(<TanksOnline />);
+  });
   fireEvent.click(screen.getByRole('button', { name: /Quick Play/ }));
   const a = Leitung.alle[0];
   act(() => a.onopen?.());
   expect(a.post[0]).toMatchObject({
     art: 'online',
+    name: 'Emile',
     version: 1,
     ohneBots: false,
   });
@@ -79,13 +89,16 @@ it('Quick Play schickt Botwahl und erlaubt das Umschalten während der Suche', (
   act(() => vi.advanceTimersByTime(5000));
   expect(Leitung.alle).toHaveLength(1);
 });
-it('nimmt nach einer Unterbrechung denselben Sitz wieder auf und beendet ungültige Sitzungen', () => {
-  render(<TanksOnline />);
+it('nimmt nach einer Unterbrechung denselben Sitz wieder auf und beendet ungültige Sitzungen', async () => {
+  await act(async () => {
+    render(<TanksOnline />);
+  });
   fireEvent.click(
     screen.getByRole('button', { name: 'Freundeslobby erstellen' }),
   );
   const a = Leitung.alle[0];
   act(() => a.onopen?.());
+  expect(a.post[0]).toMatchObject({ art: 'privat', name: 'Emile' });
   act(() =>
     a.nachricht({ art: 'zugang', code: 'AB12CD34', token: 'a'.repeat(48) }),
   );
@@ -106,4 +119,57 @@ it('nimmt nach einer Unterbrechung denselben Sitz wieder auf und beendet ungült
   expect(sessionStorage.getItem('tanks-online')).toBeNull();
   act(() => vi.advanceTimersByTime(5000));
   expect(Leitung.alle).toHaveLength(2);
+});
+
+it('wartet auf den Kontonamen und übernimmt ihn beim Beitreten ohne Namensfeld', async () => {
+  let antwort!: (me: Me) => void;
+  vi.mocked(api.me).mockReturnValue(
+    new Promise((resolve) => {
+      antwort = resolve;
+    }),
+  );
+  render(<TanksOnline />);
+  expect(
+    screen.queryByRole('textbox', { name: 'Dein Name' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Quick Play/ })).toBeDisabled();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Raumcode' }), {
+    target: { value: 'AB12CD34' },
+  });
+  expect(screen.getByRole('button', { name: 'Beitreten' })).toBeDisabled();
+  await act(async () => {
+    antwort({ displayName: 'PinguinEmile' } as Me);
+  });
+  expect(screen.getByText('PinguinEmile')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Beitreten' }));
+  const a = Leitung.alle[0];
+  act(() => a.onopen?.());
+  expect(a.post[0]).toMatchObject({
+    art: 'beitreten',
+    name: 'PinguinEmile',
+    code: 'AB12CD34',
+  });
+});
+it('startet bei einem Ladefehler nicht unter falschem Namen und bietet Wiederholen an', async () => {
+  vi.mocked(api.me).mockRejectedValueOnce(Error('Netzausfall'));
+  await act(async () => {
+    render(<TanksOnline />);
+  });
+  expect(screen.getByRole('alert')).toHaveTextContent('Kontoname');
+  expect(screen.getByRole('button', { name: /Quick Play/ })).toBeDisabled();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+  });
+  expect(screen.getByText('Emile')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Quick Play/ })).toBeEnabled();
+});
+it('gibt nicht angemeldeten Gästen automatisch einen Gastnamen', async () => {
+  vi.mocked(api.me).mockRejectedValueOnce(
+    new ApiError('unauthorized', 'error.unauthorized', 401),
+  );
+  await act(async () => {
+    render(<TanksOnline />);
+  });
+  expect(screen.getByText('Gast')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Quick Play/ })).toBeEnabled();
 });
