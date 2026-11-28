@@ -1256,8 +1256,11 @@
   box-shadow: inset 0 0 0 1.5px var(--tn-rot)
 }
 
+/* Angetippt (fremdes Brett oder fremder Kampf liegt): heller Grund, KEIN
+   Rahmen. Robin (28.11.2026): Der goldene Rahmen stand immer auf „Emil", der
+   gar nicht sein Gegner war — Rahmen hat seitdem nur der naechste Gegner. */
 .spielerKachel[data-gezeigt] {
-  box-shadow: inset 0 0 0 2px var(--tn-gold)
+  background: color-mix(in srgb, var(--tn-gold) 30%, rgba(5, 11, 29, 0.6))
 }
 
 .spielerKachel[data-aus] {
@@ -1435,39 +1438,72 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* Ein Brett (seit dem 28.11.2026): unten am Feld, nah an der Bank, von
+     der man aufstellt. Was an Hoehe uebrig ist, bleibt oben als Schauplatz. */
+  justify-content: flex-end;
   align-items: center;
+  gap: 6px;
   padding: 0 4px 6px;
   box-sizing: border-box
 }
 
-.feldGegner,
 .feldEigen {
   position: relative;
-  /* Beide Bretter teilen sich die Hoehe; die Breite folgt dem Seitenverhaeltnis
-     aus `rastermass` (am Element). Container-Einheiten statt einer festen Zahl,
-     damit 375 px und 430 px dieselbe Komposition bekommen. */
-  width: min(100%, 50cqh * var(--verhaeltnis, 1.47));
+  /* Die Breite folgt dem Seitenverhaeltnis aus `rastermass` (am Element),
+     begrenzt durch die Hoehe des Feldes — Container-Einheiten statt einer
+     festen Zahl, damit 375 px und 430 px dieselbe Komposition bekommen. */
+  width: min(100%, 92cqh * var(--verhaeltnis, 1.47));
   display: flex;
   flex-direction: column;
   align-items: stretch;
 }
 
-.feldGegner {
-  opacity: 0.88;
-  width: min(88%, 40cqh * var(--verhaeltnis, 1.47));
+/* Ein fremdes Brett liegt an der Stelle des eigenen: rot getoent und mit
+   Kopfzeile, damit niemand es fuer das eigene haelt. */
+.feld[data-fremd] .feldEigen {
+  width: min(100%, 80cqh * var(--verhaeltnis, 1.47));
+  border-radius: 18px;
+  background: radial-gradient(80% 70% at 50% 55%, rgba(217, 75, 85, 0.22), transparent 75%);
 }
 
-.feldEigen::before {
-  /* Die Linie zwischen den Heeren — ohne sie lesen sich beide Raster als eins. */
-  content: '';
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: -1.5cqh;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+.fremdKopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.fremdKopf .feldName {
+  margin: 0;
+  font-size: 14px;
+  text-align: left;
+}
+
+.zurueckFeld {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
+  box-shadow: 0 3px 0 #2a7a44;
+  color: #052512;
+  font: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zurueckFeld span {
+  font-size: 22px;
+  line-height: 1;
 }
 
 /* Der naechste Gegner in der Ruestphase: in der Farbe seiner Leistenkachel. */
@@ -1696,7 +1732,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   padding: 0 2px 6px;
+}
+
+/* Die Feldplaetze nach rechts, gleich neben den Bereit-Haken. */
+.ladenKopf .feldstand {
+  margin-left: auto;
 }
 
 .goldstand {
@@ -1732,7 +1774,9 @@
 
 .karte {
   position: relative;
-  aspect-ratio: 0.7;
+  /* Hoeher als frueher (0,7): Das Gegnerbrett ist aus der Ruestphase weg und
+     der grosse Bereit-Knopf auch — die Hoehe bekommt der Laden (Robin). */
+  aspect-ratio: 0.6;
   container-type: inline-size;
   --rahmen: var(--tn-kontur);
 }
@@ -1964,47 +2008,56 @@
 
 
 .bereitknopf {
-  /* Der eine Knopf unten, ueber die ganze Breite: Wuerfeln und Rang gibt es
-     seit dem 27.11.2026 nicht mehr. */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 50px;
-  margin-top: 8px;
-  border: 0;
-  border-radius: 16px;
-  font-family: var(--tn-anz);
-  font-weight: 400;
-  font-size: 20px;
-  color: #052512;
-  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
-  box-shadow: 0 3px 0 #2a7a44;
+  /* Klein und rund am rechten Rand (Robin, 28.11.2026): Der Knopf ueber die
+     ganze Breite kostete eine Kartenhoehe. Nicht bereit: gruener Ring mit
+     hellem Haken — bereit: gruen GEFUELLT, dann ist es nicht zu uebersehen. */
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 2px solid var(--tn-gruen-hell);
+  border-radius: 50%;
+  background: rgba(5, 11, 29, 0.7);
+  color: var(--tn-tinte);
+  box-shadow: 0 0 0 3px rgba(72, 184, 106, 0.25), 0 3px 0 rgba(0, 0, 0, 0.45);
   cursor: pointer;
-  touch-action: manipulation
+  touch-action: manipulation;
+  animation: bereitPuls 1.8s ease-in-out infinite
 }
 
-
-
-.bereitknopf {
-  border: 0;
-  font-family: var(--tn-anz);
-  font-weight: 400;
-  font-size: 18px;
-  color: #052512;
-  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
-  box-shadow: 0 3px 0 #2a7a44;
+@keyframes bereitPuls {
+  50% {
+    box-shadow: 0 0 0 6px rgba(72, 184, 106, 0.12), 0 3px 0 rgba(0, 0, 0, 0.45);
+  }
 }
 
 .bereitknopf[data-bereit] {
-  background: var(--tn-karte);
-  color: var(--tn-leise);
-  box-shadow: none;
+  border-color: var(--tn-gruen-hell);
+  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
+  color: #052512;
+  box-shadow: 0 0 12px rgba(111, 220, 142, 0.7);
+  animation: none
 }
 
 .bereitknopf:disabled {
-  opacity: 0.5;
   cursor: default;
+}
+
+.bereitknopf:disabled:not([data-bereit]) {
+  opacity: 0.45;
+  animation: none
+}
+
+.haken {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .auswahlband {
@@ -2879,4 +2932,285 @@
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Robins Rueckmeldung vom iPhone (28.11.2026)                               */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * Das Einheitenblatt fast als Vollbild: Kopf (Figur) NEBEN Titel, Zeile und
+ * Marken, Knoepfe nebeneinander. Gemessen auf 375 x 667 und 390 x 844 —
+ * Werte, Faehigkeit, Marken und Knoepfe ohne Rollen („checkt keiner", Robin).
+ */
+.blattGrund[data-gross] .blatt {
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+  padding-top: 6px;
+}
+
+.blattKopfReihe {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  /* Rechts frei fuer den Schliessen-Knopf. */
+  padding-right: 40px;
+}
+
+.blattGrund[data-gross] .blattFigur {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+  margin: 0;
+}
+
+.blattGrund[data-gross] .blattSterne {
+  font-size: 15px;
+}
+
+.blattKopfText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blattGrund[data-gross] .blattTitel {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.blattGrund[data-gross] .blattZeile {
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.blattGrund[data-gross] .blattMarken > div {
+  gap: 6px;
+}
+
+.blattGrund[data-gross] .markenchip {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.blattGrund[data-gross] .blattInhalt {
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.blattGrund[data-gross] .faehigkeit {
+  padding: 10px 12px;
+}
+
+.blattGrund[data-gross] .faehigkeit .text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.blattGrund[data-gross] .blattFuss {
+  flex-direction: row;
+}
+
+.blattGrund[data-gross] .blattFuss > * {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+/*
+ * Die Verkaufszone: unten ueber dem Laden, solange eine verkaufbare Einheit am
+ * Finger haengt. Ueber ihr (oder unter dem Bildschirmrand) losgelassen ist
+ * verkauft. Im Kampf niedriger, weil dort die Bank dichter am Rand steht.
+ */
+.verkaufZone {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: 0;
+  translate: -50% 0;
+  width: 100%;
+  max-width: 30rem;
+  height: calc(120px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 22px 22px 0 0;
+  border: 2px dashed rgba(255, 170, 176, 0.75);
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(120, 22, 32, 0.82), rgba(60, 8, 16, 0.95));
+  color: #ffe1e3;
+  font-weight: 900;
+  font-size: 15px;
+  animation: hochfahren 0.16s ease both;
+}
+
+.verkaufZone[data-phase='kampf'] {
+  height: calc(76px + env(safe-area-inset-bottom));
+}
+
+.verkaufZone strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 26px;
+  color: var(--tn-gold-hell);
+}
+
+.verkaufZone strong .zeichen {
+  width: 22px;
+  height: 22px;
+}
+
+.verkaufZone[data-unter] {
+  border-style: solid;
+  border-color: var(--tn-gold);
+  background: linear-gradient(180deg, rgba(190, 40, 52, 0.92), rgba(90, 12, 22, 0.98));
+  box-shadow: 0 -6px 24px rgba(245, 192, 46, 0.35);
+}
+
+/*
+ * Im Kampf: unter der Arena Bank und Laden. Die Arena (`.kampf`, flex 1)
+ * gibt die Hoehe ab, die beide brauchen — aufgeklappt mehr, zugeklappt nur
+ * eine schmale Leiste.
+ */
+.kampfFlaeche[data-unten] {
+  padding-bottom: 0;
+}
+
+.kampfUnten {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.kampfUnten .bank {
+  padding-top: 10px;
+}
+
+.shopleiste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  padding: 6px 10px max(6px, env(safe-area-inset-bottom));
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.7), rgba(5, 11, 29, 0.95));
+  color: var(--tn-tinte);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shopleisteGold {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+}
+
+.shopleisteGold strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  color: var(--tn-gold-hell);
+}
+
+.shopleisteKarten {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.miniKarte {
+  position: relative;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  --rahmen: var(--tn-kontur);
+  box-shadow: inset 0 0 0 1.5px var(--rahmen);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rahmen) 45%, #22397a), #0e1a3d);
+}
+
+.miniKarte[data-rahmen='bronze'] {
+  --rahmen: var(--tn-bronze);
+}
+
+.miniKarte[data-rahmen='silber'] {
+  --rahmen: var(--tn-silber);
+}
+
+.miniKarte[data-rahmen='gold'] {
+  --rahmen: var(--tn-goldrahmen);
+}
+
+.miniKarte[data-leer] {
+  background: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.miniFigur {
+  height: 190%;
+  top: -30%;
+}
+
+.miniKarte em {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-style: normal;
+  font-family: var(--tn-anz);
+  font-size: 12px;
+  color: #fff6d6;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+}
+
+.shopleistePfeil {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 16px;
+}
+
+/* Aufgeklappt im Kampf: oben ein Griff zum Zuklappen. */
+.laden[data-aufgeklappt] {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px 18px 0 0;
+  padding-top: 0;
+}
+
+.ladenGriff {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 26px;
+  margin: 0 0 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.ladenGriff i {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.45);
 }

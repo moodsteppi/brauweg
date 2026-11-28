@@ -244,6 +244,13 @@ export const SCHADEN_GRUNDWERT = 1;
  * Wer den Teiler doch anfasst, misst danach mit werkzeug/spielzeit.mjs: Von 3
  * auf 2 sind es heute 8 Runden und 6:42 statt 9 und 7:27.
  *
+ * SECHS SEIT DEM 28.11.2026: Seit zwei statt drei Kopien verschmelzen,
+ * stehen viel mehr Sterne auf den Brettern, und mit dem Teiler 3 schrumpfte
+ * die Partie zu viert von 6:48 auf 5:17 (8 Runden). Gemessen (je 300 Partien
+ * zu viert): Teiler 4 5:54, 5 6:15, 6 6:37 bei 10 Runden; die Marken liegen
+ * mit 6 bei x0,93-1,08. Weniger Grundeinkommen (4 statt 5) aenderte an der
+ * Dauer nichts (5:17) und blieb deshalb, wie es war.
+ *
  * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
  * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
  * nicht durch die Rundung zum halben Preis werden.

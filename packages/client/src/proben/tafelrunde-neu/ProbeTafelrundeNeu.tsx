@@ -9,8 +9,10 @@
  * echten Bot-Partie (`szene-erzeugen.mjs`).
  *
  * Faelle: einstieg, suche, wartesaal, ladebild, ruesten (Vorgabe), marke
- * (Marke angetippt: Ring und Pop-up), blatt (Einheitenblatt), regeln, kampf,
- * zuschauen (eigener Kampf vorbei, andere laufen noch), ende.
+ * (Marke angetippt: Ring und Pop-up), blatt (Einheitenblatt), regeln, fremd
+ * (Mitspieler oben angetippt: sein Brett statt des eigenen), kampf,
+ * kampfladen (Kampf mit aufgeklapptem Laden), zuschauen (eigener Kampf
+ * vorbei, andere laufen noch), ende.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -23,9 +25,40 @@ import { SucheSeite } from '../../minispiele/tafelrunde/neu/Suche';
 import { WartesaalSeite } from '../../minispiele/tafelrunde/neu/Wartesaal';
 import szene from './szene.json';
 
-const RUEST = szene.ruest as unknown as TafelrundeSicht;
-const KAMPF = szene.kampf as unknown as TafelrundeSicht;
+const SZENE_RUEST = szene.ruest as unknown as TafelrundeSicht;
+const SZENE_KAMPF = szene.kampf as unknown as TafelrundeSicht;
 const LEGAL = szene.legal as unknown as Aktion[];
+
+/*
+ * Die Szene ist am 27.11.2026 aufgezeichnet, vor `naechsterGegner` und
+ * `kampfZuege` (28.11.2026). Bis sie neu erzeugt ist (`szene-erzeugen.mjs`),
+ * stehen beide hier NACHGESTELLT — damit die Sichtprobe den roten Rahmen und
+ * die Shopleiste im Kampf zeigt. Das ist Probenkulisse, keine Regel: Am Tisch
+ * kommen beide Felder aus dem Modul.
+ */
+const RUEST: TafelrundeSicht = SZENE_RUEST.eigenes
+  ? {
+      ...SZENE_RUEST,
+      eigenes: {
+        ...SZENE_RUEST.eigenes,
+        naechsterGegner: SZENE_RUEST.eigenes.naechsterGegner ?? { sitz: SZENE_RUEST.gegner[0]?.sitz ?? 1, geist: false },
+      },
+    }
+  : SZENE_RUEST;
+const KAMPF: TafelrundeSicht = SZENE_KAMPF.eigenes
+  ? {
+      ...SZENE_KAMPF,
+      eigenes: {
+        ...SZENE_KAMPF.eigenes,
+        kampfZuege: SZENE_KAMPF.eigenes.kampfZuege ?? [
+          ...SZENE_KAMPF.eigenes.laden.flatMap((id, platz): Aktion[] => (id ? [{ typ: 'kaufen', platz }] : [])),
+          ...SZENE_KAMPF.eigenes.bank.flatMap((k, platz): Aktion[] =>
+            k ? [{ typ: 'verkaufen', ort: { bereich: 'bank', platz } }] : [],
+          ),
+        ],
+      },
+    }
+  : SZENE_KAMPF;
 
 const SITZE = [
   { seat: 0, displayName: 'Robin', accountId: 'r', avatarUrl: null, isBot: false },
@@ -49,6 +82,13 @@ function useTipp(fall: string): void {
         // Die erste eigene Einheit: Enter ist der Tastaturweg zum Blatt.
         const zelle = document.querySelector('[data-ziel^="brett:"][role="button"]');
         zelle?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      }
+      if (fall === 'fremd') {
+        // Der naechste Gegner oben in der Leiste (rot umrandet).
+        (document.querySelector('[data-gegner]') as HTMLElement | null)?.click();
+      }
+      if (fall === 'kampfladen') {
+        (document.querySelector('button[aria-label="Laden öffnen"], button[aria-label="Open shop"]') as HTMLElement | null)?.click();
       }
       if (fall === 'regeln') {
         (document.querySelector('button[aria-label="So spielt man Tafelrunde"], button[aria-label="How to play Tafelrunde"]') as HTMLElement | null)?.click();
@@ -124,8 +164,9 @@ export function ProbeTafelrundeNeu(): React.JSX.Element {
   }
   if (fall === 'ladebild') return <Ladebild erledigt={7} gesamt={19} onAbbrechen={nichts} />;
 
+  const imKampf = fall === 'kampf' || fall === 'kampfladen' || fall === 'zuschauen';
   const sicht =
-    fall === 'kampf' || fall === 'zuschauen'
+    imKampf
       ? KAMPF
       : fall === 'ende'
         ? {
@@ -146,12 +187,13 @@ export function ProbeTafelrundeNeu(): React.JSX.Element {
       tischKennung={new URLSearchParams(window.location.search).get('tisch') ?? 'probe-tafelrunde'}
       sicht={sicht}
       wissen={wissen}
-      legaleZuege={fall === 'kampf' || fall === 'zuschauen' ? [] : LEGAL}
+      /* Im Kampf ist `legalActions` leer; was dort geht, steht in `kampfZuege`. */
+      legaleZuege={imKampf ? [] : LEGAL}
       revision={1}
       /* `zuschauen`: Die Frist ist JETZT, also springt die Arena ans Ende des
          eigenen Kampfes (`startVersatz`) — die anderen laufen noch. */
       frist={fall === 'zuschauen' ? Date.now() : null}
-      rundenfrist={fall === 'kampf' || fall === 'zuschauen' ? null : Date.now() + 42_000}
+      rundenfrist={imKampf ? null : Date.now() + 42_000}
       sitze={SITZE}
       trophaeen={fall === 'ende' ? [{ seat: RUEST.ich ?? 0, delta: 24 }] : undefined}
       onAktion={nichts}

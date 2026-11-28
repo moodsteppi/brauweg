@@ -704,7 +704,8 @@ export const BRETTWERT_BAENDER = 8;
  * eingerechnet.
  *
  * Ueber `gesamtkosten` und nicht ueber `einheit(id).kosten`: Eine Dorfwache
- * auf Stufe 3 hat neun Karten verschlungen und ist kein Zwei-Gold-Platz mehr.
+ * auf Stufe 3 hat vier Karten verschlungen (seit dem 28.11.2026, vorher neun)
+ * und ist kein Zwei-Gold-Platz mehr.
  * Wer das weglaesst, misst das aufgestiegene Brett als arm. (`kosten` ist seit
  * dem 27.11.2026 ohnehin nur noch die Kostenstufe; das Gold steht in `preis`.)
  */

@@ -14,7 +14,25 @@
 import type { Kampfpaarung, Paarungsergebnis } from './kampfbericht';
 import type { Synergie, Synergiestand } from './marken';
 import type { Platz } from './platzierung';
-import type { Kaempfer } from './zuege';
+import type { Kaempfer, Ort } from './zuege';
+
+/**
+ * Die Aktionen des Moduls (partie.ts). `neuwuerfeln` und `levelAuf` gibt es
+ * seit dem 27.11.2026 abends nicht mehr (Robin) — die Feldplaetze wachsen mit
+ * der Runde, und der Laden ist, was er ist. Kommen sie in einer alten Liste
+ * noch vor, bietet der Bildschirm sie nicht an.
+ *
+ * Hier und nicht im Spieltisch (dort stand sie bis zum 28.11.2026): Seit
+ * `kampfZuege` traegt die SICHT Aktionen, und der Vertrag darf keine `.tsx`
+ * importieren (Kopf dieser Datei).
+ */
+export type Aktion =
+  | { typ: 'kaufen'; platz: number }
+  | { typ: 'neuwuerfeln' }
+  | { typ: 'levelAuf' }
+  | { typ: 'verschieben'; von: Ort; nach: Ort }
+  | { typ: 'verkaufen'; ort: Ort }
+  | { typ: 'bereit' };
 
 /** Kampfrolle. Siehe packages/game-tafelrunde/src/katalog.ts. */
 export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
@@ -97,6 +115,18 @@ export interface EigeneSicht {
    * Kampf und fuer Ausgeschiedene; wahlfrei fuer Tische aus der Zeit davor.
    */
   naechsterGegner?: { sitz: number; geist: boolean } | null;
+  /**
+   * Was man WAEHREND DES KAMPFES tun darf (seit dem 28.11.2026, Robin: „schmale
+   * Leiste, aufklappbar"): `kaufen` je Ladenplatz, `verkaufen` je Bankplatz;
+   * ausserhalb der Kampfphase leer. In der Kampfphase ist `legalActions`
+   * absichtlich LEER — sonst liesse der Server Bots in der Kampfpause endlos
+   * handeln —, deshalb steht die Liste hier in der Sicht. Der Bildschirm
+   * nimmt sie im Kampf statt `legalActions`. `verschieben` steht wie dort
+   * nicht drin; im Kampf geht es nur Bank zu Bank.
+   *
+   * Wahlfrei fuer Tische aus der Zeit davor: Dann gibt es im Kampf nichts zu tun.
+   */
+  kampfZuege?: Aktion[];
   belegt: number;
   einkommen: number;
   /*

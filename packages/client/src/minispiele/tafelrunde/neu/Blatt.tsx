@@ -22,6 +22,8 @@ export function Blatt({
   escapeAus,
   ebene = 1,
   kompakt,
+  gross,
+  nebenTitel,
 }: {
   titel: string;
   /** Was ueber dem Titel steht (Bild, Zeichen). */
@@ -39,6 +41,15 @@ export function Blatt({
    * unter dem die Farbringe auf dem Feld sichtbar bleiben sollen.
    */
   kompakt?: boolean;
+  /**
+   * Fast Vollbild, Kopf NEBEN dem Titel statt darueber, Knoepfe nebeneinander
+   * — fuer das Einheitenblatt. Robin am iPhone (28.11.2026): Man musste
+   * scrollen, um Faehigkeit, Marken und Werte zu sehen, „checkt keiner". Auf
+   * 375 x 667 passt so alles ohne Rollen.
+   */
+  gross?: boolean;
+  /** Bei `gross`: was rechts neben dem Kopf unter dem Titel steht. */
+  nebenTitel?: ReactNode;
 }): React.JSX.Element {
   useEffect(() => {
     if (escapeAus) return;
@@ -50,7 +61,13 @@ export function Blatt({
   }, [escapeAus, onSchliessen]);
 
   return (
-    <div className={stil.blattGrund} data-ebene={ebene} data-kompakt={kompakt ? '' : undefined} onClick={onSchliessen}>
+    <div
+      className={stil.blattGrund}
+      data-ebene={ebene}
+      data-kompakt={kompakt ? '' : undefined}
+      data-gross={gross ? '' : undefined}
+      onClick={onSchliessen}
+    >
       <section
         className={stil.blatt}
         role="dialog"
@@ -62,8 +79,20 @@ export function Blatt({
         <button type="button" className={stil.blattZu} onClick={onSchliessen} aria-label={tz('schliessen')}>
           ✕
         </button>
-        {kopf}
-        <h2 className={stil.blattTitel}>{titel}</h2>
+        {gross ? (
+          <div className={stil.blattKopfReihe}>
+            {kopf}
+            <div className={stil.blattKopfText}>
+              <h2 className={stil.blattTitel}>{titel}</h2>
+              {nebenTitel}
+            </div>
+          </div>
+        ) : (
+          <>
+            {kopf}
+            <h2 className={stil.blattTitel}>{titel}</h2>
+          </>
+        )}
         <div className={stil.blattInhalt}>{children}</div>
         {fuss && <div className={stil.blattFuss}>{fuss}</div>}
       </section>

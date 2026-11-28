@@ -236,20 +236,22 @@ describe('Gold', () => {
 
     // Ausgeschrieben statt ueber `erloes` gerechnet: Sonst prueft die Probe
     // die Formel gegen sich selbst. Sturmrufer ist Kostenstufe 3 = 4 Gold.
+    // Seit dem 28.11.2026 verschmelzen zwei: Eine Stufe-2-Einheit steckt
+    // voller ZWEI Kopien (vorher drei).
     const zwei = fuehreAus(p, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } });
-    assert.equal(zwei.heere[0]!.gold, 10 + 3 * 4, 'drei Kopien zu je 4 Gold');
-    // Die drei Karten gehen in den Vorrat.
-    assert.equal(zwei.vorrat['sturmrufer'], vorher + 3);
+    assert.equal(zwei.heere[0]!.gold, 10 + 2 * 4, 'zwei Kopien zu je 4 Gold');
+    // Die zwei Karten gehen in den Vorrat.
+    assert.equal(zwei.vorrat['sturmrufer'], vorher + 2);
     assert.equal(zwei.heere[0]!.bank[0], null);
 
     const eins = fuehreAus(zwei, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 1 } });
-    assert.equal(eins.heere[0]!.gold, 22 + 3, 'einfacher Sturmrufer: 4 - 1');
-    assert.equal(eins.vorrat['sturmrufer'], vorher + 4);
+    assert.equal(eins.heere[0]!.gold, 18 + 3, 'einfacher Sturmrufer: 4 - 1');
+    assert.equal(eins.vorrat['sturmrufer'], vorher + 3);
 
     // Die billigste Einheit bringt noch einen Gold: Mit dem Mindestpreis 2
     // bringt kein Verkauf null ein.
     const billig = fuehreAus(eins, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 2 } });
-    assert.equal(billig.heere[0]!.gold, 25 + 1, 'einfache Dorfwache: 2 - 1');
+    assert.equal(billig.heere[0]!.gold, 21 + 1, 'einfache Dorfwache: 2 - 1');
     assert.equal(erloes('dorfwache', 1), 1);
   });
 
@@ -298,13 +300,12 @@ describe('Rundenwechsel', () => {
     assert.notDeepEqual(naechste.heere[0]!.laden, vorherLaden);
   });
 
-  it('laesst waehrend des Kampfes niemanden handeln', () => {
-    const p = beideBereit(neu());
-    // Ein Kauf statt des frueher hier benutzten Neuwuerfelns: Das gibt es seit
-    // dem 27.11.2026 nicht mehr, und die Probe soll an der Phase scheitern,
-    // nicht an einem abgeschafften Zug.
-    assert.throws(() => fuehreAus(p, 0, { typ: 'kaufen', platz: 0 }), /geruestet/);
-  });
+  /*
+   * Hier stand bis zum 28.11.2026 "laesst waehrend des Kampfes niemanden
+   * handeln". Seitdem darf man im Kampf an Laden und Bank (Robin: "man kann
+   * waehrend der Kampfphase Truppen auf der Bank kaufen und verkaufen"); die
+   * Proben dazu stehen in kampfhandel.test.ts.
+   */
 });
 
 describe('Kampfausgang', () => {
@@ -371,8 +372,9 @@ describe('Kampfausgang', () => {
       { sitz: 1, sieg: false, schaden: 999 },
     ]);
 
-    // Eine Stufe-2-Einheit steckt voller drei Karten.
-    assert.equal(nachher.vorrat['grimmbart'], vorGrimmbart + 3);
+    // Eine Stufe-2-Einheit steckt voller zwei Karten (seit dem 28.11.2026
+    // verschmelzen zwei, vorher drei).
+    assert.equal(nachher.vorrat['grimmbart'], vorGrimmbart + 2);
     assert.equal(nachher.vorrat['sturmrufer'], vorSturmrufer + 1);
     assert.ok(ladenKarten > 0);
     assert.ok(nachher.heere[1]!.laden.every((k) => k === null));

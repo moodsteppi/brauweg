@@ -233,7 +233,10 @@ describe('Bot: keine ungueltigen Zuege', () => {
 
 describe('Bot: kaufen', () => {
   /**
-   * Zwei Kopien auf der Bank, beide Ladenplaetze bezahlbar — und der
+   * Eine Kopie auf der Bank (seit dem 28.11.2026 verschmelzen zwei; bis dahin
+   * standen hier zwei Kopien und der Bot sollte die dritte holen — zwei
+   * gleiche auf der Bank waeren jetzt laengst verschmolzen und kein Zustand,
+   * der im Spiel vorkommt), beide Ladenplaetze bezahlbar — und der
    * Gassendieb ist fuer sich genommen die STAERKERE Einheit. Genau deshalb
    * steht er hier: Ohne die Bevorzugung der Verschmelzung kaeuft der Bot ihn,
    * und die Probe faellt.
@@ -257,10 +260,7 @@ describe('Bot: kaufen', () => {
     });
   }
 
-  const ZWEI_KOPIEN: (readonly [EinheitId, Stufe])[] = [
-    ['moosheiler', 1],
-    ['moosheiler', 1],
-  ];
+  const EINE_KOPIE: (readonly [EinheitId, Stufe])[] = [['moosheiler', 1]];
 
   /**
    * `sanft` fehlt hier mit Absicht: Er ist die einzige Gangart, die eine
@@ -268,20 +268,20 @@ describe('Bot: kaufen', () => {
    * ist als die anderen beiden (siehe GANGARTEN in bot.ts).
    */
   for (const grad of ['normal', 'hart'] as const) {
-    it(`nimmt als ${grad} die dritte Kopie und nicht die staerkere Einheit`, () => {
-      assert.deepEqual(zug(bauVerschmelzung(bankMit(ZWEI_KOPIEN)), grad), {
+    it(`nimmt als ${grad} die zweite Kopie und nicht die staerkere Einheit`, () => {
+      assert.deepEqual(zug(bauVerschmelzung(bankMit(EINE_KOPIE)), grad), {
         typ: 'kaufen',
         platz: 1,
       });
     });
   }
 
-  it('nimmt die dritte Kopie auch ohne Angabe der Gangart', () => {
-    assert.deepEqual(zug(bauVerschmelzung(bankMit(ZWEI_KOPIEN))), { typ: 'kaufen', platz: 1 });
+  it('nimmt die zweite Kopie auch ohne Angabe der Gangart', () => {
+    assert.deepEqual(zug(bauVerschmelzung(bankMit(EINE_KOPIE))), { typ: 'kaufen', platz: 1 });
   });
 
   it('greift auch als sanfter Gegner zu einem erlaubten Kauf', () => {
-    const p = bauVerschmelzung(bankMit(ZWEI_KOPIEN));
+    const p = bauVerschmelzung(bankMit(EINE_KOPIE));
     const aktion = zug(p, 'sanft');
     assert.equal(aktion.typ, 'kaufen');
     assert.doesNotThrow(() => fuehreAus(p, 0, aktion));
@@ -295,13 +295,23 @@ describe('Bot: kaufen', () => {
    */
   it('kauft auch bei voller Bank, wenn der Kauf verschmilzt', () => {
     /*
-     * Die sieben Fuellplaetze sind ABSICHTLICH sieben verschiedene Einheiten:
-     * Laegen dort dreimal dieselben, verschmoelzen die beim naechsten Kauf
-     * mit, die Bank waere danach nicht mehr voll — und die Probe pruefte das
-     * Gegenteil dessen, was sie behauptet.
+     * Die acht Fuellplaetze sind ABSICHTLICH acht verschiedene Einheiten:
+     * Laegen dort zwei gleiche, verschmoelzen die beim naechsten Kauf mit, die
+     * Bank waere danach nicht mehr voll — und die Probe pruefte das Gegenteil
+     * dessen, was sie behauptet.
+     *
+     * Seit dem 28.11.2026 verschmelzen schon zwei. Deshalb steht nur EIN
+     * Moosheiler hier und kein Gassendieb: Der liegt im Laden, sein Kauf
+     * verschmoelze sonst ebenfalls und waere erlaubt. Bis dahin standen hier
+     * zwei Moosheiler und ein Gassendieb.
+     *
+     * Ohne Gassendieb und zweiten Moosheiler gibt es nur sechs verschiedene
+     * Einheiten der Kostenstufe 1, zwei Fuellplaetze kommen also aus Stufe 2.
+     * Damit keine davon staerker ist als die Einheit auf dem Feld (der Bot
+     * tauschte sie sonst erst auf, statt zu kaufen), steht dort fuer diese
+     * Probe ein Wurzelriese statt des Grimmbarts aus `bauVerschmelzung`.
      */
     const volleBank: (readonly [EinheitId, Stufe])[] = [
-      ['moosheiler', 1],
       ['moosheiler', 1],
       ['dorfwache', 1],
       ['schildknappe', 1],
@@ -309,10 +319,13 @@ describe('Bot: kaufen', () => {
       ['steinschleuderer', 1],
       ['funkenlehrling', 1],
       ['irrlicht', 1],
-      ['gassendieb', 1],
+      ['grimmbart', 1],
+      ['hainwaechterin', 1],
     ];
     assert.equal(volleBank.length, DEFAULT_REGELN.bankPlaetze);
-    const p = bauVerschmelzung(bankMit(volleBank));
+    const brett = leeresBrett();
+    brett[platzNummer(0, 2)] = { id: 'wurzelriese', stufe: 1 };
+    const p = mitHeer(bauVerschmelzung(bankMit(volleBank)), 0, { brett });
 
     const aktion = zug(p);
     assert.deepEqual(aktion, { typ: 'kaufen', platz: 1 });
