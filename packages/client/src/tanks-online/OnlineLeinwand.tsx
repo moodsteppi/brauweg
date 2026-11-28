@@ -9,8 +9,10 @@ import { zeichneBuehne, type Effekt } from '../broremote/brotanks/zeichnen';
 import type { OnlineStand } from '@brauweg/broremote-kern/tanks/online';
 export function OnlineLeinwand({
   partie,
+  ich,
 }: {
   partie: NonNullable<OnlineStand['partie']>;
+  ich: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null),
     aktuell = useRef({ partie, zeit: performance.now() });
@@ -75,8 +77,9 @@ export function OnlineLeinwand({
           meer: p.meer,
           wind: p.wind,
           bros: p.bros,
-          amZug: p.phase === 'ende' ? undefined : p.amZug,
-          zielen: p.phase === 'zielen',
+          amZug: p.phase === 'ende' ? undefined : ich,
+          schiessende: p.salve,
+          zielen: p.phase === 'zielen' && !p.bereit?.includes(ich),
           flug: flug ? { bahn: flug.bahn, t } : undefined,
           effekte,
           jetzt,
@@ -88,7 +91,7 @@ export function OnlineLeinwand({
     }
     malen();
     return () => clearTimeout(timer);
-  }, []);
+  }, [ich]);
   return (
     <canvas
       ref={canvas}

@@ -48,6 +48,10 @@ const meta: GameMeta = {
   nameKey: 'game.dreckbro',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Fuenfertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md) — wie Tafelrunde und die
+  // anderen Suchspiele, damit Quick-Play ueberall gleich gross sucht.
+  suchSitze: 4,
   rotationSize: () => rotationSize(),
   suggestedRounds: () => suggestedRounds(),
 };

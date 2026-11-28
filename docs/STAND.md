@@ -156,7 +156,12 @@ Einheit zählt für eine Marke nur einmal. Seit dem 28.11. sucht „Mitspieler
 suchen“ Tische zu viert statt zu acht (`suchSitze` in der Meta), die Rüstphase
 zeigt den nächsten Gegner (`naechsterGegner` in der eigenen Sicht), und im
 Kampf schauen die Figuren nach links oder rechts zu ihrem Ziel (gespiegelt,
-die Bildfolgen haben nur eine Richtung). Plan und Entscheidungen:
+die Bildfolgen haben nur eine Richtung). Seit dem 28.11. (zweiter Schritt)
+verschmelzen zwei Kopien statt drei (vier für drei Sterne), die Startleben
+stehen auf 16, und während des Kampfs darf man kaufen, von der Bank verkaufen
+und auf der Bank umsortieren (`kampfZuege` in der eigenen Sicht, nicht in
+`legalActions`, sonst handelten die Bots die ganze Schaupause). Ein Paar mit
+einer kämpfenden Einheit verschmilzt nach dem Kampf. Plan und Entscheidungen:
 `docs/TAFELRUNDE-NEU-UMSETZUNG.md`. In der App steht das Spiel weiter auf
 „Bald“. Der Absatz darunter beschreibt den Stand davor.
 

@@ -730,6 +730,9 @@ export async function anonymizeAccount(db: Db, accountId: string): Promise<void>
     .where(or(eq(s.block.accountId, accountId), eq(s.block.blockedAccountId, accountId)));
   await db.delete(s.clubMessage).where(eq(s.clubMessage.accountId, accountId));
   await db.delete(s.clubJoinRequest).where(eq(s.clubJoinRequest.accountId, accountId));
+  // Was jemand gern und zuletzt gespielt hat (Startseiten-Umbau, 0047), ebenso.
+  await db.delete(s.kontoVorliebe).where(eq(s.kontoVorliebe.accountId, accountId));
+  await db.delete(s.zuletztGespielt).where(eq(s.zuletztGespielt.accountId, accountId));
 
   // Push-Tokens und -Einstellungen: Ein Geraetetoken ist eine Zustelladresse
   // und gehoert zum Personenbezug. Die Kaskade am Fremdschluessel greift

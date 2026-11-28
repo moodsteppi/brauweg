@@ -108,6 +108,11 @@ const meta: GameMeta = {
   // auf und laesst den freien Platz mit einem Bot fuellen. Die Engine kann 3
   // weiterhin (validator, Tests) - es steht nur nicht mehr in der Lobby.
   seatCounts: [4, 5],
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Fuenfertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Zu viert ist das
+  // Grundspiel, zu fuenft setzt der Geber aus — das waehlt man bewusst in
+  // der Lobby, nicht per Zufall in der Suche.
+  suchSitze: 4,
   rotationSize(seats) {
     // 3er-Tisch hat einen Dauerbot, die Rotation umfasst trotzdem 4 Geber.
     return rotationSize(seats as 3 | 4 | 5);

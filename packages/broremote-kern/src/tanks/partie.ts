@@ -4,6 +4,7 @@ import { einschlagAnwenden, flugBerechnen, type Einschlag, type Flugbahn } from 
 import { mischen, REGELN, STROM, VORRAT_START, WAFFEN_ANZAHL, zufallsstrom, type Waffe } from './regeln.js';
 
 const R = REGELN;
+export const ONLINE_ZIELZEIT = R.zielzeit + 10;
 const TICKS = (s: number): number => Math.round(s / R.schritt);
 
 export type TanksSpieler = { id: string; name: string; farbe: string; team?: 0 | 1; design?: PanzerDesign };
@@ -52,6 +53,7 @@ export type TanksSicht = {
   optionen: TanksOptionen; phase: TanksPhase; /** Restzeit der Phase in s. */ rest: number; seed: number;
   /** Zählt bei jeder Veränderung des Geländes hoch: Die Bühne zeichnet die Insel nur dann neu. */
   gelaendeStand: number; gelaende: Gelaende; meer: number; wind: number; runde: number; zug: number; amZug: string;
+  gleichzeitig?: boolean; bereit?: string[]; salve?: string[];
   reihe: string[]; bros: BroSicht[]; schuss?: SchussSicht; gewinner: string[]; grund: TanksGrund;
 };
 export type TanksPrivat = ArtiPrivat;
@@ -72,6 +74,9 @@ export class TanksPartie {
   private phase: TanksPhase = 'countdown';
   private ticks = TICKS(R.countdown);
   private flug?: Flugbahn;
+  private readonly bereit = new Set<string>();
+  private salve: { id: string; flug: Flugbahn }[] = [];
+  private schussCountdown = false;
   private schuss?: SchussSicht;
   private gewinner: string[] = [];
   private grund: TanksGrund = '';
@@ -80,7 +85,7 @@ export class TanksPartie {
   /** Wer beim letzten Prüfen noch im Spiel war: bei gleichzeitigem Ausscheiden aller sind das die Gleichen. */
   private lebendStand: string[];
 
-  constructor(private readonly spieler: readonly TanksSpieler[], readonly seed: number, readonly optionen: TanksOptionen = { modus: 'einzel', serie: 1 }, zugStart = 1) {
+  constructor(private readonly spieler: readonly TanksSpieler[], readonly seed: number, readonly optionen: TanksOptionen = { modus: 'einzel', serie: 1 }, zugStart = 1, private readonly gleichzeitig = false) {
     if (spieler.length < R.spielerMin || spieler.length > R.spielerMax || new Set(spieler.map(s => s.id)).size !== spieler.length) {
       throw new Error('Zwei bis vier verschiedene Spieler sind erforderlich.');
     }
@@ -114,7 +119,7 @@ export class TanksPartie {
     if (!b || this.phase === 'ende') return;
     if (a.art === 'reset') { b.fahrt = 0; return; }
     // Nur der Bro am Zug, nur beim Zielen. Alles andere wird still verworfen.
-    if (this.phase !== 'zielen' || b !== this.amZug || b.raus) return;
+    if (this.phase !== 'zielen' || (!this.gleichzeitig && b !== this.amZug) || b.raus || this.bereit.has(id)) return;
     if (a.art === 'tanksitem') { this.itemNutzen(b, a); return; }
     if (a.art === 'steuerung') {
       if (typeof a.x !== 'number' || !Number.isFinite(a.x)) return;
@@ -126,7 +131,14 @@ export class TanksPartie {
       if (b.munition[a.waffe] !== 0) b.waffe = a.waffe as Waffe;
       return;
     }
-    if (a.art === 'feuer') this.feuern(b, a);
+    if (a.art === 'feuer') {
+      if (!this.gleichzeitig) this.feuern(b, a);
+      else if (a.zug === this.zugNr && b.munition[a.waffe] !== 0) {
+        b.winkel = a.winkel; b.staerke = a.staerke; b.waffe = a.waffe as Waffe;
+        b.fahrt = 0; this.bereit.add(id);
+        if (this.lebende().every(o => this.bereit.has(o.id))) this.salveCountdown();
+      }
+    }
   }
 
   private itemNutzen(b: Bro, a: Extract<TanksEingabe, { art: 'tanksitem' }>): void {
@@ -155,6 +167,59 @@ export class TanksPartie {
     this.ticks = Math.max(30, TICKS(Math.min(R.flugAnzeige, this.flug.dauer)));
   }
 
+  private salveCountdown(): void {
+    this.neutralisieren();
+    for (const b of this.lebende()) this.bereit.add(b.id);
+    this.schussCountdown = true; this.phase = 'countdown'; this.ticks = TICKS(3);
+  }
+
+  private salveFeuern(): void {
+    // Alle Bahnen verwenden dasselbe Gelände und dieselben Startstellungen.
+    // Ein früher Treffer kann keinen bereits gestarteten Gegenschuss verhindern.
+    this.salve = this.lebende().map(b => {
+      b.schuesse++;
+      if (b.munition[b.waffe] > 0) b.munition[b.waffe]--;
+      const ziele = this.lebende().map(o => ({ x: o.x, y: o.y, schuetze: o === b }));
+      return { id: b.id, flug: flugBerechnen(b, b.winkel, b.staerke, this.wind, b.waffe, this.g, ziele) };
+    });
+    this.phase = 'flug';
+    this.ticks = Math.max(30, TICKS(Math.min(R.flugAnzeige, Math.max(...this.salve.map(s => s.flug.dauer)))));
+  }
+
+  private salveAufloesen(): void {
+    const einschlaege = this.salve.flatMap(s => s.flug.einschlaege.map(e => ({ e, id: s.id })))
+      .sort((a, b) => a.e.t - b.e.t || a.id.localeCompare(b.id));
+    const treffer = new Map<string, { id: string; schaden: number }[]>();
+    const stoss = new Map<string, number>();
+    // Schaden zuerst sammeln: gleiche Startlage für alle und ein echter
+    // Gleichstand, wenn sich die letzten Panzer gegenseitig ausschalten.
+    for (const { e, id } of einschlaege) {
+      for (const t of schadenBei(e, this.bros, id)) {
+        const b = this.bro(t.id)!;
+        if (b.schild) { b.schild = false; continue; }
+        const liste = treffer.get(b.id) ?? [];
+        liste.push({ id, schaden: t.schaden }); treffer.set(b.id, liste);
+      }
+      for (const b of this.lebende()) {
+        const d = Math.hypot(b.x - e.sx, b.y + R.broHoehe - e.sy);
+        if (d < e.sr) stoss.set(b.id, (stoss.get(b.id) ?? 0) + (b.x >= e.sx ? 1 : -1) * e.stoss * (1 - d / e.sr));
+      }
+      einschlagAnwenden(this.g, e); this.stand++;
+    }
+    const getroffen = new Set<string>();
+    for (const [id, liste] of treffer) {
+      const b = this.bro(id)!, summe = liste.reduce((n, t) => n + t.schaden, 0), echt = Math.min(b.lp, summe);
+      for (const t of liste) if (t.id !== id) {
+        this.bro(t.id)!.schaden += echt * t.schaden / summe; getroffen.add(t.id);
+      }
+      b.lp -= echt; if (b.lp <= 0) { b.lp = 0; b.raus = true; }
+    }
+    for (const id of getroffen) { const b = this.bro(id)!; b.treffer++; b.schaden = Math.round(b.schaden); }
+    for (const b of this.lebende()) b.x = Math.max(-1, Math.min(R.breite + 1, b.x + (stoss.get(b.id) ?? 0)));
+    this.nachrutschen([], []);
+    this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf); this.endePruefen();
+  }
+
   neutralisieren(): void { for (const b of this.bros) b.fahrt = 0; }
 
   aufgeben(id: string): void {
@@ -162,6 +227,10 @@ export class TanksPartie {
     if (!b || b.raus || this.phase === 'ende') return;
     b.aufgegeben = true; b.raus = true; b.lp = 0; b.fahrt = 0;
     if (this.endePruefen()) return;
+    if (this.gleichzeitig) {
+      if (this.phase === 'zielen' && this.lebende().every(o => this.bereit.has(o.id))) this.salveCountdown();
+      return;
+    }
     if (this.phase === 'zielen' && b === this.amZug) { this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf); }
   }
 
@@ -169,29 +238,41 @@ export class TanksPartie {
     if (this.phase === 'ende') return;
     this.dauerTicks++;
     if (this.phase === 'zielen') {
-      this.fahren();
+      if (this.gleichzeitig) { for (const b of this.lebende()) { if (this.phase !== 'zielen') break; this.fahren(b); } }
+      else this.fahren(this.amZug);
       // Fahren kann den Zug beenden (Meer); dann gilt der neue Zeitgeber, nicht ein weiterer Tick.
       if (this.phase !== 'zielen') return;
     }
     if (--this.ticks > 0) return;
-    if (this.phase === 'countdown') this.zugStarten();
+    if (this.phase === 'countdown') {
+      if (this.gleichzeitig && this.schussCountdown) this.salveFeuern();
+      else this.zugStarten();
+    }
     else if (this.phase === 'zielen') {
+      if (this.gleichzeitig) { this.salveCountdown(); return; }
       // Zeit abgelaufen: Der Zug verfällt, es wird nichts verbraucht.
       this.amZug.fahrt = 0; this.schuss = undefined; this.flug = undefined;
       this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf);
-    } else if (this.phase === 'flug') this.aufloesen();
+    } else if (this.phase === 'flug') {
+      if (this.gleichzeitig) this.salveAufloesen(); else this.aufloesen();
+    }
     else this.weiter();
   }
 
   private zugStarten(): void {
+    if (this.gleichzeitig) {
+      this.phase = 'zielen'; this.ticks = TICKS(ONLINE_ZIELZEIT);
+      this.bereit.clear(); this.salve = []; this.schussCountdown = false;
+      for (const b of this.lebende()) { b.tank = R.tank; b.fahrt = 0; b.itemGenutzt = false; }
+      return;
+    }
     // Wer im Countdown aufgegeben hat, darf nicht dran sein: sonst warten alle die vollen 20 s auf einen Toten.
     if (this.amZug.raus) { this.weiter(); return; }
     this.phase = 'zielen'; this.ticks = TICKS(R.zielzeit);
     this.amZug.tank = R.tank; this.amZug.fahrt = 0; this.amZug.itemGenutzt = false;
   }
 
-  private fahren(): void {
-    const b = this.amZug;
+  private fahren(b: Bro): void {
     if (!b.fahrt) return;
     if (++b.fahrtAlter > TICKS(R.eingabeVerfall)) { b.fahrt = 0; return; }
     if (b.tank <= 0) return;
@@ -206,7 +287,8 @@ export class TanksPartie {
       // Ertrunken: Der Zug endet sofort, statt bis zum Ablauf der Zielzeit auf einen Toten zu warten.
       b.lp = 0; b.raus = true; b.fahrt = 0;
       if (this.endePruefen()) return;
-      this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf);
+      if (!this.gleichzeitig) { this.phase = 'nachlauf'; this.ticks = TICKS(R.nachlauf); }
+      else if (this.lebende().every(o => this.bereit.has(o.id))) this.salveCountdown();
     }
   }
 
@@ -271,6 +353,16 @@ export class TanksPartie {
   /** Nach dem Nachlauf: nächster lebender Bro; neue Runde, Flut und Rundengrenze. */
   private weiter(): void {
     if (this.endePruefen()) return;
+    if (this.gleichzeitig) {
+      this.runde++;
+      if (this.runde > R.rundenMax) { this.runde = R.rundenMax; this.grenze(); return; }
+      if (this.runde >= R.flutAb) {
+        this.meer += R.flutProRunde; this.nachrutschen([], []); this.stand++;
+        if (this.endePruefen()) return;
+      }
+      this.zugNr++; this.windZiehen(); this.schuss = undefined; this.flug = undefined;
+      this.zugStarten(); return;
+    }
     let i = this.idx, neueRunde = false;
     do { i++; if (i >= this.reihe.length) { i = 0; neueRunde = true; } } while (this.bro(this.reihe[i])!.raus);
     this.idx = i;
@@ -306,6 +398,7 @@ export class TanksPartie {
   sicht(): TanksSicht {
     const rang = rangfolge(this.bros, this.gewinner);
     return {
+      ...(this.gleichzeitig ? { gleichzeitig: true, bereit: [...this.bereit], salve: this.salve.map(s => s.id) } : {}),
       optionen: { ...this.optionen }, phase: this.phase, rest: this.ticks * R.schritt, seed: this.seed, gelaendeStand: this.stand, gelaende: this.g, meer: this.meer,
       wind: this.wind, runde: this.runde, zug: this.zugNr, amZug: this.reihe[this.idx], reihe: [...this.reihe],
       bros: this.bros.map(({ fahrt: _f, fahrtAlter: _a, ...b }) => ({ ...b, items: [...b.items], munition: [...b.munition], platz: rang.find(r => r.id === b.id)!.platz })),
@@ -317,9 +410,9 @@ export class TanksPartie {
   privatFuer(id: string): TanksPrivat | undefined {
     const b = this.bro(id);
     if (!b) return undefined;
-    const am = this.phase === 'zielen' && b === this.amZug && !b.raus;
+    const am = this.phase === 'zielen' && (this.gleichzeitig ? !this.bereit.has(id) : b === this.amZug) && !b.raus;
     let inZuegen = 0;
-    if (!b.raus && !am) {
+    if (!this.gleichzeitig && !b.raus && !am) {
       // Schritte in der Zugfolge bis zu diesem Bro, nur lebende gezählt; er selbst nach seinem Schuss: ein voller Umlauf.
       const n = this.reihe.length;
       for (let k = 1; k <= n; k++) {
@@ -330,9 +423,10 @@ export class TanksPartie {
       }
     }
     return {
+      ...(this.gleichzeitig ? { bereit: this.bereit.has(id) } : {}),
       spielerzahl:this.bros.length, dauer:Math.floor(this.dauerTicks*R.schritt), aufgegeben:b.aufgegeben, items: [...b.items], itemGenutzt: b.itemGenutzt, schild: b.schild, teleportZiele: teleportZiele(b, this.bros, this.g, this.meer),
       schaden: b.schaden, schuesse: b.schuesse, treffer: b.treffer, ...(this.optionen.modus === 'team' ? { team: b.team } : {}),
-      phase: this.phase, amZug: am, zug: this.zugNr, rest: Math.min(R.zielzeit, Math.ceil(this.ticks * R.schritt)), inZuegen: Math.min(3, inZuegen),
+      phase: this.phase, amZug: am, zug: this.zugNr, rest: Math.min(this.gleichzeitig ? ONLINE_ZIELZEIT : R.zielzeit, Math.ceil(this.ticks * R.schritt)), inZuegen: Math.min(3, inZuegen),
       winkel: b.winkel, staerke: b.staerke, waffe: b.waffe, munition: [...b.munition], lp: b.lp, tank: Math.round(b.tank), wind: this.wind,
       runde: this.runde, platz: this.platzVon(id), raus: b.raus, gewonnen: this.grund !== 'gleichstand' && (this.optionen.modus === 'team' ? new Set(this.bros.filter(b=>this.gewinner.includes(b.id)).map(b=>b.team)).size===1 : this.gewinner.length===1) && this.gewinner.includes(id),
     };
@@ -341,7 +435,7 @@ export class TanksPartie {
   /** Revanche: neue Partie mit denselben Bros und neuem Seed. Nur nach dem Ende; Aufgegebene sind wieder dabei. */
   revanche(neuerSeed: number): TanksPartie {
     if (this.phase !== 'ende') throw new Error('Eine Revanche gibt es erst nach dem Ende der Partie.');
-    return new TanksPartie(this.spieler, neuerSeed, this.optionen);
+    return new TanksPartie(this.spieler, neuerSeed, this.optionen, 1, this.gleichzeitig);
   }
 }
 

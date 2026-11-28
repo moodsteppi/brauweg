@@ -7,6 +7,7 @@ import { spiele } from "../klang";
 import "./ice.css";
 import { EisArena } from "./EisArena";
 import type { Stand } from "./sicht";
+import { useZuletztMelden } from "../zuletzt";
 const farben = ["#4af2dc", "#ffcf63", "#bf9cff", "#ff8da4"];
 export default function IceClash() {
   const [stand, setStand] = useState<Stand | null>(null),
@@ -31,7 +32,8 @@ export default function IceClash() {
     [verbunden, setVerbunden] = useState(false),
     [aktiv, setAktiv] = useState(false),
     [ping, setPing] = useState(0),
-    [info, setInfo] = useState(false);
+    [info, setInfo] = useState(false),
+    [kontoGeladen, setKontoGeladen] = useState(false);
   const ws = useRef<WebSocket | null>(null),
     zugang = useRef<{
       code: string;
@@ -148,11 +150,32 @@ export default function IceClash() {
           setName((v) => (v === "Pinguin" ? me.displayName : v));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (lebt) setKontoGeladen(true);
+      });
     return () => {
       lebt = false;
     };
   }, []);
+  // „Zuletzt gespielt" (seit dem 28.11.2026): Die Arena hat keinen Tisch,
+  // den der Server sieht, also meldet sie sich beim Öffnen selbst.
+  useZuletztMelden("ice-clash");
+  /*
+   * Quick-Play schickt mit `?schnell=1` hierher (Startseite, Plan Abschnitt 4):
+   * dann sofort die Online-Suche, dieselbe Aktion wie der Knopf — ohne
+   * Zwischenmenü. Erst nach dem Kontoladen, damit der Pinguin unter dem
+   * Kontonamen antritt statt als „Pinguin"; genau einmal; und nicht über eine
+   * Partie hinweg, die sich fortsetzen ließe — die gehört dem Spieler.
+   */
+  const schnellGestartet = useRef(false);
+  useEffect(() => {
+    if (schnellGestartet.current || !kontoGeladen || aktiv || fortsetzen) return;
+    if (new URLSearchParams(location.search).get("schnell") !== "1") return;
+    schnellGestartet.current = true;
+    los("online");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kontoGeladen, aktiv, fortsetzen]);
   useEffect(() => {
     if (stand?.phase === "pause") spiele("runde-ende");
     if (stand?.phase === "ende") spiele("sieg");

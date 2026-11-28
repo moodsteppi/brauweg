@@ -73,9 +73,9 @@ function zielSitze(gameId: GameId): number {
  *
  * Erlaubt ist neben der Werksgroesse nur, was das Modul als
  * `sitzeNurMitRegelsatz` anbietet — also nicht jede Zahl aus `seatCounts`.
- * Das ist Absicht: Fuer alle anderen Spiele bleibt die Suche genau, wie sie
- * war (Doppelkopf sucht weiter fuenf, Tafelrunde acht), auch wenn ein
- * Client eine Zahl mitschickt. Ob der Regelsatz die Zahl traegt (zu viert nur
+ * Das ist Absicht: Fuer alle anderen Spiele bleibt die Suche bei ihrer
+ * Werksgroesse (seit dem 28.11.2026 fuer die meisten `suchSitze: 4`, sonst die
+ * groesste Sitzzahl), auch wenn ein Client eine Zahl mitschickt. Ob der Regelsatz die Zahl traegt (zu viert nur
  * Extreme), entscheidet danach `validateConfig` in `betritt`.
  *
  * Die Werksgroesse wird zu null, damit ein Client, der "2" ausdruecklich
@@ -215,6 +215,21 @@ export class Vermittlung {
   /** Abbrechen. */
   verlaesst(gameId: GameId, accountId: string): void {
     this.schlange.verlaesst(gameId, accountId);
+  }
+
+  /** Suchende je Spiel ueber alle Toepfe, ohne `ohne` (Quick-Play, schlange.ts). */
+  wartendeJeSpiel(ohne?: string): Map<GameId, number> {
+    return this.schlange.wartendeJeSpiel(ohne);
+  }
+
+  /**
+   * Dort einreihen, wo in diesem Spiel schon die meisten warten — mit deren
+   * Regelsatz und Sitzzahl (`vollsterTopf` in schlange.ts). Wartet niemand,
+   * gilt die Vorgabe, wie bei `betritt` ohne Angaben.
+   */
+  async betrittBeiDenWartenden(gameId: GameId, accountId: string): Promise<Suchstand> {
+    const topf = this.schlange.vollsterTopf(gameId, accountId);
+    return this.betritt(gameId, accountId, topf?.config ?? null, topf?.sitze ?? null);
   }
 
   /** Alles, was jetzt losgehen kann, an Tische setzen. */

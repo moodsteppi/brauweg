@@ -125,6 +125,7 @@ const EIGENE_FELDER = [
   'einkommen',
   'feldplaetzeNaechsteRunde',
   'naechsterGegner',
+  'kampfZuege',
   'darfHandeln',
   'synergien',
 ] as const;

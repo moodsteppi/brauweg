@@ -109,6 +109,11 @@ const meta: GameMeta = {
   nameKey: 'game.golf',
   availability: 'playable',
   seatCounts: [1, 2, 3, 4, 5, 6, 7, 8],
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Achtertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Jedes Loch wartet auf alle,
+  // sieben Bots um einen Suchenden machen die Runde nur laenger. Acht bleiben
+  // fuer den verabredeten Tisch.
+  suchSitze: 4,
   /** Golf kennt keine Geberrotation — jedes Loch spielen alle gleichzeitig. */
   rotationSize: () => 1,
   suggestedRounds: () =>

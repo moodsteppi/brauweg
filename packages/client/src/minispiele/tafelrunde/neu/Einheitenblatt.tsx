@@ -57,11 +57,38 @@ export function Einheitenblatt({
       titel={name}
       escapeAus={escapeAus}
       onSchliessen={onSchliessen}
+      gross
       kopf={
         <div className={stil.blattFigur} data-rahmen={kostenStufe(einheit.kosten)}>
           <Figur einheit={einheit} klasse={stil.grossFigur} />
           <Sterne stufe={kaempfer.stufe} klasse={stil.blattSterne} />
         </div>
+      }
+      /* Rolle, Stufe, Preis und die Marken NEBEN der Figur statt darunter —
+         die Hoehe, die das spart, ist genau die, die auf dem iPhone zum
+         Scrollen zwang (Robin, 28.11.2026). */
+      nebenTitel={
+        <>
+          <p className={stil.blattZeile}>
+            <RolleZeichen rolle={einheit.rolle} />
+            {rollenName(einheit.rolle)}
+            {' · '}
+            {tz('neu.stufe', { n: kaempfer.stufe })}
+            {' · '}
+            <Muenze />
+            {preisVon(einheit)}
+          </p>
+          <section className={stil.blattMarken} aria-label={tz('neu.marken')}>
+            <div>
+              {einheit.marken.map((m) => (
+                <button key={m} type="button" className={stil.markenchip} onClick={() => onMarke(m)}>
+                  <MarkeZeichen marke={m} />
+                  <span>{markeName(m, markennamen[m] ?? m)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </>
       }
       fuss={
         knoepfe ? (
@@ -95,16 +122,6 @@ export function Einheitenblatt({
         ) : undefined
       }
     >
-      <p className={stil.blattZeile}>
-        <RolleZeichen rolle={einheit.rolle} />
-        {rollenName(einheit.rolle)}
-        {' · '}
-        {tz('neu.stufe', { n: kaempfer.stufe })}
-        {' · '}
-        <Muenze />
-        {preisVon(einheit)}
-      </p>
-
       {werte && (
         <dl className={stil.werte}>
           <div>
@@ -150,18 +167,6 @@ export function Einheitenblatt({
         ) : (
           <p className={stil.klein}>{faehigkeit === null ? tz('neu.faehigkeit.keine') : tz('neu.faehigkeit.unbekannt')}</p>
         )}
-      </section>
-
-      <section className={stil.blattMarken}>
-        <h3>{tz('neu.marken')}</h3>
-        <div>
-          {einheit.marken.map((m) => (
-            <button key={m} type="button" className={stil.markenchip} onClick={() => onMarke(m)}>
-              <MarkeZeichen marke={m} />
-              <span>{markeName(m, markennamen[m] ?? m)}</span>
-            </button>
-          ))}
-        </div>
       </section>
     </Blatt>
   );

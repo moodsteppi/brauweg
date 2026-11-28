@@ -40,7 +40,7 @@ export default {
   // Einstieg
   'tafelrunde.ui.einstieg.unter': 'Auto battler · up to 8 players',
   'tafelrunde.ui.einstieg.mitspielerzahl': '{n} players in Tafelrunde right now',
-  'tafelrunde.ui.einstieg.text': 'Buy champions, put them on the board and combine three of a kind - three make one stronger. Last one standing wins.',
+  'tafelrunde.ui.einstieg.text': 'Buy champions, put them on the board and collect identical ones - they merge into a stronger one. Last one standing wins.',
   'tafelrunde.ui.einstieg.erstellen': 'Create table',
   'tafelrunde.ui.einstieg.beitreten': 'Join table',
   'tafelrunde.ui.einstieg.gegenBots': 'Play against bots',
@@ -139,6 +139,7 @@ export default {
   'tafelrunde.ui.laden.ansehen': 'View {name}',
   'tafelrunde.ui.laden.wartet': 'Waiting…',
   'tafelrunde.ui.laden.bereit': 'Ready',
+  'tafelrunde.ui.laden.bereitGemeldet': 'Ready - waiting for the others',
   'tafelrunde.ui.hinweis.ziel': 'Tap a target - or cancel',
 
   // Einheitenblatt
@@ -215,6 +216,10 @@ export default {
   'tafelrunde.ui.neu.wartesaal.einladen': 'Invite friends',
   'tafelrunde.ui.neu.deinFeld': 'Your field',
   'tafelrunde.ui.neu.feldVon': '{name}\'s field',
+  'tafelrunde.ui.neu.zurueckZuDeinemFeld': 'Back to your field',
+  'tafelrunde.ui.neu.verkaufZone': 'Release here to sell',
+  'tafelrunde.ui.neu.ladenOeffnen': 'Open shop',
+  'tafelrunde.ui.neu.ladenZu': 'Close shop',
   'tafelrunde.ui.neu.naechsterGegner': 'Next rival: {name}',
   'tafelrunde.ui.neu.naechsterGeist': 'Next rival: copy of {name}',
   'tafelrunde.ui.neu.gold': 'gold',
@@ -232,7 +237,8 @@ export default {
   'tafelrunde.ui.neu.regeln.reiter.marken': 'Traits',
   'tafelrunde.ui.neu.regeln.laden': 'Each round the shop offers five champions. Buying costs gold - the price is on the card, the frame shows the tier.',
   'tafelrunde.ui.neu.regeln.ziehen': 'Drag a champion from the bench onto a hex - or tap it, then tap the target.',
-  'tafelrunde.ui.neu.regeln.verschmelzen': 'Three identical champions of the same tier merge into a stronger one on their own. The stars show the tier.',
+  'tafelrunde.ui.neu.regeln.verschmelzen': 'Identical champions of the same tier merge into a stronger one on their own. The stars show the tier.',
+  'tafelrunde.ui.neu.regeln.verschmelzenZahl': '{n} identical champions of the same tier merge into a stronger one on their own. The stars show the tier.',
   'tafelrunde.ui.neu.regeln.rang': 'How many champions may stand on the field grows with the rounds: each round adds a slot until the field is full. What the next round brings is shown above the shop.',
   'tafelrunde.ui.neu.regeln.faehigkeiten': 'Many champions have an ability. Mana comes from hits; when the blue bar is full, it fires. Passives always work.',
   'tafelrunde.ui.neu.regeln.marken': 'With enough different carriers of a trait on the field, the trait gains its effect - each unit counts only once, and every trait has its own tiers. Tap a trait: its carriers glow, and you see what each tier does.',

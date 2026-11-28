@@ -344,3 +344,13 @@ je Spielart** über codex · „Mit Freunden“: Spielart + darunter klein **„
 Regeln“** · Tabelle der Spielarten **so nehmen** · **„Gegen Bots“** bleibt als
 zweiter Knopf (Quick-Play gold, „Gegen Bots“ und „Mit Freunden“ blau, alle mit
 der gewählten Spielart).
+
+**Robins Doppelkopf-Standard** (aus seinem zuletzt erstellten Tisch auf staging,
+12.10.2026, 22 von 24 seiner Tische mit fast genau diesem Satz): ohne Neunen
+(Scharf), 8 Runden, Bock bei Null und Re+Kontra (4 Spiele, doppelt), Pflichtsolo,
+Pflichtansage (30/29, auch Folge/Armut/Schweine), Feigling, Schweinchen +
+Superschweine, Schmeißen bei 5 Luschen / 7 Vollen (neu geben), zweite Dulle sticht
+die erste, alle Sonderpunkte inkl. Charlie, Herzdurchlauf und im Solo, Armut mit
+Rückgabe-Ansage. Weil das schon die harte Spielart ist, legt **Hart** obendrauf:
+alle Bock-Auslöser (zusätzlich Solo, verlorenes Re, Schmeißen), Schmeißen mit
+Bock, Feigling und Pflichtansage auch im Solo.

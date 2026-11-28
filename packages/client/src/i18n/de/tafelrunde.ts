@@ -55,7 +55,7 @@ export default {
   // Einstieg
   'tafelrunde.ui.einstieg.unter': 'Auto-Battler · bis zu 8 Spieler',
   'tafelrunde.ui.einstieg.mitspielerzahl': '{n} Spieler gerade in Tafelrunde',
-  'tafelrunde.ui.einstieg.text': 'Kaufe Recken, stelle sie aufs Feld und lege drei gleiche zusammen - aus dreien wird eine stärkere. Wer am längsten steht, gewinnt.',
+  'tafelrunde.ui.einstieg.text': 'Kaufe Recken, stelle sie aufs Feld und sammle gleiche - sie verschmelzen zu einem stärkeren. Wer am längsten steht, gewinnt.',
   'tafelrunde.ui.einstieg.erstellen': 'Tisch erstellen',
   'tafelrunde.ui.einstieg.beitreten': 'Tisch beitreten',
   'tafelrunde.ui.einstieg.gegenBots': 'Gegen Bots spielen',
@@ -154,6 +154,7 @@ export default {
   'tafelrunde.ui.laden.ansehen': '{name} ansehen',
   'tafelrunde.ui.laden.wartet': 'Wartet…',
   'tafelrunde.ui.laden.bereit': 'Bereit',
+  'tafelrunde.ui.laden.bereitGemeldet': 'Bereit - wartet auf die anderen',
   'tafelrunde.ui.hinweis.ziel': 'Ziel antippen - oder abbrechen',
 
   // Einheitenblatt
@@ -230,6 +231,10 @@ export default {
   'tafelrunde.ui.neu.wartesaal.einladen': 'Freunde einladen',
   'tafelrunde.ui.neu.deinFeld': 'Dein Feld',
   'tafelrunde.ui.neu.feldVon': 'Feld von {name}',
+  'tafelrunde.ui.neu.zurueckZuDeinemFeld': 'Zurück zu deinem Feld',
+  'tafelrunde.ui.neu.verkaufZone': 'Hier loslassen: verkaufen',
+  'tafelrunde.ui.neu.ladenOeffnen': 'Laden öffnen',
+  'tafelrunde.ui.neu.ladenZu': 'Laden zuklappen',
   'tafelrunde.ui.neu.naechsterGegner': 'Nächster Gegner: {name}',
   'tafelrunde.ui.neu.naechsterGeist': 'Nächster Gegner: Abbild von {name}',
   'tafelrunde.ui.neu.gold': 'Gold',
@@ -247,7 +252,8 @@ export default {
   'tafelrunde.ui.neu.regeln.reiter.marken': 'Marken',
   'tafelrunde.ui.neu.regeln.laden': 'Jede Runde legt der Laden fünf Recken aus. Kaufen kostet Gold - der Preis steht auf der Karte, der Rahmen zeigt die Stufe.',
   'tafelrunde.ui.neu.regeln.ziehen': 'Zieh einen Recken von der Bank auf eine Wabe - oder tipp ihn an und dann das Ziel.',
-  'tafelrunde.ui.neu.regeln.verschmelzen': 'Drei gleiche Recken derselben Stufe verschmelzen von selbst zu einem stärkeren. Die Sterne zeigen die Stufe.',
+  'tafelrunde.ui.neu.regeln.verschmelzen': 'Gleiche Recken derselben Stufe verschmelzen von selbst zu einem stärkeren. Die Sterne zeigen die Stufe.',
+  'tafelrunde.ui.neu.regeln.verschmelzenZahl': '{n} gleiche Recken derselben Stufe verschmelzen von selbst zu einem stärkeren. Die Sterne zeigen die Stufe.',
   'tafelrunde.ui.neu.regeln.rang': 'Wie viele Recken auf dem Feld stehen dürfen, wächst mit der Runde: Jede Runde kommt ein Platz dazu, bis das Feld voll ist. Was die nächste Runde bringt, steht über dem Laden.',
   'tafelrunde.ui.neu.regeln.faehigkeiten': 'Viele Recken haben eine Fähigkeit. Mana kommt aus Treffern, ist der blaue Balken voll, wirkt sie. Passive wirken immer.',
   'tafelrunde.ui.neu.regeln.marken': 'Stehen genug verschiedene Träger einer Marke auf dem Feld, bekommt die Marke ihren Effekt - jede Einheit zählt dabei nur einmal, und jede Marke hat ihre eigenen Stufen. Tipp eine Marke an: Ihre Träger leuchten, und du siehst, was jede Stufe bringt.',

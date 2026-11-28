@@ -1834,3 +1834,44 @@ export const tanksRunde = pgTable('brotanks_runde', {
   ergebnis: jsonb().$type<import('@brauweg/broremote-kern').TanksErgebnis>(),
   muenzen: integer().notNull().default(0),
 }, t => [primaryKey({ columns: [t.accountId, t.partie] }), index('brotanks_runde_konto_tag_idx').on(t.accountId, t.tag)]);
+
+// ---------------------------------------------------------------------------
+// Startseiten-Umbau (28.11.2026, Migration 0047): Vorlieben und „zuletzt
+// gespielt". Ein zusammenhaengender Block, damit parallele Arbeiten an diesem
+// Schema (BroweG-Bock) beim Zusammenfuehren nicht in dieselben Zeilen greifen.
+// ---------------------------------------------------------------------------
+
+/**
+ * Vorlieben eines Kontos: Favoriten fuer „Deine Spiele" und die Spielauswahl
+ * von Quick-Play. Am Konto und nicht im Geraet, damit App und Webseite
+ * dasselbe zeigen (Robin, B3). Keine Zeile = keine Favoriten, alle Kandidaten.
+ */
+export const kontoVorliebe = pgTable('konto_vorliebe', {
+  accountId: uuid()
+    .primaryKey()
+    .references(() => account.id, { onDelete: 'cascade' }),
+  /** Spielkennungen in der Reihenfolge des Hinzufuegens (neu hinten). */
+  favoriten: text().array().notNull().default(sql`'{}'::text[]`),
+  /** Quick-Play-Auswahl; null = alle Kandidaten der Plattform, nie leer. */
+  schnellspiel: text().array(),
+  aktualisiert: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Wann ein Konto ein Spiel zuletzt gespielt hat (src/zuletzt.ts). Freie
+ * Kennung: Tischspiele, Solo-Spiele und Arenen stehen nebeneinander.
+ */
+export const zuletztGespielt = pgTable(
+  'zuletzt_gespielt',
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    spiel: text().notNull(),
+    am: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: 'zuletzt_gespielt_pk', columns: [t.accountId, t.spiel] }),
+    index('zuletzt_gespielt_konto_am_idx').on(t.accountId, t.am),
+  ],
+);

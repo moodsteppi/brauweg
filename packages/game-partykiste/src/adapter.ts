@@ -88,6 +88,11 @@ const meta: GameMeta = {
   nameKey: 'game.partykiste',
   availability: 'playable',
   seatCounts: [...SITZE],
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Zwoelfertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Elf Bots um einen
+  // Suchenden waeren keine Party. Vier ist zugleich die kleinste Runde, die
+  // die Kiste zulaesst; mehr bleibt der Lobby.
+  suchSitze: 4,
   /** Keine Geberrotation — es gibt kein Blatt und niemanden, der gibt. */
   rotationSize: () => 1,
   suggestedRounds: () =>

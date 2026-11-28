@@ -139,8 +139,9 @@ export const HEERGROESSEN: readonly number[] = [3, 5, 7, 9];
  * Ein Heer wuerfeln: `groesse` Einheiten, gleichverteilt aus dem Katalog und
  * MIT Zuruecklegen.
  *
- * Mit Zuruecklegen, weil echte Heere Kopien enthalten — drei gleiche Karten
- * sind im Spiel sogar das Ziel (`VERSCHMELZ_ZAHL`). Gleichverteilt dagegen
+ * Mit Zuruecklegen, weil echte Heere Kopien enthalten — gleiche Karten
+ * (seit dem 28.11.2026 zwei, vorher drei) sind im Spiel sogar das Ziel
+ * (`VERSCHMELZ_ZAHL`). Gleichverteilt dagegen
  * ist bewusst UNREALISTISCH: Der Bot kauft nach Wert und der Laden wuerfelt
  * nach Level, ein gezogenes Heer sieht also nicht aus wie ein gespieltes. Fuer
  * die Duellfrage ist das richtig herum — beide Seiten bekommen dasselbe Heer,

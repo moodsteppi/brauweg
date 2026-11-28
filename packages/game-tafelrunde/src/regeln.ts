@@ -146,7 +146,13 @@ export interface TafelrundeRegeln {
  * Probe in test/spielzeit.ts.
  */
 export const DEFAULT_REGELN: TafelrundeRegeln = {
-  startLeben: 12,
+  // 16 seit dem 28.11.2026 (vorher 12): Seit zwei Kopien verschmelzen, stehen
+  // frueher Sterne auf dem Brett, und die Partie zu viert fiel von 6:48 auf
+  // 5:27 (8 Runden). Mit 16 sind es 6:55 bei 10 Runden, die Marken liegen bei
+  // x0,93-1,03 (je 1.000 Partien), und hart schlaegt normal 116 : 94,7. Den
+  // Schadensteiler zu erhoehen haette dasselbe gebracht, aber knappe und klare
+  // Niederlagen gleich teuer gemacht (siehe SCHADEN_STUFEN_TEILER in kampf.ts).
+  startLeben: 16,
   // 4 statt 2 seit dem 27.11.2026: Runde 1 hat zwei Feldplaetze und die
   // billigste Einheit kostet 2 — mit 2 Gold bliebe ein Platz immer leer.
   startGold: 4,

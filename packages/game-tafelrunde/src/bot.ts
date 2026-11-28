@@ -304,7 +304,12 @@ export const GANGARTEN: Readonly<Record<Schwierigkeit, Gangart>> = {
     aufstiegsReserve: 3,
     nurBeiVollemBrett: true,
     wuerfeltNeu: true,
-    patzerQuote: 0.15,
+    // 0,3 seit dem 28.11.2026 (vorher 0,15). Seit zwei Kopien verschmelzen,
+    // nimmt jeder Bot fast jede Verschmelzung mit, und Polster und Reserve
+    // trennen hart und normal kaum noch: Mit 0,15 schlug ein normaler drei
+    // harte 111 : 96,3 (400 Partien zu viert). Mit 0,3 liegt hart wieder vorn
+    // (104,3 : 87), sanft bleibt weit dahinter.
+    patzerQuote: 0.3,
     nimmtVerschmelzungImmer: true,
   },
   hart: {

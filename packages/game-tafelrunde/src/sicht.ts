@@ -40,6 +40,7 @@ import type {
   Kaempfer,
   Kampfpaarung,
   Phase,
+  TafelrundeAktion,
   TafelrundePartie,
   Serie,
 } from './partie.js';
@@ -48,6 +49,7 @@ import {
   darfHandeln,
   einkommen,
   heerVon,
+  kampfZuege,
   lebendeSitze,
   platzierungen,
   setzeAn,
@@ -110,6 +112,14 @@ export interface EigeneSicht {
    * Ausgeschiedene null; der laufende Kampf steht dann in `paarungen`.
    */
   readonly naechsterGegner: { readonly sitz: number; readonly geist: boolean } | null;
+  /**
+   * Die Zuege WAEHREND DES KAMPFES (kaufen, von der Bank verkaufen), seit dem
+   * 28.11.2026. Ausserhalb des Kampfes leer. Sie stehen hier und nicht in
+   * `legalActions`, weil die Plattform sonst die Bots die ganze Schaupause
+   * ueber handeln liesse (siehe `kampfZuege` in partie.ts). Umsortieren auf
+   * der Bank geht im Kampf ebenfalls und steht, wie immer, nicht in der Liste.
+   */
+  readonly kampfZuege: readonly TafelrundeAktion[];
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
   readonly darfHandeln: boolean;
   /**
@@ -549,6 +559,7 @@ export function sichtFuer(
     wuerfeRunde: heer.wuerfeRunde,
     feldplaetzeNaechsteRunde: feldplaetze(levelFuerRunde(partie.runde + 1)),
     naechsterGegner: naechsterGegner(partie, sitz),
+    kampfZuege: kampfZuege(partie, sitz),
     darfHandeln: darfHandeln(partie, sitz),
     synergien: synergienVon(heer.brett),
   };

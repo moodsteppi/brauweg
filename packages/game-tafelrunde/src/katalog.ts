@@ -70,13 +70,19 @@ export type Kosten = 1 | 2 | 3;
 
 export const KOSTENSTUFEN: readonly Kosten[] = [1, 2, 3];
 
-/** Sternstufe. Drei gleiche einer Stufe ergeben eine der naechsten. */
+/** Sternstufe. Zwei gleiche einer Stufe ergeben eine der naechsten (seit dem 28.11.2026, vorher drei). */
 export type Stufe = 1 | 2 | 3;
 
 export const MAX_STUFE: Stufe = 3;
 
-/** Wie viele gleiche Einheiten verschmelzen. */
-export const VERSCHMELZ_ZAHL = 3;
+/**
+ * Wie viele gleiche Einheiten verschmelzen.
+ *
+ * Seit dem 28.11.2026 zwei (Robin: "2 Units zusammen sind schon das naechste
+ * Level, nicht 3", und "4 statt 9" fuer drei Sterne). Kosten, Erloes und
+ * Kartenzahl haengen alle an dieser Zahl, nichts davon steht doppelt.
+ */
+export const VERSCHMELZ_ZAHL = 2;
 
 export interface Grundwerte {
   readonly leben: number;
@@ -869,8 +875,8 @@ export function werteFuer(id: EinheitId, stufe: Stufe, bonus: Wertebonus = KEIN_
 /**
  * Was eine Einheit auf dieser Stufe im Laden gekostet HAETTE.
  *
- * Braucht man beim Verkaufen: Eine Stufe-2-Einheit steckt voller drei Karten,
- * gibt also das Dreifache zurueck. Ohne diese Rechnung waere Verschmelzen ein
+ * Braucht man beim Verkaufen: Eine Stufe-2-Einheit steckt voller
+ * `VERSCHMELZ_ZAHL` Karten, gibt also so viel mal den Preis zurueck. Ohne diese Rechnung waere Verschmelzen ein
  * Weg, Gold zu vernichten — und niemand wuerde je eine verschmolzene Einheit
  * wieder hergeben.
  */

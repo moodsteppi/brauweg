@@ -659,22 +659,32 @@ describe('Kampf — der Ausgang', () => {
     });
     // Gerechnet wird die Stufensumme geteilt durch SCHADEN_STUFEN_TEILER und
     // aufgerundet: 0 Ueberlebende kosten nur den Grundwert, ein Stufe-1-Gegner
-    // einen Punkt mehr, drei Stufen zusammen (Teiler 3) genauso viel wie eine
-    // einzelne Stufe-3-Einheit.
+    // einen Punkt mehr. Seit dem 28.11.2026 steht der Teiler auf 6 statt 3
+    // (kampf.ts); die Probe rechnet deshalb mit dem Teiler statt mit festen
+    // Zahlen — und haelt fest, dass er ueber 3 liegt, sonst stimmten die
+    // Gleichheiten unten nicht.
+    const T = SCHADEN_STUFEN_TEILER;
+    assert.ok(T >= 3);
     assert.equal(schadenFuerVerlierer([]), SCHADEN_GRUNDWERT);
     assert.equal(schadenFuerVerlierer([stand(0, 1)]), SCHADEN_GRUNDWERT + 1);
     assert.equal(schadenFuerVerlierer([stand(0, 3)]), SCHADEN_GRUNDWERT + 1);
     assert.equal(schadenFuerVerlierer([stand(0, 1), stand(1, 2)]), SCHADEN_GRUNDWERT + 1);
     assert.equal(
       schadenFuerVerlierer([stand(0, 3), stand(1, 3), stand(2, 3)]),
-      SCHADEN_GRUNDWERT + 3,
+      SCHADEN_GRUNDWERT + Math.ceil(9 / T),
     );
     // Mehr Ueberlebende kosten mehr — die Teilung darf die Ordnung nicht
     // einebnen, sonst waere eine knappe Niederlage so teuer wie eine klare.
-    assert.ok(
-      schadenFuerVerlierer([stand(0, 1), stand(1, 1), stand(2, 1), stand(3, 1)]) >
-        schadenFuerVerlierer([stand(0, 1)]),
-    );
+    // Seit dem Teiler 6 (28.11.2026) kosten einer und vier einfache
+    // Ueberlebende gleich viel; die Ordnung gilt ueber eine Teilerbreite
+    // hinweg: ein Ueberlebender gegen T + 1 (bei 6 sind das sieben, ein volles
+    // Feld).
+    const viele = Array.from({ length: T + 1 }, (_, i) => stand(i, 1));
+    assert.ok(schadenFuerVerlierer(viele) > schadenFuerVerlierer([stand(0, 1)]));
+    // Und nie weniger: Mehr Ueberlebende kosten mindestens gleich viel.
+    for (let n = 1; n < T + 1; n++) {
+      assert.ok(schadenFuerVerlierer(viele.slice(0, n + 1)) >= schadenFuerVerlierer(viele.slice(0, n)));
+    }
   });
 
   /**

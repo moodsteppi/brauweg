@@ -31,6 +31,7 @@ export type Aktion =
 export type BauPrivat = { form: number; hoehe: number; restzeit: number; phase: 'countdown' | 'spiel' | 'pause' | 'ende'; countdown: number; platz: number; fertig: boolean; gewonnen: boolean; verbraucht: number; spielerzahl?: number; ziele?: string[]; zielCountdown?: number; item?: BauItem; itemIn?: number; itemBereit?: boolean; platzierung?: BauPlatzierung; eisWartet?: boolean; steinWartet?: boolean; anker?: number; schwereWartet?: boolean; gebaut?: number; verloren?: number; aufgegeben?: boolean; dauer?: number };
 /** BroTanks: was ein einzelnes Handy über seine Partie erfährt (docs/BROREMOTE-ARTILLERIE.md, Abschnitt 6). */
 export type ArtiPrivat = {
+  bereit?: boolean;
   items?: number[]; itemGenutzt?: boolean; schild?: boolean; teleportZiele?: number[];
   spielerzahl?: number; dauer?: number; aufgegeben?: boolean; schaden?: number; schuesse?: number; treffer?: number; team?: 0 | 1;
   serie?: { runde: number; maximal: 1 | 3; siege: number; fertig: boolean; gewonnen: boolean };
