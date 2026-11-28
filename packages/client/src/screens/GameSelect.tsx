@@ -150,8 +150,6 @@ export function GameSelect({
   /** Solo-Minispiele aus der Spielauswahl (z. B. Pro-Subway). */
   onSolo: (modusId: string) => void;
   onResume: (gameId: string, tableId: string) => void;
-  /** BroweG-Bock öffnen (Kachel auf der Startseite); fehlt er, gibt es den Bock nicht. */
-  onBock?: () => void;
   onThemeChange: (
     gameId: string,
     teil: { cardDeck?: string; tableScene?: string; cardBack?: string },
@@ -273,6 +271,7 @@ export function GameSelect({
             onPick={onPick}
             onSolo={soloStarten}
             onBald={setBald}
+            onBock={onBock}
             onSammlung={(art) => { const spiel = spielseite ?? 'doppelkopf'; setSammlungSpiel(spiel); setSammlungEinstieg({ spiel, art: art ?? null }); setTab('blatt'); }}
             onLernen={oeffneLernen}
             onKontoNeu={onAvatarChange}

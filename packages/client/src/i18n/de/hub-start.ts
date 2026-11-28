@@ -223,6 +223,7 @@ export default {
   'schnell.nochmal': 'Noch mal suchen',
   'schnell.verbindung': 'Die Verbindung hakt – wir versuchen es weiter.',
   'schnell.fehler': 'Quick-Play hat gerade nicht geklappt. Versuch es gleich noch mal.',
+  'schnell.laufend': 'Du sitzt noch an einem laufenden Tisch – erst zurück an den Tisch.',
   'schnell.keinSpiel': 'Für deine Auswahl ist gerade kein Spiel frei. Nimm im Zahnrad mehr Spiele dazu.',
   'schnell.ok': 'Alles klar',
   'schnell.startet': 'Quick-Play startet …',

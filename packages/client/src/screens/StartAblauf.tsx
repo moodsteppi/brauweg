@@ -176,9 +176,16 @@ export function useStartAblauf({
         else seitenwechsel.zu(`/${stand.arena}?schnell=1`);
       })
       .catch((e: unknown) => {
-        // 404/409/422: Für die Auswahl gibt es gerade kein Spiel — das kann
-        // man selbst ändern, also sagen wir wo.
-        const keins = e instanceof ApiError && [404, 409, 422].includes(e.status);
+        // Die Codes stehen in server/src/schnellspiel.ts: Für die Auswahl gibt
+        // es gerade kein Spiel (das kann man am Zahnrad selbst ändern, also
+        // sagen wir wo), oder man sitzt schon an einem laufenden Tisch, den
+        // dieses Geraet noch nicht kannte (dann gilt die Sperre von oben).
+        const code = e instanceof ApiError ? e.code : '';
+        if (code === 'schnellspielLaufenderTisch') {
+          setMeldung(t('schnell.laufend'));
+          return;
+        }
+        const keins = code === 'schnellspielKeinSpiel' || code === 'schnellspielLeer';
         setMeldung(t(keins ? 'schnell.keinSpiel' : 'schnell.fehler'));
       })
       .finally(() => setStartet(false));

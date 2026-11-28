@@ -218,6 +218,7 @@ export default {
   'schnell.nochmal': 'Search again',
   'schnell.verbindung': 'The connection is shaky – we keep trying.',
   'schnell.fehler': 'Quick Play didn’t work just now. Please try again in a moment.',
+  'schnell.laufend': 'You are still at a running table – go back to it first.',
   'schnell.keinSpiel': 'No game is available for your selection right now. Add more games in the settings.',
   'schnell.ok': 'Got it',
   'schnell.startet': 'Quick Play is starting …',

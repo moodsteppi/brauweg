@@ -213,6 +213,7 @@ export function SpieleNeu({
   onPick,
   onSolo,
   onBald,
+  onBock,
   onSammlung,
   onLernen,
   onKontoNeu,
@@ -224,6 +225,11 @@ export function SpieleNeu({
   onPick: (gameId: string) => void;
   onSolo: (modusId: string) => void;
   onBald: (name: string) => void;
+  /**
+   * BroweG-Bock öffnen (seit dem 28.11.2026 spielbar, `src/bock/`). Fehlt er
+   * (Umfang ohne `mehrkampf`), bleibt die ehrliche „Bald"-Karte der Webseite.
+   */
+  onBock?: () => void;
   onSammlung: (art?: SammelBereich) => void;
   /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
@@ -538,6 +544,26 @@ export function SpieleNeu({
           {mitBrowort && <button className="hb-sk" onClick={() => onSolo('browort')}><span className="hb-sk-bild" style={{backgroundImage:'url(/hub/browort-icon.webp)'}}/><strong>Browort</strong><small>Solo</small></button>}
         </div></section>}
 
+        {/* Der Bock ist seit dem 28.11.2026 spielbar — dann auf Webseite UND in
+            der App eine echte Karte unter „Modi" statt der Bald-Marke. */}
+        {filter === 'alle' && onBock && imUmfang('mehrkampf') && (
+          <section className="hb-blk">
+            <h2 className="hb-ab">
+              <Symbol>
+                <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
+              </Symbol>
+              {t('spielwahl.modi')}
+            </h2>
+            <div className="hb-reihe">
+              <button type="button" className="hb-sk" onClick={onBock}>
+                <span className="hb-sk-bild" style={{ backgroundImage: 'url(/hub/banner-mehrkampf.webp)' }} />
+                <strong>{t('modus.mehrkampf')}</strong>
+                <small>{t('spielwahl.mehrkampf.unter')}</small>
+              </button>
+            </div>
+          </section>
+        )}
+
         {filter === 'alle' && !inApp && (
           <>
             {/* Der Mehrkampf ist noch nicht gebaut: ehrliche „Bald"-Marke (DESIGN.md).
@@ -547,7 +573,7 @@ export function SpieleNeu({
                 Abstimmung nicht im Umfang ist, sonst stünde er doppelt da.
                 Ohne `mehrkampf` im Umfang fehlt auch die Marke: Was dort nicht
                 steht, ist auf der Webseite weg (server/src/umfang.ts). */}
-            {imUmfang('mehrkampf') && !bald.some((g) => g.id === 'mehrkampf') && (
+            {!onBock && imUmfang('mehrkampf') && !bald.some((g) => g.id === 'mehrkampf') && (
             <section className="hb-blk">
               <h2 className="hb-ab">
                 <Symbol>
