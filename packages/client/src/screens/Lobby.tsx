@@ -1,57 +1,78 @@
 import { useEffect, useState } from 'react';
 
-import { ApiError, api, type GameDefaults, type TableRow } from '../api';
+import { ApiError, api, type GameDefaults } from '../api';
 import { t } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
-import { AnfrageWarten } from '../tisch/Anfragen';
-import { ARTNAME, VORGABE_ZEIT, regelnFuer, zeitText, zeitkontrolle } from '../minispiele/brochess/zeit';
+import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
+import {
+  ARTNAME,
+  VORGABE_ZEIT,
+  ZEITKONTROLLEN,
+  regelnFuer,
+  zeitText,
+  zeitkontrolle,
+} from '../minispiele/brochess/zeit';
 import { ArtZeichen, ZeitWahlBlatt } from '../minispiele/brochess/ZeitWahl';
 import { useSpezialModi } from '../minispiele/brochess/SpezialModi';
+import { EinzelKarte, SpielartKarten, SuchWarten, quickplayUnter, spielartName } from '../spielarten/SpielartKarten';
+import { useSchnellsuche } from '../spielarten/useSchnellsuche';
+import { useSpielarten } from '../spielarten/useSpielarten';
 
 /**
- * Gemerkte Zeitkontrolle fuer BroChess. Eigener Schluessel statt im
- * gemerkten Regelsatz: Der Regelsatz uebernimmt nur Felder, die die
- * Vorgabe des Moduls kennt, und die Vorgabe hat keine Uhr — sonst bekaeme
- * jeder alte Tisch eine.
+ * Der Spieleinstieg der Lobby-Spiele (Doppelkopf, Skat, Zauberer, Cambio,
+ * BroChess, DreckBro, Bro Bluff) — seit dem 28.11.2026 ohne Tischliste.
+ *
+ * Robin: „Die Tischlisten verwirren — weg damit", die Zwischenseite soll
+ * aussehen wie bei Farbduell. Oben die Spielarten als Karten (aus dem Modul,
+ * `GameMeta.spielarten`; Antippen WAEHLT nur aus), darunter im Fuss der
+ * goldene Quick-Play-Knopf (Suche in dieser Spielart ueber die Schlange),
+ * blau „Gegen Bots" und „Mit Freunden" (Code-Tisch, Wartesaal wie bisher),
+ * klein „Eigene Regeln" fuer den Freundestisch. Alle drei Wege nehmen die
+ * gewaehlte Spielart. Wer einen Code bekommen hat, tippt ihn unten ein.
+ *
+ * Erstellen, Bot-Tisch und Regelblatt sind die der alten Lobby — nur der
+ * Einstieg davor ist neu. Spiele ohne Spielarten bekommen eine grosse Karte
+ * mit ihrem Banner und dieselben Knoepfe.
+ */
+
+/**
+ * Gemerkte Zeitkontrolle fuer BroChess (bis zum 28.11.2026 die Wahl der
+ * Lobby). Seitdem setzt die Spielart die Uhr; die eigene Zeitwahl unter
+ * „Mit Freunden" ueberschreibt sie nur, wenn jemand sie anfasst.
  */
 const ZEIT_KEY = 'brochess.zeit';
-
-function gemerkteZeit(): string {
-  try {
-    return localStorage.getItem(ZEIT_KEY) ?? VORGABE_ZEIT;
-  } catch {
-    return VORGABE_ZEIT;
-  }
-}
 
 function merkeZeit(id: string): void {
   try {
     localStorage.setItem(ZEIT_KEY, id);
   } catch {
-    // Gesperrter Speicher: dann eben beim naechsten Mal wieder die Vorgabe.
+    // Gesperrter Speicher: dann eben beim naechsten Mal wieder die Spielart.
   }
 }
 
-/**
- * Lobby und Tischerstellung.
- *
- * Welche Spielerzahlen und Rundenzahlen zur Auswahl stehen, liefert der
- * Server aus dem Spielmodul. Der Client verdrahtet nichts davon fest.
- *
- * Die Einstellungen des zuletzt erstellten Tisches werden am Geraet gemerkt
- * und beim naechsten Mal vorgelegt: Wer immer mit denselben Hausregeln
- * spielt, soll sie nicht jedes Mal neu zusammenklicken.
- */
+/** Die Zeitkontrolle aus dem Regelsatz einer Spielart, fuer die Anzeige. */
+function zeitIdAus(config: Record<string, unknown> | null): string {
+  const treffer = ZEITKONTROLLEN.find((z) => {
+    const r = regelnFuer(z);
+    return r.bedenkzeitMs === config?.['bedenkzeitMs'] && r.zuschlagMs === (config?.['zuschlagMs'] ?? 0);
+  });
+  return treffer?.id ?? VORGABE_ZEIT;
+}
 
+/**
+ * Was am Geraet gemerkt wird: Sitze, Runden, fuer wen und Bot-Staerke des
+ * letzten Freundestisches. Der Regelsatz NICHT mehr (bis zum 28.11.2026
+ * schon) — den bringt jetzt die Spielart, und ein gemerkter alter Regelsatz
+ * stuende still ueber ihr.
+ */
 interface Gemerkt {
   seats?: number;
   rounds?: number;
-  config?: Record<string, unknown>;
-  visibility?: Sichtbarkeit;
+  visibility?: string;
   botLevel?: BotLevel;
 }
 
@@ -84,12 +105,11 @@ const SCHACH_STUFEN: readonly { id: BotLevel; name: string; unter: string }[] = 
 ];
 
 /**
- * Spiele, die man in der Lobby direkt allein gegen einen Bot beginnen kann.
- * Bisher nur BroChess (Emile, 13.10.2026): Zu zweit gibt es sonst keinen Weg,
- * ohne Gegner zu spielen, außer erst einen Tisch zu öffnen und dort den
- * freien Platz zu füllen — das findet niemand.
+ * Spiele, bei denen „Gegen Bots" erst nach der Staerke fragt. Nur dort wertet
+ * das Modul sie aus (Doppelkopf) bzw. braucht man sie (Schach allein gegen
+ * den Computer, Emile 13.10.2026). Alle anderen setzen sich sofort hin.
  */
-const ALLEIN_GEGEN_BOT: ReadonlySet<string> = new Set(['brochess']);
+const BOT_STAERKE_WAEHLEN: ReadonlySet<string> = new Set(['doppelkopf', 'brochess']);
 
 /**
  * Der Zaehler am Schluessel verwirft alte Staende.
@@ -109,37 +129,30 @@ function gemerkteEinstellungen(gameId: string): Gemerkt | null {
     return null;
   }
 }
-/**
- * Der Satz unter dem Erstellen-Knopf.
- *
- * Er stand einmal fest verdrahtet da und erzählte auch am Skattisch vom
- * „Bot als Vierter" — ein Satz aus dem Doppelkopf. Skat IST ein Dreierspiel;
- * dort ist der Dreiertisch der Normalfall und kein Behelf. Deshalb hängt der
- * Text jetzt am Spiel und nicht allein an der Platzzahl.
- */
-/**
- * Wer an den Tisch darf. `on_request` heißt seit dem 13.10.2026 „Privat":
- * Er steht nicht in der Lobbyliste, man kommt nur per Einladung herein, und
- * der Gastgeber sagt jedem Beitritt zu (Server: tables/anfragen.ts).
- */
-type Sichtbarkeit = 'public' | 'on_request' | 'club_only';
 
-function fussnote(gameId: string, seats: number, visibility: Sichtbarkeit): string {
-  if (visibility === 'on_request') {
-    return t('lobby.fuss.privat');
-  }
-  if (visibility === 'club_only') {
-    return t('lobby.fuss.clan');
-  }
-  if (gameId === 'skat') {
-    return t('lobby.fuss.skat');
-  }
-  if (seats === 3) {
-    return t('lobby.fuss.dreier');
-  }
-  // Bots zählen seit dem 04.08.2026 für die Rangliste (`countsForRanking` im
-  // Server); bis zum 13.10.2026 stand hier noch das Gegenteil.
-  return t('lobby.fuss.standard');
+/**
+ * Wer an den Freundestisch darf. Offen gibt es nicht mehr: Ohne Tischliste
+ * findet einen offenen Tisch niemand, der den Code nicht hat — er waere ein
+ * privater Tisch mit falschem Namen. `on_request` ist „Privat": Man kommt nur
+ * per Einladung herein, und der Gastgeber sagt jedem Beitritt zu (Server:
+ * tables/anfragen.ts).
+ */
+type Sichtbarkeit = 'on_request' | 'club_only';
+
+/**
+ * Der Satz unter dem Knopf „Tisch aufmachen". Er haengt am Spiel und nicht
+ * allein an der Platzzahl: Skat IST ein Dreierspiel, dort ist der Dreiertisch
+ * der Normalfall und kein Behelf.
+ */
+function fussnote(gameId: string, visibility: Sichtbarkeit): string {
+  if (visibility === 'club_only') return t('lobby.fuss.clan');
+  if (gameId === 'skat') return t('lobby.fuss.skat');
+  return t('einstieg.freunde.fuss');
+}
+
+/** Boolesche Regeln und die Blattwahl — das, was das Regelblatt umschaltet. */
+function schalter(config: Record<string, unknown>): [string, unknown][] {
+  return Object.entries(config).filter(([key, value]) => typeof value === 'boolean' || (key === 'deck' && typeof value === 'string'));
 }
 
 export function Lobby({
@@ -151,246 +164,175 @@ export function Lobby({
   onEnter: (tableId: string) => void;
   onBack: () => void;
 }): React.JSX.Element {
-  const [tables, setTables] = useState<TableRow[]>([]);
   const [defaults, setDefaults] = useState<GameDefaults | null>(null);
   const [seats, setSeats] = useState(4);
   const [rounds, setRounds] = useState(8);
-  const [visibility, setVisibility] = useState<Sichtbarkeit>('public');
+  const [visibility, setVisibility] = useState<Sichtbarkeit>('on_request');
   const [botLevel, setBotLevel] = useState<BotLevel>('standard');
+  /** Regelsatz des Freundestisches — die Spielart, darauf die eigenen Regeln. */
   const [config, setConfig] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
-  /**
-   * Zeitkontrolle (nur BroChess, Emile, 22.10.2026): Bullet, Blitz, Rapid wie
-   * auf den grossen Schachseiten. Sie geht als Teil des Regelsatzes an den
-   * Tisch; pruefen und messen tun Modul und Server.
-   */
+  const [ansicht, setAnsicht] = useState<'start' | 'freunde' | 'bot'>('start');
+
   const istSchach = gameId === 'brochess';
-  const [zeitId, setZeitId] = useState(gemerkteZeit);
-  const [zeitOffen, setZeitOffen] = useState(false);
-  const zeitRegeln = istSchach ? regelnFuer(zeitkontrolle(zeitId)) : {};
   /**
-   * Spezial-Modi (BroChess: Secret Dame …), ein Knopf in Liste, Bot- und
-   * Erstellen-Ansicht — dieselbe Wahl gilt für alle drei. Bis zum 13.11.2026
-   * stand Secret Dame nur im Formular „Tisch erstellen" und wurde nicht
-   * gefunden; gegen den Bot gab es ihn gar nicht. Was es an Modi gibt, steht
-   * allein in minispiele/brochess/spezialmodi.ts.
+   * Eigene Zeitkontrolle am Freundestisch (BroChess). `null` heisst: die Uhr
+   * der Spielart. Eine angefasste Wahl gilt bis zum Verlassen des Bildschirms.
+   */
+  const [zeitWahl, setZeitWahl] = useState<string | null>(null);
+  const [zeitOffen, setZeitOffen] = useState(false);
+  /**
+   * Spezial-Modi (BroChess: Secret Dame …) unter „Gegen Bots" und „Mit
+   * Freunden". Ohne Wahl schicken sie nichts mit — dann gilt der Modus der
+   * Spielart („Spezial" zieht ihn aus dem Zufall, die anderen spielen
+   * klassisch). Was es an Modi gibt, steht allein in
+   * minispiele/brochess/spezialmodi.ts.
    */
   const spezial = useSpezialModi(istSchach);
-  /** Tischauswahl oder Tisch erstellen — zwei Bildschirme, kein Langformular. */
-  const [ansicht, setAnsicht] = useState<'liste' | 'erstellen' | 'bot'>('liste');
-  /** Gestellte Beitrittsanfrage an einen privaten Tisch, solange sie läuft. */
-  const [anfrage, setAnfrage] = useState<{ tableId: string; host: string | null } | null>(null);
-  /**
-   * Filter als Zeichenkette, weil die Sitz-Filter aus dem Spielmodul kommen:
-   * Doppelkopf hat drei bis fünf Plätze, Zauberer drei bis sechs. Fest
-   * verdrahtete Knöpfe müssten bei jedem neuen Spiel nachgezogen werden.
-   */
-  const [filter, setFilter] = useState<string>('alle');
-  const [suche, setSuche] = useState('');
 
-  const refresh = (): void => {
-    void api.tables(gameId).then(setTables);
-  };
+  const wahl = useSpielarten(gameId);
+  const suche = useSchnellsuche(gameId, onEnter);
 
   useEffect(() => {
-    refresh();
     void api.defaults(gameId).then((d) => {
       setDefaults(d);
-
-      // Gemerktes ueber die Vorgaben legen - aber nur Schluessel, die es noch
-      // gibt, mit unveraendertem Typ. So uebersteht der Speicher Regelsatz-
-      // Aenderungen, statt einen kaputten Tisch zu bauen.
       const merken = gemerkteEinstellungen(gameId);
-      const config = { ...d.config };
-      if (merken?.config) {
-        for (const [key, value] of Object.entries(merken.config)) {
-          if (key in config && typeof value === typeof config[key]) config[key] = value;
-        }
-      }
-      // Ohne gemerkte Einstellungen gilt die Vorgabe des Spielmoduls, also
-      // `d.config` unveraendert.
-      //
-      // Frueher wurde hier jede Boolesche Regel auf false gesetzt - "der Tisch
-      // startet nackt". Das hat aber nicht nur Hausregeln abgeschaltet,
-      // sondern auch Hochzeit und Armut: Wer zwei Kreuz-Damen hielt, bekam
-      // keine Hochzeit angeboten. Das ist kein nackter Tisch mehr, das ist
-      // kein Doppelkopf. Was aus ist, sagt der Regelsatz des Moduls - dort
-      // stehen Schmeissen und die Sonderpunkte schon auf aus.
-      setConfig(config);
-
       // Ohne gemerkte Wahl bleibt der Anfangswert (4) nur stehen, wenn das
       // Spiel ihn kennt. Skat hat 3 Sitze; sonst scheitert der erste Tisch.
       const seatWahl =
         merken?.seats !== undefined && d.seatCounts.includes(merken.seats)
           ? merken.seats
-          : d.seatCounts.includes(seats)
-            ? seats
-            : d.seatCounts[0];
+          : d.seatCounts.includes(4)
+            ? 4
+            : d.seatCounts[0]!;
       setSeats(seatWahl);
       const runden = d.rounds[String(seatWahl)] ?? [];
       const rundenWahl =
-        merken?.rounds !== undefined && runden.includes(merken.rounds)
-          ? merken.rounds
-          : runden[0];
+        merken?.rounds !== undefined && runden.includes(merken.rounds) ? merken.rounds : runden[0];
       if (rundenWahl) setRounds(rundenWahl);
-      if (merken?.visibility === 'club_only' || merken?.visibility === 'public' || merken?.visibility === 'on_request') {
-        setVisibility(merken.visibility);
-      }
-      if (
-        merken?.botLevel === 'standard' ||
-        merken?.botLevel === 'experte' ||
-        merken?.botLevel === 'genie'
-      ) {
+      if (merken?.visibility === 'club_only') setVisibility('club_only');
+      if (merken?.botLevel === 'standard' || merken?.botLevel === 'experte' || merken?.botLevel === 'genie') {
         setBotLevel(merken.botLevel);
       }
     });
-    const handle = setInterval(refresh, 4000);
-    return () => clearInterval(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
+
+  const name = t(`game.${gameId}`);
+  const art = wahl.gewaehlt;
+  const artName = art ? spielartName(gameId, art.id) : null;
+  /** Grundlage aller drei Wege: die Spielart, ohne eine die Vorgabe des Moduls. */
+  const basis: Record<string, unknown> = art?.config ?? defaults?.config ?? {};
+  const sitze = defaults?.seatCounts ?? [4];
+  const sitzText = sitze.length > 1 ? `${sitze[0]}-${sitze[sitze.length - 1]}` : `${sitze[0]}`;
+  const zeitId = zeitWahl ?? zeitIdAus(art?.config ?? null);
+  const zeitRegeln = istSchach && zeitWahl !== null ? regelnFuer(zeitkontrolle(zeitWahl)) : {};
 
   const baseRounds = defaults?.rounds[String(seats)] ?? [];
   // Clantische dürfen bis 100 Runden — die kurze Liste vom Modul um die
   // lange Partie ergänzen, sofern die Geberrotation aufgeht.
   const roundOptions =
-    visibility === 'club_only' && !baseRounds.includes(100)
-      ? [...baseRounds, 100]
-      : baseRounds;
+    visibility === 'club_only' && !baseRounds.includes(100) ? [...baseRounds, 100] : baseRounds;
 
+  const fehlerText = (err: unknown): string =>
+    err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen');
+
+  /** Quick-Play: die Suche in der gewaehlten Spielart. Ohne Spielart die Vorgabe des Moduls. */
+  const quickPlay = (): void => {
+    setError(null);
+    void suche.starte(art?.config);
+  };
+
+  /**
+   * Allein gegen Bots: ein Tisch, die freien Plaetze sofort mit Bots besetzt.
+   * `on_request` haelt ihn aus jeder Liste — wie bei Farbduell und Mememory.
+   * Schach spielt zu zweit, die Kartenspiele mit der Sitzzahl, die zuletzt
+   * gewaehlt war (sonst vier bzw. drei beim Skat).
+   */
+  const starteGegenBot = async (): Promise<void> => {
+    setError(null);
+    try {
+      const botSitze = istSchach ? (defaults?.seatCounts[0] ?? 2) : seats;
+      const runden = defaults?.rounds[String(botSitze)]?.[0] ?? 1;
+      const table = await api.createTable({
+        gameId,
+        config: { ...basis, tableSize: botSitze, rounds: runden, ...zeitRegeln, ...spezial.felder },
+        seats: botSitze,
+        rounds: runden,
+        visibility: 'on_request',
+        fillWithBots: true,
+        // Bot-Stärke gilt für alle Bots des Tisches; ein Modul ohne
+        // Auswertung ignoriert das Feld (siehe `BotLevel` in game-api).
+        botLevel,
+      });
+      onEnter(table.id);
+    } catch (err) {
+      setError(fehlerText(err));
+    }
+  };
+
+  /** Der Freundestisch: privat oder Clan, mit Code, Wartesaal wie bisher. */
   const create = async (): Promise<void> => {
     setError(null);
     try {
       const table = await api.createTable({
         gameId,
-        config: { ...config, tableSize: seats, rounds, ...zeitRegeln, ...spezial.felder },
+        config: { ...(config ?? basis), tableSize: seats, rounds, ...zeitRegeln, ...spezial.felder },
         seats,
         rounds,
         visibility,
-        // Bot-Stärke gilt für alle Bots des Tisches. Welche Module sie
-        // auswerten, steht bei `BotLevel` in game-api und wird hier bewusst
-        // nicht zweitgezählt: Mitschicken schadet keinem Spiel, ein Modul
-        // ohne Auswertung ignoriert das Feld.
         botLevel,
       });
-      // Erst nach dem Erfolg merken: Ein abgelehnter Regelsatz soll nicht
-      // beim naechsten Besuch wieder vorgelegt werden.
-      if (istSchach) merkeZeit(zeitId);
+      // Erst nach dem Erfolg merken: Eine Absage soll nicht beim naechsten
+      // Besuch wieder vorgelegt werden.
+      if (istSchach && zeitWahl !== null) merkeZeit(zeitWahl);
       try {
-        localStorage.setItem(
-          merkKey(gameId),
-          JSON.stringify({ seats, rounds, config, visibility, botLevel }),
-        );
+        localStorage.setItem(merkKey(gameId), JSON.stringify({ seats, rounds, visibility, botLevel }));
       } catch {
         // Voller oder gesperrter Speicher ist kein Grund, den Tisch zu verweigern.
       }
       onEnter(table.id);
     } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
+      setError(fehlerText(err));
     }
   };
 
-  /**
-   * Allein gegen den Bot: ein Tisch für zwei, der freie Platz sofort mit
-   * einem Bot besetzt. `on_request` hält ihn aus der Lobbyliste heraus — wie
-   * bei Farbduell und Mememory, damit niemand an einen Bot-Tisch gerät, der
-   * einen Menschen sucht.
-   */
-  const starteGegenBot = async (): Promise<void> => {
+  const oeffneFreunde = (eigeneRegeln: boolean): void => {
     setError(null);
-    try {
-      const sitze = defaults?.seatCounts[0] ?? 2;
-      const runden = defaults?.rounds[String(sitze)]?.[0] ?? 1;
-      const table = await api.createTable({
-        gameId,
-        config: { ...config, tableSize: sitze, rounds: runden, ...zeitRegeln, ...spezial.felder },
-        seats: sitze,
-        rounds: runden,
-        visibility: 'on_request',
-        fillWithBots: true,
-        botLevel,
-      });
-      if (istSchach) merkeZeit(zeitId);
-      onEnter(table.id);
-    } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
-    }
+    // Jedes Mal frisch von der Spielart: Wer zwischendurch eine andere Karte
+    // gewaehlt hat, soll nicht die Regeln der vorigen weiterspielen.
+    setConfig({ ...basis });
+    setAnsicht('freunde');
+    if (eigeneRegeln && !istSchach) setRegelnOffen(true);
   };
 
-  const join = async (id: string): Promise<void> => {
-    setError(null);
-    try {
-      const antwort = await api.joinTable(id);
-      // Privater Tisch: erst die Zusage des Gastgebers (tisch/Anfragen.tsx).
-      if (antwort.angefragt) {
-        setAnfrage({ tableId: id, host: tables.find((row) => row.id === id)?.host ?? null });
-        return;
-      }
-      onEnter(id);
-    } catch (err) {
-      setError(err instanceof ApiError ? t(err.messageKey) : t('lobby.verbindungFehlgeschlagen'));
-    }
-  };
+  /** Regeln, die vom Regelsatz der Spielart abweichen — egal ob an oder aus. */
+  const abweichungen = config
+    ? schalter(config).filter(([key, value]) => basis[key] !== value).length
+    : 0;
+  /** Gibt es ueberhaupt etwas einzustellen? Sonst bleibt „Eigene Regeln" weg. */
+  const hatRegeln = istSchach || schalter(basis).length > 0;
 
-  const flags = config
-    ? Object.entries(config).filter(([, value]) => typeof value === 'boolean')
-    : [];
-  /**
-   * Gezaehlt werden Abweichungen von der Vorgabe, nicht eingeschaltete
-   * Regeln. Die Vorgabe hat selbst ein Dutzend Regeln an; "12 Sonderregeln"
-   * unter jedem Tisch sagt nichts. Interessant ist, was jemand bewusst
-   * anders eingestellt hat — egal ob an oder aus.
-   */
-  const aktiveRegeln =
-    defaults && config
-      ? flags.filter(
-          ([key, value]) => (defaults.config as Record<string, unknown>)[key] !== value,
-        ).length +
-        // Die Blattwahl (Scharfer Doppelkopf) zaehlt wie jede andere Abweichung.
-        (config.deck !== undefined &&
-        config.deck !== (defaults.config as Record<string, unknown>).deck
-          ? 1
-          : 0)
-      : 0;
-
-  // Filter und Suche laufen auf der geladenen Liste: Sie ist kurz, und so
-  // reagiert die Auswahl ohne Rueckfrage beim Server.
-  const sitzFilter = /^(\d+)er$/.exec(filter);
-  const gefiltert = tables.filter((row) => {
-    if (sitzFilter && row.seats !== Number(sitzFilter[1])) return false;
-    if (filter === 'offen' && row.occupied >= row.seats) return false;
-    if (filter === 'clan' && row.visibility !== 'club_only') return false;
-    const s = suche.trim().toLowerCase();
-    if (s.length > 0 && !(row.host ?? '').toLowerCase().includes(s)) return false;
-    return true;
-  });
-
-  if (anfrage) {
+  if (suche.suchstand) {
     return (
-      <AnfrageWarten
+      <SuchWarten
         gameId={gameId}
-        tableId={anfrage.tableId}
-        gastgeber={anfrage.host}
-        onAngenommen={() => onEnter(anfrage.tableId)}
-        onZurueck={() => {
-          setAnfrage(null);
-          refresh();
-        }}
+        stand={suche.suchstand}
+        unter={artName ? `${name} · ${artName}` : name}
+        onAbbrechen={suche.brichAb}
       />
     );
   }
 
-  // Neues Hub: dieselben Zustände und Aufrufe im Spieleinstieg-Baukasten.
-  const zeitWahl = zeitkontrolle(zeitId);
   const zeitAbschnitt = istSchach ? (
     <SpielAbschnitt titel={t('lobby.zeit')}>
       <div className="hb-liste">
         <button type="button" className="spe-zeile" onClick={() => setZeitOffen(true)}>
           <span>
             <strong>
-              <ArtZeichen art={zeitWahl.art} /> {zeitText(zeitWahl)}
+              <ArtZeichen art={zeitkontrolle(zeitId).art} /> {zeitText(zeitkontrolle(zeitId))}
             </strong>
-            <small>{tf('lobby.zeit.unter', { art: ARTNAME[zeitWahl.art] })}</small>
+            <small>{tf('lobby.zeit.unter', { art: ARTNAME[zeitkontrolle(zeitId).art] })}</small>
           </span>
           <span className="hb-pf" aria-hidden="true">
             ›
@@ -401,19 +343,16 @@ export function Lobby({
   ) : null;
   const zeitBlatt =
     istSchach && zeitOffen ? (
-      <ZeitWahlBlatt wert={zeitId} onWahl={setZeitId} onClose={() => setZeitOffen(false)} />
+      <ZeitWahlBlatt wert={zeitId} onWahl={setZeitWahl} onClose={() => setZeitOffen(false)} />
     ) : null;
 
-  const name = t(`game.${gameId}`);
-  const sitze = defaults?.seatCounts ?? [4];
-  const sitzText = sitze.length > 1 ? `${sitze[0]}-${sitze[sitze.length - 1]}` : `${sitze[0]}`;
   if (ansicht === 'bot') {
     return (
       <SpielRahmen
         gameId={gameId}
         titel={t('lobby.bot.titel')}
-        unter={tf('lobby.bot.unter', { spiel: name })}
-        onBack={() => setAnsicht('liste')}
+        unter={artName ? `${name} · ${artName}` : tf('lobby.bot.unter', { spiel: name })}
+        onBack={() => setAnsicht('start')}
         zurueckText={t('lobby.zurueckZurAuswahl')}
         fuss={
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void starteGegenBot()}>
@@ -423,35 +362,46 @@ export function Lobby({
       >
         {error && <p className="hb-fehler">{error}</p>}
         {spezial.knopf}
-        {zeitAbschnitt}
         <SpielAbschnitt titel={t('lobby.botStaerke')}>
-          <SpielWahl
-            name={t('lobby.botStaerke')}
-            werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: t(b.name), unter: t(b.unter) }))}
-            wert={botLevel}
-            onWahl={setBotLevel}
-          />
+          {istSchach ? (
+            <SpielWahl
+              name={t('lobby.botStaerke')}
+              werte={SCHACH_STUFEN.map((b) => ({ wert: b.id, text: t(b.name), unter: t(b.unter) }))}
+              wert={botLevel}
+              onWahl={setBotLevel}
+            />
+          ) : (
+            <SpielWahl
+              name={t('lobby.botStaerke')}
+              werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: t(b.name) }))}
+              wert={botLevel}
+              onWahl={setBotLevel}
+            />
+          )}
         </SpielAbschnitt>
-        <p className="hb-klein">{t('lobby.bot.los')}</p>
-        {zeitBlatt}
+        {istSchach && <p className="hb-klein">{t('lobby.bot.los')}</p>}
         {spezial.blatt}
       </SpielRahmen>
     );
   }
-  if (ansicht === 'erstellen') {
+
+  if (ansicht === 'freunde') {
     return (
       <SpielRahmen
         gameId={gameId}
-        titel={t('lobby.erstellen')}
-        unter={tf('lobby.erstellen.unter', { spiel: name, spanne: sitzText })}
-        onBack={() => setAnsicht('liste')}
+        titel={t('einstieg.freunde.titel')}
+        unter={artName ? tf('einstieg.freunde.unter', { spiel: name, spielart: artName }) : name}
+        onBack={() => {
+          setRegelnOffen(false);
+          setAnsicht('start');
+        }}
         zurueckText={t('lobby.zurueckZurAuswahl')}
         fuss={
           <>
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void create()}>
-              {t('lobby.erstellen')}
+              {t('einstieg.freunde.los')}
             </button>
-            <p className="hb-klein">{fussnote(gameId, seats, visibility)}</p>
+            <p className="hb-klein">{fussnote(gameId, visibility)}</p>
           </>
         }
       >
@@ -460,37 +410,41 @@ export function Lobby({
         {zeitAbschnitt}
         {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
             je einer Möglichkeit wären keine Wahl. */}
+        {!istSchach && sitze.length > 1 && (
+          <SpielAbschnitt titel={t('lobby.spieler')}>
+            <SpielWahl
+              name={t('lobby.spieler')}
+              werte={sitze.map((c) => ({ wert: c, text: tf('lobby.spielerZahl', { n: c }) }))}
+              wert={seats}
+              onWahl={(count) => {
+                setSeats(count);
+                const first = defaults?.rounds[String(count)]?.[0];
+                if (first) setRounds(first);
+              }}
+            />
+          </SpielAbschnitt>
+        )}
         {!istSchach && (
-        <>
-        <SpielAbschnitt titel={t('lobby.spieler')}>
-          <SpielWahl
-            name={t('lobby.spieler')}
-            werte={sitze.map((c) => ({ wert: c, text: tf('lobby.spielerZahl', { n: c }) }))}
-            wert={seats}
-            onWahl={(count) => {
-              setSeats(count);
-              const first = defaults?.rounds[String(count)]?.[0];
-              if (first) setRounds(first);
-            }}
-          />
-        </SpielAbschnitt>
-        <SpielAbschnitt titel={t('lobby.runden')}>
-          <SpielWahl name={t('lobby.runden')} werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))} wert={rounds} onWahl={setRounds} />
-        </SpielAbschnitt>
-        </>
+          <SpielAbschnitt titel={t('lobby.runden')}>
+            <SpielWahl
+              name={t('lobby.runden')}
+              werte={roundOptions.map((c) => ({ wert: c, text: String(c) }))}
+              wert={rounds}
+              onWahl={setRounds}
+            />
+          </SpielAbschnitt>
         )}
         <SpielAbschnitt titel={t('lobby.fuerWen')}>
           <SpielWahl
             name={t('lobby.fuerWen')}
             werte={[
-              { wert: 'public' as const, text: t('lobby.offen'), unter: t('lobby.offen.unter') },
               { wert: 'on_request' as const, text: t('lobby.privat'), unter: t('lobby.privat.unter') },
               { wert: 'club_only' as const, text: t('lobby.nurClan'), unter: t('lobby.nurClan.unter') },
             ]}
             wert={visibility}
             onWahl={(v) => {
               setVisibility(v);
-              if (v === 'public' && rounds > 20) {
+              if (v === 'on_request' && rounds > 20) {
                 const first = defaults?.rounds[String(seats)]?.[0];
                 if (first) setRounds(first);
               }
@@ -499,113 +453,103 @@ export function Lobby({
         </SpielAbschnitt>
         {gameId === 'doppelkopf' && (
           <SpielAbschnitt titel={t('lobby.botStaerke')}>
-            <SpielWahl name={t('lobby.botStaerke')} werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: t(b.name) }))} wert={botLevel} onWahl={setBotLevel} />
+            <SpielWahl
+              name={t('lobby.botStaerke')}
+              werte={BOT_STUFEN.map((b) => ({ wert: b.id, text: t(b.name) }))}
+              wert={botLevel}
+              onWahl={setBotLevel}
+            />
           </SpielAbschnitt>
         )}
-        {!istSchach && (
-        <SpielAbschnitt titel={t('lobby.regeln')}>
-          <div className="hb-liste">
-            <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
-              <span>
-                <strong>{aktiveRegeln === 0 ? t('lobby.regeln.standard') : tn('lobby.sonderregeln', aktiveRegeln)}</strong>
-                <small>{t('lobby.regeln.einstellen')}</small>
-              </span>
-              <span className="hb-pf" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </div>
-        </SpielAbschnitt>
+        {!istSchach && hatRegeln && (
+          <SpielAbschnitt titel={t('lobby.regeln')}>
+            <div className="hb-liste">
+              <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
+                <span>
+                  <strong>
+                    {abweichungen === 0
+                      ? artName
+                        ? tf('einstieg.regeln.spielart', { spielart: artName })
+                        : t('lobby.regeln.standard')
+                      : tn('lobby.sonderregeln', abweichungen)}
+                  </strong>
+                  <small>{t('lobby.regeln.einstellen')}</small>
+                </span>
+                <span className="hb-pf" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </div>
+          </SpielAbschnitt>
         )}
-        {regelnOffen && config && <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />}
+        {regelnOffen && config && (
+          <RegelSheet config={config} onChange={setConfig} onClose={() => setRegelnOffen(false)} />
+        )}
         {zeitBlatt}
         {spezial.blatt}
       </SpielRahmen>
     );
   }
-  const filterWerte: [string, string][] = [
-    ['alle', t('lobby.filter.alle')],
-    ...sitze.map((c) => [`${c}er`, tf('lobby.filter.sitze', { n: c })] as [string, string]),
-    ['offen', t('lobby.filter.offen')],
-    ['clan', t('lobby.filter.clan')],
-  ];
+
+  const unterQuick = quickplayUnter(gameId, art);
   return (
     <SpielRahmen
       gameId={gameId}
       titel={name}
-      unter={tf('lobby.auswahl.unter', { spanne: sitzText })}
+      unter={artName ? tf('einstieg.unter', { spanne: sitzText, spielart: artName }) : tf('einstieg.unterOhne', { spanne: sitzText })}
       onBack={onBack}
       zurueckText={t('lobby.zurueckZurSpielseite')}
       fuss={
         <>
-          {ALLEIN_GEGEN_BOT.has(gameId) && (
-            <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => setAnsicht('bot')}>
-              {t('lobby.bot.titel')}
-            </button>
-          )}
           <button
             type="button"
-            className={ALLEIN_GEGEN_BOT.has(gameId) ? 'hb-kn is-breit' : 'hb-kn is-gold is-haupt is-breit'}
-            onClick={() => setAnsicht('erstellen')}
+            className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
+            data-einstieg="quickplay"
+            onClick={quickPlay}
+            disabled={suche.startet || wahl.spielarten === null}
           >
-            {t('lobby.erstellen')}
+            {t('einstieg.quickplay')}
+            {unterQuick && <small>{unterQuick}</small>}
           </button>
+          <button
+            type="button"
+            className="hb-kn is-blau is-breit"
+            data-einstieg="bots"
+            onClick={() => (BOT_STAERKE_WAEHLEN.has(gameId) ? setAnsicht('bot') : void starteGegenBot())}
+          >
+            {t('einstieg.bots')}
+          </button>
+          <button
+            type="button"
+            className="hb-kn is-blau is-breit"
+            data-einstieg="freunde"
+            onClick={() => oeffneFreunde(false)}
+          >
+            {t('einstieg.freunde')}
+          </button>
+          {hatRegeln && (
+            <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => oeffneFreunde(true)}>
+              {t('einstieg.eigeneRegeln')}
+            </button>
+          )}
         </>
       }
     >
       {error && <p className="hb-fehler">{error}</p>}
-      {spezial.knopf}
-      {spezial.blatt}
-      <div className="hb-chips spe-chips" role="group" aria-label={t('lobby.filter')}>
-        {filterWerte.map(([wert, text]) => (
-          <button
-            type="button"
-            key={wert}
-            className={`hb-chip${filter === wert ? ' is-an' : ''}`}
-            aria-pressed={filter === wert}
-            onClick={() => setFilter(wert)}
-          >
-            {text}
-          </button>
-        ))}
-      </div>
-      <input
-        className="spe-feld"
-        placeholder={t('lobby.suche')}
-        value={suche}
-        onChange={(event) => setSuche(event.target.value)}
-        aria-label={t('lobby.suche.label')}
-      />
-      <SpielAbschnitt titel={t('lobby.offeneTische')} zusatz={tables.length > 0 ? tf('lobby.offeneTische.zahl', { gefiltert: gefiltert.length, gesamt: tables.length }) : undefined}>
-        <div className="hb-liste">
-          {gefiltert.length === 0 && (
-            <p className="spe-leer">
-              {tables.length === 0 ? t('lobby.leer') : t('lobby.leerFilter')}
-            </p>
-          )}
-          {gefiltert.map((row) => (
-            <button type="button" className="spe-zeile spe-tisch" key={row.id} onClick={() => void join(row.id)}>
-              <span>
-                <strong>
-                  {row.host ? tf('lobby.tisch.runde', { host: row.host }) : t('lobby.tisch.offen')}
-                  {row.visibility === 'club_only' && <span className="spe-marke">{t('lobby.tisch.clan')}</span>}
-                </strong>
-                <small>
-                  {tf('lobby.tisch.zeile', { sitze: row.seats, runden: row.maxRounds, regeln: row.ruleCount === 0 ? t('lobby.regeln.standard') : tn('lobby.sonderregeln', row.ruleCount) })}
-                </small>
-              </span>
-              <span className="spe-punkte" aria-hidden="true">
-                {Array.from({ length: row.seats }, (_, i) => (
-                  <i key={i} className={i < row.occupied ? '' : 'is-frei'} />
-                ))}
-              </span>
-              <span className="spe-zahl" aria-label={tf('lobby.tisch.besetzt', { belegt: row.occupied, sitze: row.seats })}>
-                {row.occupied}/{row.seats}
-              </span>
-            </button>
-          ))}
-        </div>
-      </SpielAbschnitt>
+      {suche.fehler && <p className="hb-fehler">{t(suche.fehler)}</p>}
+      {wahl.spielarten !== null && wahl.spielarten.length > 0 ? (
+        <SpielAbschnitt titel={t('einstieg.spielart')}>
+          <SpielartKarten
+            gameId={gameId}
+            spielarten={wahl.spielarten}
+            gewaehlt={art?.id ?? null}
+            onWahl={wahl.waehle}
+          />
+        </SpielAbschnitt>
+      ) : wahl.spielarten !== null ? (
+        <EinzelKarte gameId={gameId} />
+      ) : null}
+      <Beitrittscode neu spiel={gameId} onBeigetreten={onEnter} />
     </SpielRahmen>
   );
 }
