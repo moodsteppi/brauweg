@@ -56,6 +56,7 @@ import {
   suggestedRounds,
 } from './regeln.js';
 import { type BroChessSicht, sichtFuer, zuschauerSicht } from './sicht.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -81,6 +82,8 @@ function ladeSnapshot(raw: unknown): BroChessPartie {
 }
 
 const meta: GameMeta = {
+  // Schnell, Blitz, Bullet, Spezial — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'brochess',
   nameKey: 'game.brochess',
   availability: 'playable',

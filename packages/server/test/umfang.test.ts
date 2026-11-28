@@ -464,6 +464,8 @@ test('die Spielsperre trifft genau diese Routen mit :gameId — eine neue muss h
     'GET /api/games/:gameId/aktiv',
     'GET /api/games/:gameId/bestleistungen/:inhaltId',
     'GET /api/games/:gameId/defaults',
+    // Die Spielarten eines ausgeblendeten Spiels braucht niemand.
+    'GET /api/games/:gameId/spielarten',
     'GET /api/me/bestleistungen/:gameId',
     'GET /api/rankings/:gameId',
     // Die Suche haengt ohnehin am Spiel (requireSpielbar). Das Abbrechen geht

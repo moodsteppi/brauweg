@@ -84,3 +84,23 @@ export function snapshotCodec<TParty extends object>(
     },
   };
 }
+
+/**
+ * Eine Spielart aus der Vorgabe eines Moduls bauen: Vorgabe, darueber die
+ * Abweichungen, darueber die Kennung als `variante` (siehe
+ * `GameMeta.spielarten`).
+ *
+ * Ein Helfer und keine Pflicht, weil nicht jede Spielart auf der Vorgabe
+ * aufsetzt — aber jede, die es tut, soll sie nicht abschreiben muessen:
+ * Kommt im Modul eine neue Regel dazu, steht sie so in jeder Spielart mit
+ * ihrem Vorgabewert, statt dort zu fehlen und am Formcheck zu scheitern.
+ */
+export function spielartAus<T extends object>(
+  id: string,
+  vorgabe: T,
+  abweichung: Partial<T> = {},
+  runden?: number,
+): { readonly id: string; readonly config: T & { readonly variante: string }; readonly runden?: number } {
+  const config = { ...vorgabe, ...abweichung, variante: id };
+  return runden === undefined ? { id, config } : { id, config, runden };
+}

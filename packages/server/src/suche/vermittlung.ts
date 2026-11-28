@@ -96,11 +96,28 @@ function gewaehlteSitze(gameId: GameId, sitze: number | null | undefined): numbe
  * Eine Rundenzahl, die durch die Geberrotation aufgeht und unter der Grenze
  * bleibt. Der Vorschlag des Moduls kommt zuerst; passt keiner, tut es die
  * Rotation selbst (die geht immer auf).
+ *
+ * Seit dem 28.11.2026 davor noch die Rundenzahl der SPIELART, sofern das
+ * Modul ihr eine mitgibt (`Spielart.runden` in game-api) und sie aufgeht.
+ * Anlass ist Golf: Ein Kurs hat sechs bis neun Bahnen, der erste Vorschlag
+ * des Moduls sind zwei Loecher. Die Spielart wird ueber `variante` gefunden —
+ * dasselbe Feld, nach dem die Schlange topft; hier steht also kein Spielname.
  */
-function runden(gameId: GameId, sitze: number): number {
+function runden(gameId: GameId, sitze: number, config: unknown = null): number {
   const meta = requireModule(gameId).meta;
   const rotation = meta.rotationSize(sitze);
   const grenze = MAX_ROUNDS.on_request;
+  const variante =
+    typeof config === 'object' && config !== null ? (config as Record<string, unknown>)['variante'] : undefined;
+  const ausSpielart = meta.spielarten?.find((art) => art.id === variante)?.runden;
+  if (
+    ausSpielart !== undefined &&
+    ausSpielart % rotation === 0 &&
+    ausSpielart >= rotation &&
+    ausSpielart <= grenze
+  ) {
+    return ausSpielart;
+  }
   const passend = meta
     .suggestedRounds(sitze)
     .find((r) => r % rotation === 0 && r >= rotation && r <= grenze);
@@ -153,7 +170,7 @@ export class Vermittlung {
     if ((config !== null && config !== undefined) || gewaehlt !== null) {
       const sitze = gewaehlt ?? zielSitze(gameId);
       const fehler = module
-        .validateConfig(config ?? module.defaultConfig(), sitze, runden(gameId, sitze))
+        .validateConfig(config ?? module.defaultConfig(), sitze, runden(gameId, sitze, config))
         .filter((p) => p.severity === 'error');
       if (fehler.length > 0) throw new RuleSetInvalidError(fehler);
     }
@@ -304,7 +321,7 @@ export class Vermittlung {
       gameId,
       config: tischConfig,
       seats: sitze,
-      rounds: runden(gameId, sitze),
+      rounds: runden(gameId, sitze, tischConfig),
       // Nicht `public`: Der Tisch ist bereits vergeben. Stuende er in der
       // Lobby, koennte ein Fremder in der Zehntelsekunde bis zum Start einen
       // Platz nehmen, der einem Suchenden dieser Runde gehoert.

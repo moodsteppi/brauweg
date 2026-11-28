@@ -38,7 +38,7 @@ export interface BroChessRegeln {
    * Felder und deren Zugziele, kein Schach, gewonnen hat, wer den König schlaegt
    * (nebel.ts).
    */
-  readonly modus?: Modus;
+  readonly modus?: Modus | 'zufall';
   /**
    * Nur bei 'secretDame': Zaehlt die Drohung einer noch VERDECKTEN Dame als
    * Schach? 'A' (Vorgabe): nein — der Gegner weiss ja nichts von ihr; laesst
@@ -56,9 +56,38 @@ export type SchachDurchVerdeckte = 'A' | 'B';
 export const MODI: readonly Modus[] = ['normal', 'secretDame', 'dreiSchach', 'chess960', 'huegel', 'nebel'];
 export const SCHACH_DURCH_VERDECKTE: readonly SchachDurchVerdeckte[] = ['A', 'B'];
 
-/** Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'. */
+/**
+ * Die Spezialmodi, aus denen 'zufall' zieht — alles ausser dem klassischen
+ * Schach. Seit dem 28.11.2026 fuer die Spielart „Spezial" (spielarten.ts):
+ * Robin wollte eine Karte, hinter der jedes Mal ein anderer Modus steckt.
+ */
+export const ZUFALLS_MODI: readonly Modus[] = ['secretDame', 'dreiSchach', 'chess960', 'huegel', 'nebel'];
+
+/**
+ * Spielart des Regelsatzes; ein fehlendes Feld heisst 'normal'.
+ *
+ * 'zufall' kommt hier nie an: `zufallAufgeloest` ersetzt es beim Partiebau
+ * durch einen echten Modus, und gelesen wird nur noch der Regelsatz der
+ * Partie. Steht es doch einmal da (ein Aufruf am Partiebau vorbei), ist es
+ * klassisches Schach — lieber das als ein Modus, den niemand gezogen hat.
+ */
 export function modusVon(regeln: BroChessRegeln): Modus {
-  return regeln.modus ?? 'normal';
+  const modus = regeln.modus ?? 'normal';
+  return modus === 'zufall' ? 'normal' : modus;
+}
+
+/**
+ * 'zufall' durch einen Modus aus `ZUFALLS_MODI` ersetzen — aus der Saat,
+ * denn ein Modul kennt keinen anderen Zufall (game-api, Grundsatz 1).
+ *
+ * Die Saat wird vorher verruehrt: Ihr letztes Bit entscheidet schon, wer Weiss
+ * spielt (`erstellePartie`), und ein roher Rest modulo fuenf hinge daran.
+ */
+export function zufallAufgeloest(regeln: BroChessRegeln, seed: number): BroChessRegeln {
+  if (regeln.modus !== 'zufall') return regeln;
+  const verruehrt = Math.imul(Math.trunc(seed) | 0, 0x9e3779b1) >>> 0;
+  const modus = ZUFALLS_MODI[(verruehrt >>> 7) % ZUFALLS_MODI.length]!;
+  return { ...regeln, modus };
 }
 
 /** Regel fuer die Drohung der verdeckten Dame; ein fehlendes Feld heisst 'A'. */
@@ -112,7 +141,7 @@ export function pruefeRegeln(config: unknown, seats: number, rounds: number): Co
     modus?: unknown;
     schachDurchVerdeckte?: unknown;
   };
-  if (regeln.modus !== undefined && !MODI.includes(regeln.modus as Modus)) {
+  if (regeln.modus !== undefined && regeln.modus !== 'zufall' && !MODI.includes(regeln.modus as Modus)) {
     probleme.push({ path: 'modus', messageKey: 'ruleset.modus', severity: 'error' });
   }
   if (

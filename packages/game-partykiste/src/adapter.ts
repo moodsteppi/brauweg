@@ -77,10 +77,13 @@ import {
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
 import { ohneVertreten } from './weiter-warten.js';
 import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
+import { SPIELARTEN } from './spielarten.js';
 
 const SNAPSHOT_VERSION = 1;
 
 const meta: GameMeta = {
+  // Die vier Modi — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'partykiste',
   nameKey: 'game.partykiste',
   availability: 'playable',

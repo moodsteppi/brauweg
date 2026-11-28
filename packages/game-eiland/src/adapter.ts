@@ -49,6 +49,7 @@ import {
   suggestedRounds,
 } from './regeln.js';
 import { type EilandSicht, sichtFuer, zuschauerSicht } from './sicht.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -60,6 +61,8 @@ const SNAPSHOT_VERSION = 4;
 type GespeichertePartie = EilandPartie & { readonly v: number };
 
 const meta: GameMeta = {
+  // Offene Karte und Nebel — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'eiland',
   nameKey: 'game.eiland',
   availability: 'playable',

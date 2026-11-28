@@ -51,6 +51,7 @@ import {
   viewFor as roundViewFor,
 } from './view.js';
 import { botAction as engineBotAction } from './bot.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -78,6 +79,8 @@ export interface CambioView {
 }
 
 const meta: GameMeta = {
+  // Normal und Hart — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'cambio',
   nameKey: 'game.cambio',
   availability: 'playable',

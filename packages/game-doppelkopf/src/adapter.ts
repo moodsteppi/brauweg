@@ -54,6 +54,7 @@ import {
   validateRuleSet,
   viewFor as roundViewFor,
 } from './index.js';
+import { SPIELARTEN } from './spielarten.js';
 
 // ---------------------------------------------------------------------------
 // Sicht
@@ -115,6 +116,8 @@ const meta: GameMeta = {
     const r = rotationSize(seats as 3 | 4 | 5);
     return [r * 1, r * 2, r * 3, r * 5];
   },
+  // Anfaenger, Normal, Standard (Robins Regeln), Hart — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
 };
 
 // ---------------------------------------------------------------------------

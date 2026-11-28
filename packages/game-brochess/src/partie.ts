@@ -58,7 +58,7 @@ import {
   standNachZugNebel,
 } from './nebel.js';
 import { nummerAusSaat, nummerVon, startFen960 } from './chess960.js';
-import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle } from './regeln.js';
+import { type BroChessRegeln, modusVon, schachRegelVon, zeitkontrolle, zufallAufgeloest } from './regeln.js';
 
 export interface BroChessZug {
   readonly type: 'zug';
@@ -179,10 +179,16 @@ export interface BroChessPartie {
  * zwanzig Zuege dorthin zu spielen. Der Tisch nimmt immer die Grundstellung.
  */
 export function erstellePartie(
-  regeln: BroChessRegeln,
+  gewaehlt: BroChessRegeln,
   seed: number,
   startFen: string = START_FEN,
 ): BroChessPartie {
+  /*
+   * Die Spielart „Spezial" schickt 'zufall' — hier wird daraus EIN Modus, und
+   * nur der steht danach im Regelsatz der Partie. Sicht, Bot und Zuege lesen
+   * ihn von dort und muessen von 'zufall' nichts wissen.
+   */
+  const regeln = zufallAufgeloest(gewaehlt, seed);
   /*
    * Chess960: Die Nummer folgt aus der Saat (chess960.ts). Eine ausdruecklich
    * uebergebene `startFen` (Tests) geht vor; ihre Nummer wird aus der
