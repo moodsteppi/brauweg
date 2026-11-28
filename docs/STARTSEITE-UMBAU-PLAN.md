@@ -283,3 +283,64 @@ C = Bock). Antworten werden hier nachgetragen.
 - `POST /api/zuletzt/:spiel` (Solo/Arenen melden sich selbst; Tischspiele trägt
   der Server beim Hinsetzen ein)
 - Bock: eigene Datei `packages/client/src/bock/api.ts`, Routen unter `/api/bock/…`.
+
+---
+
+## 11. Spiel-Einstiege mit Spielarten (Nachtrag Robin, 28.11.2026)
+
+**Wunsch:** Die Zwischenseiten der Spiele (nach „Zum Spiel“) wie bei Farbduell:
+Spielarten als **Karten mit Bildern**, antippen und man ist drin (Quick-Play in
+diese Spielart). Die Tischlisten (Doppelkopf-Lobby) verwirren — weg damit. Für
+die meisten Spiele **vorgefertigte Regelsätze** (Doppelkopf: Anfänger / Normal /
+Standard = Robins Regeln / Hart mit Pflichtsolo …). Dazu am kleinen
+Weiterspielen-Pop-up ein **rotes X** zum Verlassen mit Bestätigung samt Bro-Bild
+und „−10 Trophäen“.
+
+**Befund:**
+- Farbduell zeichnet seine Spielarten als Mini-Brett (keine Bilddateien), Antippen
+  wählt nur aus, los geht es mit dem Goldknopf. Spielart = `config.variante`, das
+  Modul macht daraus den Aufbau — genau das Muster für alle.
+- Benannte Regel-Vorlagen gibt es sonst nirgends. Die Suche topft nach
+  `variante`; ohne `variante` landen alle Regeln in einem Topf und es gilt die des
+  ersten Suchenden → **jede Spielart bekommt eine eigene `variante`**.
+- Robins Doppelkopf-Regeln liegen im Browser (`tischEinstellungen2.doppelkopf`);
+  am Server protokolliert jeder erstellte Tisch seinen Regelsatz mit Konto
+  (`rule_set`, „Tischregeln“) — daraus lässt sich sein Standard ablesen.
+
+**Bauweise:** Die Spielarten stehen **im Modul** (neues Meta-Feld, z. B.
+`spielarten: { id, config }[]`, Namen/Texte im Client-i18n), der Server liefert
+sie über `/api/games/:id/…`, der Client zeichnet die Karten — keine zweite
+Wahrheit im Client. Ein gemeinsamer Einstiegs-Baustein für alle Lobby-Spiele
+(Doppelkopf, Skat, Zauberer, Cambio, Schach, DreckBro, Bro Bluff) ersetzt
+`Lobby.tsx`: Kopf mit Banner · Spielart-Karten · „Mit Freunden“ (Code-Tisch mit
+gewählter Spielart, Wartesaal wie heute) · „Gegen Bots“ · Anleitung. Die
+Spiele mit eigener Seite (Farbduell, Poker, Golf, Eiland, Mememory, Partykiste,
+BroCooked, Tafelrunde, Würfelglanz, Feldherr) bekommen dieselben Karten bzw.
+einen Quick-Play-Knopf in ihre vorhandene Seite. Quick-Play von der Startseite
+nimmt bei Spielen mit Spielarten die Spielart, in der gerade jemand wartet,
+sonst „Standard“.
+
+**Vorschlag Spielarten** (Namen und Regeln zur Abnahme):
+
+| Spiel | Spielarten |
+| --- | --- |
+| Doppelkopf | **Anfänger** (ohne Ansagen/Absagen, ohne Sonderpunkte, Punkte werden mitgezählt) · **Normal** (Vorgabe ohne Sonderpunkte) · **Standard** (Robins Regeln) · **Hart** (Standard + Pflichtsolo + Bockrunden + Pflichtansage + Feigling + Schweinchen) |
+| Skat | **Normal** (Kontra/Re, Ramsch) · **Klassisch** (ohne Ramsch) · **Hart** (Bock, Schieberamsch, Jungfrauen) |
+| Zauberer | **Normal** (keine Hausregeln) · **Profi** (Gebotssumme verboten, verdeckte Gebote) · **Chaos** (letzte Sonderkarte gewinnt, Narr bestimmt Trumpf, blinde erste Runde) |
+| Cambio | **Normal** · **Hart** (Strafe 10, kein Blick zu Beginn) |
+| Poker | **Locker** 200/2/4 · **Abend** 500/5/10 · **Hoch** 2000/20/40 (kostet BroJetons) |
+| Farbduell | Nebel · Normal · Build · Extreme (wie heute) |
+| Eiland | **Klar** · **Nebel** (online gab es bisher nur Nebel) |
+| Golf | Kurse: Anfängerrunde · Wüstentour · Eiszeit · Wasserspiele · Flipperhalle · Nachtkurs · Profi |
+| Schach | **Bullet** 1+0 · **Blitz** 3+2 · **Schnell** 10+0 · **Spezial** (Chess960, Drei-Schach … zufällig) |
+| Partykiste | Turnier · Eskalation · Themenabend · Team (nur Web) |
+| Tafelrunde, Mememory, DreckBro, Bro Bluff, Würfelglanz, BroCooked | keine Spielarten → eine große Quick-Play-Karte |
+| Feldherr | keine Suche (Bot gibt nur auf) → bleibt wie es ist |
+
+**Antworten (Robin, 28.11.2026):** Doppelkopf-Standard **vom Server** (Regelsatz
+seines zuletzt erstellten Tischs) · Karte antippen = **auswählen**, los geht es mit
+dem goldenen **Quick-Play**-Knopf darunter (wie Farbduell heute) · **eigene Bilder
+je Spielart** über codex · „Mit Freunden“: Spielart + darunter klein **„Eigene
+Regeln“** · Tabelle der Spielarten **so nehmen** · **„Gegen Bots“** bleibt als
+zweiter Knopf (Quick-Play gold, „Gegen Bots“ und „Mit Freunden“ blau, alle mit
+der gewählten Spielart).
