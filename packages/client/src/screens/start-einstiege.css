@@ -316,56 +316,44 @@
   color: #f1e6ff;
 }
 
-/* Seitensymbole: senkrecht am rechten Rand, ein Stück über dem Mosaik
-   (Robin, A1). Sie ragen in den Seitenrand, bleiben aber unter dem Kopf und
-   über der Reiterleiste. */
-.hb .start-seitenleiste {
-  position: absolute;
-  z-index: 4;
-  /* Unter dem Bock-Titel, über dem Schild: Der Titel behält die volle
-     Breite, und die rote Zahl ragt nicht über den Bildschirmrand. */
-  top: 58px;
-  right: -12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.hb .start-symbol {
+/* Tagesaufgaben und Belohnungen: breite Knöpfe wie TikTok/Instagram über dem
+   Mosaik (Robin, 28.11.2026 abends; vorher schwebende Seitensymbole). */
+.hb .start-heute .start-heute-knopf {
   position: relative;
-  width: 50px;
-  height: 50px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 3px solid #624024;
-  background: radial-gradient(circle at 50% 32%, #41664b, #152f25 78%);
-  box-shadow:
-    0 0 0 1.5px #cda762,
-    inset 0 0 0 1px #e5bf7280,
-    0 5px 12px #000a;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 160ms ease;
 }
-.hb .start-symbol img {
-  width: 34px;
-  height: 34px;
+/* Etwas flacher als TikTok/Instagram: Die Reihe steht zusätzlich über dem
+   Mosaik, und der Start soll ohne Rollen auskommen. */
+.hb .start-heute .hb-social-link {
+  min-height: 58px;
+}
+/* Die Zahl sitzt oben am Symbol wie bei einem App-Icon: rechts in der Ecke
+   verdeckte sie die Schrift, und über den Rahmen hinaus schneidet ihn der
+   Holzrahmen ab. */
+.hb .start-heute .start-symbol-zahl {
+  top: 6px;
+  left: 30px;
+  right: auto;
+}
+.hb .start-heute .hb-social-logo {
   object-fit: contain;
   filter: drop-shadow(0 2px 2px #0008);
-  pointer-events: none;
 }
-.hb .start-symbol:active {
-  transform: scale(0.93);
+.hb .start-heute-knopf:active {
+  transform: scale(0.97);
 }
-.hb .start-symbol:focus-visible {
+.hb .start-heute-knopf:focus-visible {
   outline: 3px solid #ffe09a;
   outline-offset: 3px;
 }
 .hb .start-symbol-zahl {
   position: absolute;
-  top: -5px;
-  /* Nicht weiter nach rechts: Die Leiste steht 4 px vor dem Bildschirmrand. */
-  right: -3px;
+  top: -7px;
+  right: -5px;
+  z-index: 2;
   min-width: 21px;
   height: 21px;
   padding: 0 5px;

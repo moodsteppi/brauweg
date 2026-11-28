@@ -117,9 +117,11 @@ describe('Start: Kopf, Symbole, Mosaik', () => {
     expect(a.aktiveGesamt).not.toHaveBeenCalled();
   });
 
-  it('trägt Aufgaben und Truhen als Seitensymbole mit roter Zahl, die Zahl steht im Namen', async () => {
+  // Seit dem 28.11.2026 abends breite Knöpfe über dem Mosaik statt Seitensymbole
+  // (Robin); Rolle, Namen und Zahl sind dieselben geblieben.
+  it('trägt Aufgaben und Truhen als Knöpfe über dem Mosaik mit roter Zahl, die Zahl steht im Namen', async () => {
     await zeige();
-    const leiste = screen.getByRole('group', { name: 'Aufgaben und Belohnungen' });
+    const leiste = screen.getByRole('region', { name: 'Aufgaben und Belohnungen' });
     const aufgaben = within(leiste).getByRole('button', { name: 'Tagesaufgaben, 2 bereit' });
     const truhen = within(leiste).getByRole('button', { name: 'Belohnungen, 1 bereit' });
     expect(aufgaben.querySelector('.start-symbol-zahl')).toHaveTextContent('2');

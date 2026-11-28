@@ -82,6 +82,37 @@ export function StartNeu({
   const { aufgaben, truhen } = me.bereit;
   return (
     <div className="hb-start">
+      {/* Tagesaufgaben und Belohnungen als breite Knöpfe wie TikTok/Instagram,
+          über Quick-Play bzw. dem Bock (Robin, 28.11.2026 abends: „so viel
+          Platz" — die schwebenden Seitensymbole vom Mittag sind damit weg).
+          Die Zahl steht im Namen, weil die rote Marke allein nichts vorliest
+          (DESIGN.md). */}
+      <section className="hb-social start-social start-heute" aria-label={t('start.symbole')}>
+        <div className="hb-social-links">
+          <button
+            type="button"
+            className="hb-social-link start-holzrahmen start-heute-knopf"
+            onClick={onHeute}
+            aria-label={aufgaben > 0 ? tf('start.symbol.aufgabenBereit', { n: aufgaben }) : t('start.symbol.aufgaben')}
+          >
+            <img className="hb-social-logo" src="/hub/icon-aufgaben.webp" alt="" />
+            <strong>{t('start.symbol.aufgaben')}</strong>
+            {aufgaben > 0 && <b className="start-symbol-zahl" aria-hidden="true">{aufgaben}</b>}
+            <RahmenEcken />
+          </button>
+          <button
+            type="button"
+            className="hb-social-link start-holzrahmen start-heute-knopf"
+            onClick={onBelohnungen}
+            aria-label={truhen > 0 ? tf('start.symbol.truhenBereit', { n: truhen }) : t('start.symbol.truhen')}
+          >
+            <img className="hb-social-logo" src="/hub/truhe-holz.webp" alt="" />
+            <strong>{t('start.symbol.truhen')}</strong>
+            {truhen > 0 && <b className="start-symbol-zahl" aria-hidden="true">{truhen}</b>}
+            <RahmenEcken />
+          </button>
+        </div>
+      </section>
       <section className="start-mosaik" aria-label={t('start.einstiege')}>
         {/* Zwei Knöpfe nebeneinander statt verschachtelt: Ein Knopf im Knopf
             ist kein gültiges HTML, und das Zahnrad soll die Kachel nicht
@@ -179,29 +210,6 @@ export function StartNeu({
         >
           <img src={SPIELE_BILD} alt="" draggable={false} />
         </button>
-        {/* Robin (A1): senkrecht am rechten Rand, schwebend über dem Mosaik,
-            wie die Seitensymbole in Handyspielen. Die Zahl steht im Namen,
-            weil die rote Marke allein nichts vorliest (DESIGN.md). */}
-        <div className="start-seitenleiste" role="group" aria-label={t('start.symbole')}>
-          <button
-            type="button"
-            className="start-symbol"
-            onClick={onHeute}
-            aria-label={aufgaben > 0 ? tf('start.symbol.aufgabenBereit', { n: aufgaben }) : t('start.symbol.aufgaben')}
-          >
-            <img src="/hub/icon-aufgaben.webp" alt="" />
-            {aufgaben > 0 && <b className="start-symbol-zahl" aria-hidden="true">{aufgaben}</b>}
-          </button>
-          <button
-            type="button"
-            className="start-symbol"
-            onClick={onBelohnungen}
-            aria-label={truhen > 0 ? tf('start.symbol.truhenBereit', { n: truhen }) : t('start.symbol.truhen')}
-          >
-            <img src="/hub/truhe-holz.webp" alt="" />
-            {truhen > 0 && <b className="start-symbol-zahl" aria-hidden="true">{truhen}</b>}
-          </button>
-        </div>
       </section>
 
       {/* Weiterspielen und „Deine Spiele“ sind vom Start weg (Robin,
