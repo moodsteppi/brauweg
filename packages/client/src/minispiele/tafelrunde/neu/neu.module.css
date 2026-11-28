@@ -1781,6 +1781,15 @@
   --rahmen: var(--tn-kontur);
 }
 
+/* Auf hohen Handys (iPhone 12 bis 16: 844 px) bekommt der Laden noch mehr
+   Hoehe — das Brett ist dort von der Breite begrenzt, nicht von der Hoehe,
+   und der Platz darueber blieb sonst leerer Schauplatz. */
+@media (min-height: 760px) {
+  .karte {
+    aspect-ratio: 0.52;
+  }
+}
+
 .karte[data-leer] {
   border-radius: 12px;
   border: 1px dashed var(--tn-kontur);
@@ -1968,10 +1977,13 @@
   padding: 2px 0;
   background: rgba(72, 184, 106, 0.92);
   color: #062010;
-  font-size: 9px;
+  /* Mit der Karte kleiner: „VERSCHMILZT!" lief auf 375 px ueber den Rand. */
+  font-size: clamp(7px, 12cqw, 9px);
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
   z-index: 4;
 }
 
@@ -2944,6 +2956,10 @@
  * Werte, Faehigkeit, Marken und Knoepfe ohne Rollen („checkt keiner", Robin).
  */
 .blattGrund[data-gross] .blatt {
+  /* Fast Vollbild: mindestens vier Fuenftel, damit das Blatt nicht wie ein
+     Hinweis wirkt, sondern wie eine eigene Seite zur Einheit — oben bleibt
+     ein Streifen Feld zum Wegtippen. */
+  min-height: min(80dvh, 660px);
   max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
   padding-top: 6px;
 }
@@ -2953,14 +2969,14 @@
   align-items: center;
   gap: 14px;
   margin-top: 8px;
-  /* Rechts frei fuer den Schliessen-Knopf. */
-  padding-right: 40px;
+  /* Rechts frei fuer den Schliessen-Knopf (44 px, 8 px vom Rand). */
+  padding-right: 42px;
 }
 
 .blattGrund[data-gross] .blattFigur {
   flex: 0 0 auto;
-  width: 104px;
-  height: 104px;
+  width: 120px;
+  height: 120px;
   margin: 0;
 }
 
@@ -2978,8 +2994,24 @@
 
 .blattGrund[data-gross] .blattTitel {
   margin: 0;
-  font-size: 22px;
+  font-size: 23px;
   line-height: 1.1;
+  /* Lange Namen („Geisterschildkröte") liefen unter den Schliessen-Knopf. */
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+.blattGrund[data-gross] .blattTitel[data-lang] {
+  font-size: 19px;
+}
+
+.blattGrund[data-gross] .werte div {
+  padding: 10px 2px;
+}
+
+.blattGrund[data-gross] .werte dd {
+  font-size: 22px;
 }
 
 .blattGrund[data-gross] .blattZeile {
@@ -3007,8 +3039,8 @@
 
 .blattGrund[data-gross] .faehigkeit .text {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .blattGrund[data-gross] .blattFuss {
@@ -3018,6 +3050,7 @@
 .blattGrund[data-gross] .blattFuss > * {
   flex: 1 1 0;
   min-width: 0;
+  min-height: 52px;
   padding: 0 10px;
 }
 

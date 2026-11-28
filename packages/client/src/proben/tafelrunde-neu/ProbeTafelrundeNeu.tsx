@@ -29,36 +29,10 @@ const SZENE_RUEST = szene.ruest as unknown as TafelrundeSicht;
 const SZENE_KAMPF = szene.kampf as unknown as TafelrundeSicht;
 const LEGAL = szene.legal as unknown as Aktion[];
 
-/*
- * Die Szene ist am 27.11.2026 aufgezeichnet, vor `naechsterGegner` und
- * `kampfZuege` (28.11.2026). Bis sie neu erzeugt ist (`szene-erzeugen.mjs`),
- * stehen beide hier NACHGESTELLT — damit die Sichtprobe den roten Rahmen und
- * die Shopleiste im Kampf zeigt. Das ist Probenkulisse, keine Regel: Am Tisch
- * kommen beide Felder aus dem Modul.
- */
-const RUEST: TafelrundeSicht = SZENE_RUEST.eigenes
-  ? {
-      ...SZENE_RUEST,
-      eigenes: {
-        ...SZENE_RUEST.eigenes,
-        naechsterGegner: SZENE_RUEST.eigenes.naechsterGegner ?? { sitz: SZENE_RUEST.gegner[0]?.sitz ?? 1, geist: false },
-      },
-    }
-  : SZENE_RUEST;
-const KAMPF: TafelrundeSicht = SZENE_KAMPF.eigenes
-  ? {
-      ...SZENE_KAMPF,
-      eigenes: {
-        ...SZENE_KAMPF.eigenes,
-        kampfZuege: SZENE_KAMPF.eigenes.kampfZuege ?? [
-          ...SZENE_KAMPF.eigenes.laden.flatMap((id, platz): Aktion[] => (id ? [{ typ: 'kaufen', platz }] : [])),
-          ...SZENE_KAMPF.eigenes.bank.flatMap((k, platz): Aktion[] =>
-            k ? [{ typ: 'verkaufen', ort: { bereich: 'bank', platz } }] : [],
-          ),
-        ],
-      },
-    }
-  : SZENE_KAMPF;
+/* Seit dem 28.11.2026 neu aufgezeichnet: `naechsterGegner` und `kampfZuege`
+   kommen aus dem Modul wie am Tisch. */
+const RUEST: TafelrundeSicht = SZENE_RUEST;
+const KAMPF: TafelrundeSicht = SZENE_KAMPF;
 
 const SITZE = [
   { seat: 0, displayName: 'Robin', accountId: 'r', avatarUrl: null, isBot: false },

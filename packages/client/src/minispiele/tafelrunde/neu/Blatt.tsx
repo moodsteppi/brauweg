@@ -83,7 +83,11 @@ export function Blatt({
           <div className={stil.blattKopfReihe}>
             {kopf}
             <div className={stil.blattKopfText}>
-              <h2 className={stil.blattTitel}>{titel}</h2>
+              {/* Lange Namen eine Stufe kleiner — neben der Figur ist die
+                  Zeile schmal („Geisterschildkröte" brach mitten im Wort). */}
+              <h2 className={stil.blattTitel} data-lang={titel.length >= 14 ? '' : undefined}>
+                {titel}
+              </h2>
               {nebenTitel}
             </div>
           </div>
