@@ -594,7 +594,8 @@ function Siegerehrung({
     <SpielRahmen
       gameId="mehrkampf"
       titel={t('bock.ende')}
-      unter={sieger ? tf('bock.ende.sieger', { name: name(sieger.sitz) }) : undefined}
+      // Ohne „(du)": In der Zeile „Robin (du) gewinnt den Bock!" stolpert man.
+      unter={sieger ? tf('bock.ende.sieger', { name: sicht.sitze[sieger.sitz]!.name || name(sieger.sitz) }) : undefined}
       onBack={onFertig}
       fuss={
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onFertig}>

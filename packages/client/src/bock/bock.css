@@ -379,12 +379,13 @@
   top: calc(env(safe-area-inset-top, 0px) + 4px);
   left: 50%;
   transform: translateX(-50%);
-  max-width: calc(100vw - 120px);
-  min-height: 32px;
+  /* Links und rechts bleiben die runden Kopfknöpfe der Tische frei (44 pt + Rand). */
+  max-width: calc(100vw - 100px);
+  min-height: 30px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 12px 3px 3px;
+  gap: 5px;
+  padding: 3px 10px 3px 3px;
   border: 2px solid #624024;
   border-radius: 999px;
   background: #142f29;
@@ -392,7 +393,8 @@
     0 0 0 1px #b18b4d,
     0 4px 12px rgba(0, 0, 0, 0.4);
   color: #fff7df;
-  font: 700 12px 'Nunito Variable', system-ui, sans-serif;
+  font: 700 12px/1.15 'Nunito Variable', system-ui, sans-serif;
+  text-align: left;
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -404,16 +406,26 @@
   inset: -6px -2px;
 }
 .bock-band img {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   object-fit: cover;
+}
+/* Zwei Zeilen: der Name als Versalien-Oberzeile (DESIGN.md: 11 pt nur dafür),
+   darunter Station und Rang — in einer Zeile wurde „du bist 1." abgeschnitten. */
+.bock-band-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .bock-band strong {
   color: var(--hb-gold, #f5c02e);
   font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
-.bock-band span {
+.bock-band-text > span {
   overflow: hidden;
   text-overflow: ellipsis;
 }

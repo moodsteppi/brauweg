@@ -46,6 +46,7 @@ export function BockBand({
 
   useEffect(() => {
     let lebt = true;
+    let erster = true;
     const holen = (): void => {
       api
         .stand(bockId)
@@ -57,8 +58,18 @@ export function BockBand({
             vorbei.current();
             return;
           }
+          const warErster = erster;
+          erster = false;
           if (neu.tisch) {
+            /*
+             * Eine NEUE Station, waehrend man im Hub steht (den Zwischenstand
+             * verlassen): hin zum Bock, der fuehrt an den Tisch. Beim ersten
+             * Abruf nicht — wer eben vom laufenden Tisch in den Hub ging,
+             * wollte genau dorthin.
+             */
+            const neuerTisch = neu.tisch.tableId !== letzterTisch.current;
             letzterTisch.current = neu.tisch.tableId;
+            if (neuerTisch && !warErster) oeffnen.current(null);
             return;
           }
           // Kein laufender Tisch mehr, aber eben noch einer: Station vorbei.
@@ -99,8 +110,10 @@ export function BockBand({
       onClick={() => onOeffnen(sicht.tisch?.tableId ?? letzterTisch.current)}
     >
       <img src="/hub/banner-mehrkampf.webp" alt="" />
-      <strong>{t('modus.mehrkampf')}</strong>
-      <span>{text}</span>
+      <span className="bock-band-text">
+        <strong>{t('modus.mehrkampf')}</strong>
+        <span>{text}</span>
+      </span>
     </button>
   );
 }

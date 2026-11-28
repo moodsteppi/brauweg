@@ -23,7 +23,7 @@
  * Begruendung wie bei der Mitspielersuche (http/app.ts). Das Nachfragen ist
  * zugleich das Lebenszeichen: Wer zwischen zwei Stationen still ist, bekommt
  * an der naechsten verdeckt einen Bot (`vertretungAn`, derselbe Weg wie die
- * Admin-Vertretung), bis er wieder nachfragt.
+ * Admin-Vertretung), bis er wieder am Tisch sitzt und nachfragt.
  *
  * **Die Suche** ist eine eigene `Suchschlange` hier im Dienst und keine
  * Erweiterung von `suche/vermittlung.ts`: Die Vermittlung baut aus einer
@@ -364,8 +364,17 @@ export class BockDienst {
     await this.mitRiegel(bockId, () => this.pruefe(bockId));
     const neu = await this.zeile(bockId);
     const tisch = await this.laufenderTisch(neu);
-    // Wer wieder nachfragt, spielt wieder selbst (siehe stationBauen).
-    if (tisch && !zeile.sitze[sitz]!.verlassen) this.runtime.vertretungAus(tisch.tableId, kontoId);
+    /*
+     * Wer wieder da ist, spielt wieder selbst (siehe stationBauen) — aber nur,
+     * wer auch am Tisch sitzt. Das Band fragt ebenso aus dem Hub nach; hoebe
+     * schon das die Vertretung auf, liefe fuer jemanden, der gar nicht am
+     * Tisch ist, wieder die volle Zugzeit, und alle anderen warteten.
+     */
+    const partie = tisch ? this.runtime.get(tisch.tableId) : undefined;
+    const platz = partie ? this.runtime.seatOf(partie, kontoId) : null;
+    if (partie && platz !== null && partie.online.has(platz) && !zeile.sitze[sitz]!.verlassen) {
+      this.runtime.vertretungAus(partie.tableId, kontoId);
+    }
     return this.sicht(neu, kontoId);
   }
 

@@ -243,7 +243,7 @@ describe('BockBildschirm', () => {
     render(<BockBildschirm bockId="b0c0" {...h} />);
     await warte();
     expect(screen.getByRole('heading', { name: 'Siegerehrung' })).toBeTruthy();
-    expect(screen.getByText('Anna (du) gewinnt den Bock!')).toBeTruthy();
+    expect(screen.getByText('Anna gewinnt den Bock!')).toBeTruthy();
     expect(screen.getByText('+50')).toBeTruthy();
     expect(screen.getByText('-3')).toBeTruthy();
     expect(screen.getByText('8,5 P. · 1 Stationssieg')).toBeTruthy();
@@ -291,5 +291,30 @@ describe('BockBand', () => {
       vi.advanceTimersByTime(4100);
     });
     expect(onOeffnen).toHaveBeenCalledWith('tisch-2');
+  });
+
+  it('im Hub waehrend der Pause: die naechste Station holt einen ab, die laufende nicht', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    server.sicht = ZWISCHENSTAND;
+    const onOeffnen = vi.fn();
+    render(<BockBand bockId="b0c0" onOeffnen={onOeffnen} onVorbei={vi.fn()} />);
+    await warte();
+    server.sicht = { ...ZWISCHENSTAND, station: 2, tisch: { tableId: 'tisch-2', gameId: 'dreckbro' }, weiterInMs: null };
+    await act(async () => {
+      vi.advanceTimersByTime(4100);
+    });
+    await warte();
+    expect(onOeffnen).toHaveBeenCalledWith(null);
+
+    // Wer vom laufenden Tisch in den Hub geht, bleibt dort.
+    cleanup();
+    onOeffnen.mockClear();
+    render(<BockBand bockId="b0c0" onOeffnen={onOeffnen} onVorbei={vi.fn()} />);
+    await warte();
+    await act(async () => {
+      vi.advanceTimersByTime(4100);
+    });
+    await warte();
+    expect(onOeffnen).not.toHaveBeenCalled();
   });
 });
