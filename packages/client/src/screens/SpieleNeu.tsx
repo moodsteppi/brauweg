@@ -49,7 +49,7 @@ const KATEGORIEN: readonly Kategorie[] = [
     id: 'karten',
     titel: 'spielwahl.kategorie.karten',
     einzahl: 'spielwahl.einzahl.karten',
-    spiele: ['doppelkopf', 'skat', 'dreckbro', 'wizard', 'cambio', 'easypoker'],
+    spiele: ['doppelkopf', 'skat', 'dreckbro', 'brobluff', 'wizard', 'cambio', 'easypoker'],
     icon: <path d="M4 7.5 13 5l3 13-9 2.5z M11 4.5l7-1.5 3 13-3 .7" />,
   },
   {
@@ -80,7 +80,7 @@ const KATEGORIEN: readonly Kategorie[] = [
  * übernommen): die Spiele, für die `spielwahl.zusatz.<id>` existiert.
  */
 const ZUSATZ: ReadonlySet<string> = new Set([
-  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess', 'dreckbro',
+  'feldherr', 'mememory', 'easypoker', 'filler', 'eiland', 'golf', 'brocooked', 'tafelrunde', 'partykiste', 'brochess', 'dreckbro', 'brobluff',
 ]);
 
 /** Spiele mit Kartenblatt und Tisch aus der Sammlung. */

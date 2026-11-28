@@ -17,6 +17,7 @@ export default defineConfig({
       '@brauweg/broremote-kern/tanks': fileURLToPath(new URL('../broremote-kern/src/tanks', import.meta.url)),
       '@brauweg/broremote-kern': fileURLToPath(new URL('../broremote-kern/src/index.ts', import.meta.url)),
       '@brauweg/game-wuerfelglanz': fileURLToPath(new URL('../game-wuerfelglanz/src/index.ts', import.meta.url)),
+      '@brauweg/game-brobluff': fileURLToPath(new URL('../game-brobluff/src/index.ts', import.meta.url)),
       '@brauweg/game-api': fileURLToPath(new URL('../game-api/src/index.ts', import.meta.url)),
       /*
        * Die Simulation der Kartenmanufaktur kommt aus ihrer QUELLE: Der

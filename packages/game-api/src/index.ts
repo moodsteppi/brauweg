@@ -120,6 +120,7 @@ export type GameId =
    * `legalActions` vollstaendig (jede Karte mit jedem Ziel einzeln).
    * Bis zum 04.11.2026 stand hier die Vorschau `drecksau` ohne Modul.
    */
+  | 'brobluff'
   | 'dreckbro'
   /**
    * Cabo/Cambio: Ablegespiel mit vier verdeckten Karten, Werte minimieren.

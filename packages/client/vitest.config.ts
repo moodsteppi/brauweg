@@ -40,6 +40,7 @@ import { defineConfig } from 'vitest/config';
 const pakete = [
   'api',
   'brochess',
+  'brobluff',
   'brocooked',
   'cambio',
   'doppelkopf',
