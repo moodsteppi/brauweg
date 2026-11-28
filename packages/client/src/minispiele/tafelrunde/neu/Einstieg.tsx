@@ -17,6 +17,7 @@ import stil from './neu.module.css';
 import { Regelblatt, type Regelwissen } from './Regelblatt';
 import { Schauplatzgrund } from './Feld';
 import { Abschnitt, Seite, Wahl } from './Seite';
+import { EinstiegEcke } from '../../../screens/EinstiegEcke';
 
 /**
  * Wer im Ersatz des Titelbilds steht — fuenf Figuren, je eine Rolle.
@@ -93,6 +94,7 @@ export function EinstiegSeite({
       unter={tz('einstieg.unter')}
       zurueckText={tz('zurueck')}
       onZurueck={onBack}
+      rechts={<EinstiegEcke spiel="tafelrunde" />}
       grund={<Titel />}
       /* Die Luecke ueber dem Titel, in der die Figuren des Grundes stehen. */
       kopfbild={<div className={stil.titelLuecke} />}

@@ -119,7 +119,6 @@ export default {
   'sammlung.nichtBesessen': 'Dieses Design gehört dir noch nicht. Im Shop findest du deine persönlichen Tagesangebote. Die Auswahl wechselt täglich um 0 Uhr deutscher Zeit.',
   'sammlung.zumShopJa': 'Zum Shop',
   // „Deine Spiele" ganz oben im Reiter und das Herz der Spielseite (28.11.2026)
-  'spielwahl.deine.titel': 'Deine Spiele',
   'spielwahl.deine.favoriten': 'Favoriten',
   'spielwahl.deine.zuletzt': 'Zuletzt gespielt',
   'spielwahl.deine.solo': 'Solo',
@@ -127,4 +126,7 @@ export default {
   'spielwahl.favorit.marke': 'Favorit',
   'spielwahl.favorit.knopf': '{spiel} als Favorit',
   'spielwahl.favorit.fehler': 'Der Favorit ließ sich nicht speichern. Versuch es gleich noch mal.',
+  // Der Eckknopf im Spieleinstieg öffnet die Übersicht (28.11.2026 abends)
+  'spielwahl.uebersicht.knopf': 'Übersicht: Trophäen, Rangliste, Ausstattung',
+  'spielwahl.uebersicht.zurueck': 'Zurück zum Spiel',
 } satisfies Woerterbuch;

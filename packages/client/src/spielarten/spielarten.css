@@ -7,15 +7,21 @@
  * quadratisch und freigestellt (256 × 256) und stehen deshalb ganz im Feld;
  * das Banner ist breit und fuellt es.
  */
+/* Kompakt (28.11.2026 abends): bis vier Karten in einer Reihe, nur Bild und
+   Name; der Satz der gewählten Karte steht darunter (SpielartKarten.tsx). */
+.spe .spa-karten {
+  gap: 6px;
+}
 .spe .spa-karten .aw-kachel {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 6px 8px;
+  gap: 3px;
+  min-height: 44px;
+  padding: 4px 4px 6px;
   border: 1.5px solid var(--hb-kontur);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--hb-karte);
-  text-align: left;
+  text-align: center;
 }
 .spe .spa-karten .aw-kachel.is-an {
   border: 2px solid var(--spe-akzent);
@@ -23,18 +29,63 @@
   background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
 }
 .spe .spa-karten .aw-titel {
-  font: 800 14px/1.2 var(--hb-txt);
+  font: 800 13px/1.15 var(--hb-txt);
+  /* Trennen statt mitten im Wort umbrechen („Anfängerrund-e" sah kaputt aus). */
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
+.spe .spa-karten.is-wisch .aw-titel {
+  font-size: 12px;
+}
+/* Klein: In der Karte steht nur der Sperrgrund, der Satz steht darunter.
+   Versteckt mit display:none — für Vorleser bleibt er über
+   aria-describedby die Beschreibung der Karte. */
 .spe .spa-karten .aw-text {
-  font: 700 12px/1.3 var(--hb-txt);
+  display: none;
+  font: 700 11px/1.25 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spa-karten .aw-kachel[aria-disabled] .aw-text {
+  display: block;
+}
+.spe .spa-karten .aw-vorschau {
+  display: block;
+}
+/* Mehr als vier Spielarten (Golf: sieben Kurse): eine Reihe zum Wischen.
+   Gut drei Karten sichtbar, die angeschnittene vierte zeigt, dass es weitergeht. */
+.spe .spa-karten.is-wisch {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 2px 16px 4px;
+  scroll-padding-inline: 16px;
+}
+.spe .spa-karten.is-wisch::-webkit-scrollbar {
+  display: none;
+}
+.spe .spa-karten.is-wisch .aw-kachel {
+  flex: 0 0 calc((100% - 18px) / 3.3);
+  scroll-snap-align: start;
+}
+/* Der Satz der gewählten Spielart: eine, höchstens zwei Zeilen unter der Reihe. */
+.spe .spa-beschreibung {
+  margin: 0;
+  min-height: 2.6em;
+  font: 600 13px/1.3 var(--hb-txt);
   color: var(--hb-leise);
 }
 .spa-art {
   display: block;
   position: relative;
-  aspect-ratio: 4 / 3;
+  /* Feste Höhe statt Seitenverhältnis: Vier Karten nebeneinander wären mit
+     4 : 3 flach genug, zwei aber doppelt so hoch wie nötig. Mit der Höhe des
+     Bildschirms wachsen sie etwas mit, auf 375 × 667 bleiben sie klein. */
+  height: clamp(48px, 8.5dvh, 78px);
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--hb-grund-tief, rgba(0, 0, 0, 0.25));
 }
 .spa-art img {
@@ -60,20 +111,128 @@
   gap: 10px;
 }
 .spa-einzel .spa-art {
-  aspect-ratio: 2 / 1;
+  height: auto;
+  aspect-ratio: 2.4 / 1;
   border: 1.5px solid var(--hb-kontur);
   border-radius: 16px;
 }
-/* „Eigene Regeln" unter „Mit Freunden": klein, ein Textknopf. */
-.spe .spa-eigene {
-  align-self: center;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 0;
-  background: none;
-  color: var(--hb-leise);
-  font: 800 13px var(--hb-txt);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
+/* Karten und Satz darunter als eine Spalte (SpielartKarten.tsx). */
+.spe .spa-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/*
+ * Große Handys (ab 780 px Höhe — 375 × 812, 390 × 844, 430 × 932): Die Karten
+ * füllen die freie Höhe bis zu den Knöpfen (Robin, 28.11.2026 abends: „kein
+ * großes Loch"). Ohne JavaScript, als Flex-Kette: `.spe-rolle` ist eine
+ * Spalte, `.spe-inhalt` wächst in den Rest (spiel-einstieg.css), darin der
+ * Abschnitt mit den Karten, darin das Raster mit gleich hohen Zeilen — und in
+ * jeder Karte wächst das Bild in das, was der Satz übrig lässt. Steht mehr
+ * darüber (Fehler, Poker-Felder), werden die Bilder kleiner statt dass die
+ * Seite rollt; erst unter 72 px Bild rollt sie.
+ */
+@media (min-height: 780px) {
+  .spe .spe-inhalt > .hb-blk:has(> .spa-feld > .spa-karten:not(.is-reihe)) {
+    flex: 1 0 auto;
+  }
+  .spe .spa-feld:not(:has(> .is-reihe)) {
+    flex: 1 0 auto;
+  }
+  .spe .spa-karten:not(.is-wisch, .is-reihe) {
+    flex: 1 0 auto;
+    grid-auto-rows: 1fr;
+    gap: 8px;
+  }
+  /* Vier als 2 × 2. */
+  .spe .spa-karten.spa-n4:not(.is-wisch, .is-reihe) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Zwei oder drei (Skat, Zauberer, Cambio, Poker, Eiland) untereinander,
+     Bild links, Name und Satz rechts. Nebeneinander wurden die drei Karten
+     schmal und sehr hoch — das Bild stieß an seine Grenze, und unten blieb
+     in jeder Karte ein leerer Streifen (Sichtprobe Skat, 390 × 844). */
+  .spe .spa-karten:is(.spa-n2, .spa-n3):not(.is-wisch, .is-reihe) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .spe .spa-karten:is(.spa-n2, .spa-n3):not(.is-wisch, .is-reihe) .aw-kachel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto 1fr;
+    column-gap: 12px;
+    row-gap: 4px;
+    padding: 6px;
+  }
+  /* Hier trägt der Satz rechts die Mindesthöhe, das Bild darf kleiner
+     werden: Poker hat über und unter den Karten noch Name und Spielerzahl. */
+  .spe .spa-karten:is(.spa-n2, .spa-n3):not(.is-wisch, .is-reihe) .aw-vorschau {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-height: 52px;
+    max-height: none;
+  }
+  .spe .spa-karten:is(.spa-n2, .spa-n3):not(.is-wisch, .is-reihe) .aw-titel {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 17px;
+  }
+  .spe .spa-karten:is(.spa-n2, .spa-n3):not(.is-wisch, .is-reihe) .aw-text {
+    grid-column: 2;
+    grid-row: 3;
+    font-size: 13px;
+  }
+  .spe .spa-karten .aw-kachel {
+    gap: 5px;
+    padding: 6px 6px 10px;
+    border-radius: 14px;
+    text-align: left;
+  }
+  .spe .spa-karten .aw-titel,
+  .spe .spa-karten .aw-text {
+    padding-inline: 4px;
+  }
+  .spe .spa-karten .aw-titel {
+    font-size: 16px;
+  }
+  .spe .spa-karten .aw-text {
+    display: block;
+    font: 600 12.5px/1.3 var(--hb-txt);
+  }
+  .spe .spa-karten:not(.is-wisch, .is-reihe) .aw-vorschau {
+    flex: 1 1 0;
+    min-height: 72px;
+    max-height: 200px;
+    display: flex;
+  }
+  .spe .spa-karten:not(.is-wisch, .is-reihe) .spa-art {
+    flex: 1;
+    height: auto;
+    border-radius: 10px;
+  }
+  /* Absolut, damit das Bild der gewachsenen Fläche folgt und sie nicht selbst aufbläht. */
+  .spe .spa-karten:not(.is-wisch, .is-reihe) .spa-art img {
+    position: absolute;
+    inset: 0;
+  }
+  /* Golf: weiter eine Wischreihe, aber gut zwei Karten breit und mit Satz. */
+  .spe .spa-karten.is-wisch .aw-kachel {
+    flex-basis: calc((100% - 12px) / 2.3);
+  }
+  .spe .spa-karten.is-wisch .aw-titel {
+    font-size: 15px;
+  }
+  .spe .spa-karten.is-wisch .spa-art {
+    height: clamp(90px, 14dvh, 140px);
+  }
+  /* Poker (`reihe`): eine Reihe, Bild etwas größer als klein, Satz auf der Karte. */
+  .spe .spa-karten.is-reihe .spa-art {
+    height: clamp(56px, 8dvh, 90px);
+  }
+  .spe .spa-karten.is-reihe .aw-titel {
+    font-size: 15px;
+  }
+  .spe .spa-beschreibung {
+    display: none;
+  }
 }

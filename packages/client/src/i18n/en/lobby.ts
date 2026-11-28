@@ -46,7 +46,7 @@ export default {
   'lobby.filter.offen': 'Open',
   'lobby.filter.clan': 'Clan',
   'lobby.auswahl.unter': '{spanne} players · Choose a table',
-  'lobby.zurueckZurSpielseite': 'Back to game page',
+  'lobby.zurueckZurSpielseite': 'Back to all games',
   'lobby.filter': 'Filter',
   'lobby.suche': 'Search players…',
   'lobby.suche.label': 'Search tables by host',

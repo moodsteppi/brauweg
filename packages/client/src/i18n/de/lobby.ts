@@ -50,7 +50,7 @@ export default {
   'lobby.filter.offen': 'Offen',
   'lobby.filter.clan': 'Clan',
   'lobby.auswahl.unter': '{spanne} Spieler · Tischauswahl',
-  'lobby.zurueckZurSpielseite': 'Zurück zur Spielseite',
+  'lobby.zurueckZurSpielseite': 'Zurück zu allen Spielen',
   'lobby.filter': 'Filter',
   'lobby.suche': 'Spieler suchen…',
   'lobby.suche.label': 'Tisch nach Gastgeber suchen',

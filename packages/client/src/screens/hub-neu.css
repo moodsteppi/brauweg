@@ -197,7 +197,20 @@
   padding: 4px 16px 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* Auf großen Handys wächst der Abstand mit, auf 375 × 667 bleibt er bei
+     16 px — sonst müsste dort gerollt werden. */
+  gap: clamp(16px, 2.4dvh, 26px);
+}
+/* Senkrecht mittig in der freien Höhe (Robin, 28.11.2026: auf großen Handys
+   stand die ganze Luft zwischen TikTok/Instagram und der Reiterleiste).
+   Automatische Ränder statt `justify-content: center`: Wird der Inhalt höher
+   als die Seite (große Schrift), schneidet `center` oben ab, ohne dass man
+   hinrollen kann — Auto-Ränder fallen dann einfach auf null. */
+.hb .hb-start > :first-child {
+  margin-top: auto;
+}
+.hb .hb-start > :last-child {
+  margin-bottom: auto;
 }
 :is(.hb, .spe) .hb-blk {
   display: flex;
@@ -3785,9 +3798,9 @@
 
 .hb-profil .hb-einstiege { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-/* ---------- Spiele-Reiter: „Deine Spiele" und das Herz (28.11.2026) ---------- */
-/* Die Register stehen seitdem in der Rolle (unter „Deine Spiele") und kleben
-   oben fest, sobald sie dort ankommen. Der dunkle Grund verhindert, dass die
+/* ---------- Spiele-Reiter: Register, Favoriten und das Herz (28.11.2026) ---------- */
+/* Die Register stehen in der Rolle (seit dem Abend wieder ganz oben, darunter
+   Favoriten und „Zuletzt gespielt") und kleben oben fest. Der dunkle Grund verhindert, dass die
    Kacheln beim Rollen durch die Leiste scheinen. */
 .hb.hb .hb-spiele-rolle > .hb-chips-klebend {
   position: sticky;
@@ -3801,27 +3814,9 @@
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-/* „Deine Spiele" als waagerechte Streifen statt Raster: Acht zuletzt gespielte
-   Spiele wären sonst drei Rasterzeilen vor dem eigentlichen Katalog. */
-.hb.hb .hb-einheitlich .hb-deine .hb-reihe {
-  display: flex;
-  overflow-x: auto;
-  margin: 0 -16px;
-  padding: 0 16px;
-  gap: 9px;
-}
-.hb.hb .hb-einheitlich .hb-deine .hb-sk {
-  flex: none;
-  width: 108px;
-}
-:is(.hb, .spe) .hb-deine-reihe + .hb-deine-reihe {
-  margin-top: 10px;
-}
-:is(.hb, .spe) .hb-deine-unter {
-  margin: 0 0 6px;
-  font: 800 13px var(--hb-txt);
-  color: var(--hb-leise);
-}
+/* Favoriten und „Zuletzt gespielt" haben seit dem 28.11.2026 abends keinen
+   eigenen Stil mehr: Sie stehen unter den Registern als Reihen wie jede
+   Kategorie (Robin). Die waagerechten Streifen von vorher sind weg. */
 :is(.hb, .spe) .hb-sk {
   position: relative;
 }

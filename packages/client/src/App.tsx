@@ -9,7 +9,9 @@ import { inApp } from './laufzeit';
 import { imUmfang } from './umfang';
 import { deckForGame, deckMitRuecken } from './decks';
 import { Auth } from './screens/Auth';
-import { GameSelect } from './screens/GameSelect';
+import { GameSelect, type Tab } from './screens/GameSelect';
+import { EinstiegKontext, type EinstiegUmfeld } from './screens/EinstiegEcke';
+import type { SammelBereich } from './screens/SammlungVorschau';
 import { Lobby } from './screens/Lobby';
 import { AnfrageWarten } from './tisch/Anfragen';
 import { horcheAufAntippen } from './mitteilung-antippen';
@@ -119,7 +121,12 @@ const WizardTable = lazy(() =>
 );
 
 type Screen =
-  | { name: 'games' }
+  /**
+   * Das Hub. `tab`, `sammlung` und `lernen` sagen, womit es öffnet — gesetzt
+   * nur auf dem Rückweg aus einem Spieleinstieg (Reiter „Spiele") und aus
+   * dessen Übersicht (Sammlung, Lernpfad). Ohne Angabe öffnet der Start.
+   */
+  | { name: 'games'; tab?: Tab; sammlung?: { spiel: string; art: SammelBereich | null }; lernen?: boolean }
   /** Minispiel: laeuft im Browser, kein Tisch, kein Spielmodul. */
   | { name: 'feldherr' }
   /**
@@ -183,6 +190,15 @@ type Screen =
    * aufgebaut; der Server schickt ohnehin immer die volle Sicht.
    */
   | { name: 'profil'; accountId: string; vorher: Screen };
+
+/**
+ * Zurueck aus einem Spieleinstieg: in den Reiter „Spiele", aus dem man kam
+ * (Robin, 28.11.2026 abends). Bis dahin fuehrte der Weg ueber die
+ * Uebersichtsseite des Spiels — die steht jetzt hinter dem Eckknopf im
+ * Einstieg, und ein Zurueck auf den Start liesse einen das Spiel neu suchen.
+ * Wer eine Partie am Tisch verlaesst, landet weiter auf dem Start.
+ */
+const SPIELE_REITER: Screen = { name: 'games', tab: 'spiele' };
 
 /** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
 const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro', 'brobluff']);
@@ -417,7 +433,7 @@ export function App(): React.JSX.Element {
       return true;
     }
     if (screen.name === 'lobby' && MIT_KARTENLOBBY.has(screen.gameId)) {
-      setScreen({ name: 'games' });
+      setScreen(SPIELE_REITER);
       void reload();
       return true;
     }
@@ -487,8 +503,20 @@ export function App(): React.JSX.Element {
    * zwar so, dass nur der Weg ueber den Vorhang ihn nicht bekaeme.
    */
   const zurueckZuDenSpielen = (): void => {
-    setScreen({ name: 'games' });
+    setScreen(SPIELE_REITER);
     void reload();
+  };
+
+  /**
+   * Was die Ecke eines Spieleinstiegs braucht (EinstiegEcke.tsx): das Konto
+   * für Herz und Übersicht und die Wege zurück ins Hub, wenn man in der
+   * Übersicht auf die Sammlung oder „Doppelkopf lernen" tippt.
+   */
+  const einstiegUmfeld: EinstiegUmfeld = {
+    me,
+    onKontoNeu: () => void reload(),
+    onSammlung: (spiel, art) => setScreen({ name: 'games', sammlung: { spiel, art: art ?? null } }),
+    onLernen: imUmfang('lernpfad') ? () => setScreen({ name: 'games', lernen: true }) : undefined,
   };
 
   /**
@@ -521,7 +549,7 @@ export function App(): React.JSX.Element {
           <Runner
             hubMode
             onBack={() => {
-              setScreen({ name: 'games' });
+              setScreen(SPIELE_REITER);
               void reload();
             }}
           />
@@ -547,7 +575,7 @@ export function App(): React.JSX.Element {
     if (screen.name === 'lobby' && screen.gameId === 'feldherr') {
       return (
         <FeldherrTisch
-          onBack={() => setScreen({ name: 'games' })}
+          onBack={() => setScreen(SPIELE_REITER)}
           onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
         />
       );
@@ -565,7 +593,7 @@ export function App(): React.JSX.Element {
           startTisch={screen.tisch ?? null}
           istAufsicht={me.entitlements.staff}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -580,7 +608,7 @@ export function App(): React.JSX.Element {
           startTisch={screen.name === 'table' ? screen.tableId : null}
           istAufsicht={me.entitlements.staff}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -597,7 +625,7 @@ export function App(): React.JSX.Element {
         <EasyPoker
           startTisch={screen.tisch ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -611,7 +639,7 @@ export function App(): React.JSX.Element {
         <EasyPoker
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -628,7 +656,7 @@ export function App(): React.JSX.Element {
         <Filler
           startTisch={screen.tisch ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -642,7 +670,7 @@ export function App(): React.JSX.Element {
         <Filler
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -659,7 +687,7 @@ export function App(): React.JSX.Element {
         <Eiland
           startTisch={screen.tisch ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -673,7 +701,7 @@ export function App(): React.JSX.Element {
         <Eiland
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -690,7 +718,7 @@ export function App(): React.JSX.Element {
         <Golf
           startTisch={screen.tisch ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -706,7 +734,7 @@ export function App(): React.JSX.Element {
         <BroCooked
           startTisch={screen.tisch ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -717,7 +745,7 @@ export function App(): React.JSX.Element {
         <BroCooked
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -728,7 +756,7 @@ export function App(): React.JSX.Element {
         <Golf
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -746,7 +774,7 @@ export function App(): React.JSX.Element {
           startTisch={screen.tisch ?? null}
           einzel={screen.einzel ?? null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -757,7 +785,7 @@ export function App(): React.JSX.Element {
         <Partykiste
           startTisch={screen.name === 'table' ? screen.tableId : null}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
         />
@@ -797,7 +825,7 @@ export function App(): React.JSX.Element {
     }
 
     if ((screen.name === 'lobby' || screen.name === 'table') && screen.gameId === 'wuerfelglanz') {
-      return <Wuerfelglanz kontoId={me.id} startTisch={screen.name === 'table' ? screen.tableId : null} onBack={() => { setScreen({ name: 'games' }); void reload(); }} />;
+      return <Wuerfelglanz kontoId={me.id} startTisch={screen.name === 'table' ? screen.tableId : null} onBack={() => { setScreen(SPIELE_REITER); void reload(); }} />;
     }
 
     if (screen.name === 'table') {
@@ -887,7 +915,7 @@ export function App(): React.JSX.Element {
     if (screen.name === 'feldherr') {
       return (
         <FeldherrTisch
-          onBack={() => setScreen({ name: 'games' })}
+          onBack={() => setScreen(SPIELE_REITER)}
           onEnter={(tableId) => setScreen({ name: 'table', gameId: 'feldherr', tableId })}
         />
       );
@@ -898,7 +926,7 @@ export function App(): React.JSX.Element {
         <Lobby
           gameId={screen.gameId}
           onBack={() => {
-            setScreen({ name: 'games' });
+            setScreen(SPIELE_REITER);
             void reload();
           }}
           onEnter={(tableId) => setScreen({ name: 'table', gameId: screen.gameId, tableId })}
@@ -909,6 +937,9 @@ export function App(): React.JSX.Element {
     return (
       <GameSelect
         me={me}
+        anfangsTab={screen.name === 'games' ? screen.tab : undefined}
+        anfangsSammlung={screen.name === 'games' ? screen.sammlung : undefined}
+        anfangsLernen={screen.name === 'games' ? screen.lernen : undefined}
         // Feldherr und Mememory haben keine Kartenlobby: Tisch erstellen und
         // beitreten erledigt der jeweils eigene Bildschirm, fest mit zwei
         // Sitzen und einer Runde.
@@ -958,7 +989,9 @@ export function App(): React.JSX.Element {
 
   return (
     <>
-      <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
+      <EinstiegKontext.Provider value={einstiegUmfeld}>
+        <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
+      </EinstiegKontext.Provider>
       {/* Das Band des Bocks liegt ueber jedem anderen Bildschirm, vor allem
           ueber den Stationstischen — die muessen so nichts vom Bock wissen. */}
       {bockId && screen.name !== 'bock' && (

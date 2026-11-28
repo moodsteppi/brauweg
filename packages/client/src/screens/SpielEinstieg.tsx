@@ -4,6 +4,7 @@ import './hub-neu.css';
 import './spiel-einstieg.css';
 import { t } from '../i18n';
 import { bannerFuer } from './StartNeu';
+import { EinstiegEcke } from './EinstiegEcke';
 
 /**
  * Der gemeinsame Rahmen aller Spieleinstiege im neuen Hub (Robin, 26.09.2026:
@@ -27,6 +28,7 @@ export function SpielRahmen({
   onBack,
   zurueckText = t('einstieg.zurueck'),
   rechts,
+  uebersicht,
   fuss,
   children,
 }: {
@@ -41,6 +43,12 @@ export function SpielRahmen({
   zurueckText?: string;
   /** Knöpfe oben rechts im Kopf (z. B. Info, Einstellungen). */
   rechts?: React.ReactNode;
+  /**
+   * Nur auf der Hauptseite eines Einstiegs: Herz und Übersicht dieses Spiels
+   * (EinstiegEcke.tsx) ganz rechts in der Ecke. Die Kennung, weil die Seite
+   * eines Partykiste-Minispiels die Übersicht der Kiste zeigt.
+   */
+  uebersicht?: string;
   /** Bleibt unten stehen: der Hauptknopf und was zu ihm gehört. */
   fuss?: React.ReactNode;
   children: React.ReactNode;
@@ -54,7 +62,12 @@ export function SpielRahmen({
               <path d="M15 5l-7 7 7 7" />
             </svg>
           </button>
-          {rechts && <div className="spe-rechts">{rechts}</div>}
+          {(rechts || uebersicht) && (
+            <div className="spe-rechts">
+              {rechts}
+              {uebersicht && <EinstiegEcke spiel={uebersicht} />}
+            </div>
+          )}
           <div className="spe-titel">
             <h1>{titel}</h1>
             {unter && <span>{unter}</span>}

@@ -113,7 +113,6 @@ export default {
   'sammlung.nichtBesessen': 'You don’t own this design yet. The shop has your personal daily deals. The selection changes every day at midnight German time.',
   'sammlung.zumShopJa': 'Go to shop',
   // "Your games" at the top of the tab and the heart on the game page (28.11.2026)
-  'spielwahl.deine.titel': 'Your games',
   'spielwahl.deine.favoriten': 'Favourites',
   'spielwahl.deine.zuletzt': 'Recently played',
   'spielwahl.deine.solo': 'Solo',
@@ -121,4 +120,6 @@ export default {
   'spielwahl.favorit.marke': 'Favourite',
   'spielwahl.favorit.knopf': '{spiel} as favourite',
   'spielwahl.favorit.fehler': 'Couldn’t save the favourite. Please try again in a moment.',
+  'spielwahl.uebersicht.knopf': 'Overview: trophies, leaderboard, equipment',
+  'spielwahl.uebersicht.zurueck': 'Back to the game',
 } satisfies Woerterbuch;

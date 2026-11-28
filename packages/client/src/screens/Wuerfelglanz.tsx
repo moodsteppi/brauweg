@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { spiele } from '../klang';
 import { useTable } from '../useTable';
 import { useRueckfrage } from './HbBlatt';
+import { EinstiegEcke } from './EinstiegEcke';
 import './hub-neu.css';
 import './spiel-einstieg.css';
 import './wuerfelglanz.css';
@@ -44,8 +45,9 @@ function Wuerfelbecher() {
     <span>5 Würfel im Becher</span>
   </div>;
 }
-function Kopf({ onBack, unter = 'FÜNF WÜRFEL. DEIN MOMENT.' }: { onBack: () => void; unter?: string }) {
-  return <header className="wg-kopf"><button className="wg-zurueck" onClick={onBack} aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg></button><div><small>{unter}</small><h1>Würfelglanz</h1></div><span className="wg-stern" aria-hidden="true">✦</span></header>;
+/** Im Menü stehen statt des Sterns Herz und Übersicht (EinstiegEcke.tsx), am Tisch bleibt der Stern. */
+function Kopf({ onBack, unter = 'FÜNF WÜRFEL. DEIN MOMENT.', ecke = false }: { onBack: () => void; unter?: string; ecke?: boolean }) {
+  return <header className="wg-kopf"><button className="wg-zurueck" onClick={onBack} aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg></button><div><small>{unter}</small><h1>Würfelglanz</h1></div>{ecke ? <span className="wg-ecke"><EinstiegEcke spiel="wuerfelglanz" /></span> : <span className="wg-stern" aria-hidden="true">✦</span>}</header>;
 }
 export function Wuerfelglanz({ startTisch = null, onBack, kontoId }: { startTisch?: string | null; onBack: () => void; kontoId?: string }) {
   const [tischId, setTischId] = useState(startTisch);
@@ -75,14 +77,24 @@ export function WuerfelglanzMenue({ onBack, onTisch }: { onBack: () => void; onT
     return (await api.createTable({ gameId: 'wuerfelglanz', seats: anzahl, rounds: runden, visibility: anzahl === 1 ? 'on_request' : 'public' })).id;
   });
   if (suche.suchstand) return <SuchWarten gameId="wuerfelglanz" stand={suche.suchstand} unter="Würfelglanz" onAbbrechen={suche.brichAb} />;
-  return <main className="spe wg wg-menue"><Kopf onBack={onBack} /><div className="wg-rolle">
-    <section className="wg-held"><img src="/hub/banner-wuerfelglanz.webp" alt="Zwei Pinguine würfeln an einem gemütlichen Spieltisch" /><div><span className="wg-etikett">DEINE NÄCHSTE GLÜCKSSERIE</span><h2>Fünf Würfel.<br />Dein großer Moment.</h2><p>Würfel halten, Chancen nutzen, deinen Bogen füllen.</p></div></section>
-    <div className="wg-fakten"><span><b>5</b> Würfel</span><span><b>3</b> Würfe je Zug</span><span><b>13</b> Wertungen</span></div>
+  /*
+   * Kompakt seit dem 28.11.2026 abends (Robin: „möglichst wenig Klicks ins
+   * Spiel", der Einstieg soll ohne Rollen passen): Quick-Play zuerst und in
+   * Gold, „Allein spielen" direkt darunter, die Freundesrunde als eine Karte
+   * mit Sitzwahl. Der Code und die Regeln sind zugeklappt — beides braucht
+   * man selten, und offen schoben sie das Menü über den Bildschirm hinaus.
+   */
+  return <main className="spe wg wg-menue"><Kopf onBack={onBack} ecke /><div className="wg-rolle">
+    <section className="wg-held wg-held-kompakt"><img src="/hub/banner-wuerfelglanz.webp" alt="Zwei Pinguine würfeln an einem gemütlichen Spieltisch" /><div><span className="wg-etikett">5 WÜRFEL · 3 WÜRFE JE ZUG · 13 WERTUNGEN</span></div></section>
     {fehler && <p className="wg-fehler" role="alert">{fehler} {!vorgabe && <button onClick={holeVorgabe}>Erneut laden</button>}</p>}
-    <section className="wg-modus"><div><small>DEIN PERSÖNLICHER REKORD</small><h2>Nur du und die Würfel</h2><p>{rekord === null ? 'Spiele deinen ersten vollständigen Bogen.' : `Deine Bestleistung: ${rekord} Punkte`}</p></div><button className="wg-gold" disabled={busy || !vorgabe?.seatCounts.includes(1)} onClick={() => erstellen(1)}>{busy ? 'Tisch wird vorbereitet…' : 'Allein spielen'}</button></section>
-    <section className="wg-modus wg-freunde"><small>GEMEINSAM WIRD’S SPANNEND</small><h2>Eine Runde mit Freunden</h2><p>Online gegeneinander. Jeder mit eigenem Bogen und denselben Chancen.</p><div className="wg-sitzwahl" role="group" aria-label="Spielerzahl">{(vorgabe?.seatCounts.filter(n => n > 1) ?? []).map(n => <button key={n} aria-pressed={sitze === n} onClick={() => setSitze(n)}>{n}</button>)}</div><button className="wg-gold" disabled={busy || !vorgabe || sitze === 0} onClick={() => erstellen(sitze)}>Offenen Tisch für {sitze} erstellen</button><small>Teile danach den Tischcode mit deinen Freunden.</small></section>
-    <form className="wg-code" onSubmit={e => { e.preventDefault(); void aktion(async () => { const v = await api.tischPerCode(code.trim().toUpperCase()); if (v.gameId !== 'wuerfelglanz') throw new Error('Anderes Spiel'); const res = await api.beitretenPerCode(code.trim().toUpperCase()); if (res.angefragt) throw new Error('Tisch wartet auf Zusage'); return res.tableId; }); }}><label htmlFor="wg-code">Du hast einen Tischcode?</label><div><input id="wg-code" value={code} onChange={e => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoCorrect="off" placeholder="Tischcode" maxLength={10} /><button disabled={busy || code.trim().length < 4}>Beitreten</button></div></form>
-    <section className="wg-modus"><div><small>MITSPIELER FINDEN</small><h2>{t('einstieg.quickplay')}</h2><p>{t('einstieg.text.ohneSpielart')}</p></div>{suche.fehler && <p className="wg-fehler" role="alert">{t(suche.fehler)}</p>}<button className="wg-gold" data-einstieg="quickplay" disabled={busy || suche.startet} onClick={() => void suche.starte(undefined)}>{t('einstieg.quickplay')}</button></section>
+    {suche.fehler && <p className="wg-fehler" role="alert">{t(suche.fehler)}</p>}
+    <div className="wg-schnell">
+      <button className="wg-gold" data-einstieg="quickplay" disabled={busy || suche.startet} onClick={() => void suche.starte(undefined)}>{t('einstieg.quickplay')}</button>
+      <button className="wg-zweit" disabled={busy || !vorgabe?.seatCounts.includes(1)} onClick={() => erstellen(1)}>{busy ? 'Tisch wird vorbereitet…' : 'Allein spielen'}</button>
+      <small>{rekord === null ? 'Allein spielst du um deine Bestleistung.' : `Deine Bestleistung: ${rekord} Punkte`}</small>
+    </div>
+    <section className="wg-modus wg-freunde"><h2>Mit Freunden</h2><div className="wg-sitzwahl" role="group" aria-label="Spielerzahl">{(vorgabe?.seatCounts.filter(n => n > 1) ?? []).map(n => <button key={n} aria-pressed={sitze === n} onClick={() => setSitze(n)}>{n}</button>)}</div><button className="wg-gold" disabled={busy || !vorgabe || sitze === 0} onClick={() => erstellen(sitze)}>Offenen Tisch für {sitze} erstellen</button><small>Teile danach den Tischcode mit deinen Freunden.</small></section>
+    <details className="wg-regeln wg-code-klappe"><summary>Du hast einen Tischcode?</summary><form className="wg-code" onSubmit={e => { e.preventDefault(); void aktion(async () => { const v = await api.tischPerCode(code.trim().toUpperCase()); if (v.gameId !== 'wuerfelglanz') throw new Error('Anderes Spiel'); const res = await api.beitretenPerCode(code.trim().toUpperCase()); if (res.angefragt) throw new Error('Tisch wartet auf Zusage'); return res.tableId; }); }}><label htmlFor="wg-code" className="wg-unsichtbar">Tischcode</label><div><input id="wg-code" value={code} onChange={e => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoCorrect="off" placeholder="Tischcode" maxLength={10} /><button disabled={busy || code.trim().length < 4}>Beitreten</button></div></form></details>
     <details className="wg-regeln"><summary>So spielst du Würfelglanz</summary><p>Du hast pro Zug höchstens drei Würfe. Tippe auf Würfel, die du behalten möchtest. Mit einem weiteren Tipp gibst du sie wieder frei.</p><p>Trage danach genau ein freies Feld ein. Auch null Punkte sind erlaubt, ein belegtes Feld bleibt fest. Nach 13 Einträgen ist dein Bogen fertig.</p><p>Ab 63 Punkten bei Einsern bis Sechsern erhältst du 35 Bonuspunkte. Die meisten Gesamtpunkte gewinnen. Ein Fünferglanz bringt 50 Punkte; zusätzliche Joker- oder Wiederholungsboni gibt es in dieser Spielart nicht.</p><p>Solo spielst du um deine Bestleistung. Online würfelt ihr reihum; gleiche Punktzahlen teilen sich den Platz.</p></details>
   </div></main>;
 }

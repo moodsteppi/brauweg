@@ -42,3 +42,26 @@
 .wg-becher { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:92px; gap:3px; }
 .wg-becher svg { display:block; width:130px; height:96px; filter:drop-shadow(0 5px 5px #0005); }
 .wg-becher>span { color:#eddbaf; font-size:9px; font-weight:900; letter-spacing:.3px; }
+
+/* Kompaktes Menü (28.11.2026 abends): Quick-Play und „Allein spielen" oben,
+   die Freundesrunde als eine Karte, Code und Regeln zugeklappt — damit der
+   Einstieg auf einem großen Handy ohne Rollen passt. */
+.wg-menue .wg-rolle { padding-top:12px; }
+.wg-menue .wg-kopf { padding-bottom:10px; }
+.wg-ecke { margin-left:auto; }
+.wg-held-kompakt>img { aspect-ratio:2.6; }
+.wg-held-kompakt>div { margin-top:-18px; padding:2px 16px 10px; }
+.wg-schnell { display:grid; gap:8px; margin:12px 0 0; }
+.wg-schnell>small { display:block; text-align:center; font-size:11px; color:#aabed0; }
+.wg .wg-zweit { display:block; width:100%; min-height:46px; padding:10px; border-radius:14px; border:1px solid #849ac799; background:#1c334f; color:#ffe6b4; font:900 14px/1.2 'Nunito Variable',sans-serif; text-align:center; }
+/* `.spe` setzt Knöpfe auf `text-align: inherit` — die Zahlen standen links in der Kachel. */
+.wg .wg-sitzwahl button { text-align:center; }
+.wg .wg-zweit:disabled { color:#9eb4bf; border-color:#415d6a; }
+.wg-menue .wg-modus { padding:12px 14px; margin:12px 0 4px; }
+.wg-menue .wg-modus h2 { font-size:19px; margin:0 0 8px; }
+.wg-menue .wg-sitzwahl { margin-bottom:10px; }
+.wg-menue .wg-regeln { padding:0; }
+/* Zugeklappt nur eine Zeile, aber mit voller Tippfläche (DESIGN.md: 44 pt). */
+.wg-menue .wg-regeln summary { min-height:44px; display:flex; align-items:center; }
+.wg-code-klappe .wg-code { margin:10px 0 0; }
+.wg-unsichtbar { position:absolute!important; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

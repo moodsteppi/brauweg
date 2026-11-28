@@ -7,7 +7,7 @@ import type { BotLevel } from '../protocol';
 import { regelBild } from '../regelbilder';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
-import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
+import { CodeBeitritt } from '../minispiele/partykiste/Beitrittscode';
 import {
   ARTNAME,
   VORGABE_ZEIT,
@@ -506,6 +506,7 @@ export function Lobby({
       unter={artName ? tf('einstieg.unter', { spanne: sitzText, spielart: artName }) : tf('einstieg.unterOhne', { spanne: sitzText })}
       onBack={onBack}
       zurueckText={t('lobby.zurueckZurSpielseite')}
+      uebersicht={gameId}
       fuss={
         <>
           <button
@@ -538,11 +539,17 @@ export function Lobby({
               {t('einstieg.freunde')}
             </button>
           </div>
-          {hatRegeln && (
-            <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => oeffneFreunde(true)}>
-              {t('einstieg.eigeneRegeln')}
-            </button>
-          )}
+          {/* Die zwei Nebenwege als Textlinks in einer Zeile (28.11.2026
+              abends): Das Codefeld stand vorher als eigener Abschnitt über
+              dem Fuß und kostete den Spielarten den Platz. */}
+          <div className="spa-links">
+            {hatRegeln && (
+              <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => oeffneFreunde(true)}>
+                {t('einstieg.eigeneRegeln')}
+              </button>
+            )}
+            <CodeBeitritt spiel={gameId} onBeigetreten={onEnter} />
+          </div>
         </>
       }
     >
@@ -560,7 +567,6 @@ export function Lobby({
       ) : wahl.spielarten !== null ? (
         <EinzelKarte gameId={gameId} />
       ) : null}
-      <Beitrittscode neu spiel={gameId} onBeigetreten={onEnter} />
     </SpielRahmen>
   );
 }

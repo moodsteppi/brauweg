@@ -466,6 +466,7 @@ export function Eiland({
         akzent={AKZENT}
         onBack={onBack}
         zurueckText={t('eiland.zurueckZurSpielseite')}
+        uebersicht="eiland"
         fuss={
           <>
             <button

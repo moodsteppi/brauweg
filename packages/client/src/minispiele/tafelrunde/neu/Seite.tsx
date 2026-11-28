@@ -22,10 +22,13 @@ export function Seite({
   onZurueck,
   kopfbild,
   grund,
+  rechts,
   children,
   fuss,
 }: {
   titel: string;
+  /** Knöpfe oben rechts — im Einstieg Herz und Übersicht. */
+  rechts?: ReactNode;
   unter?: string;
   zurueckText: string;
   onZurueck: () => void;
@@ -43,6 +46,7 @@ export function Seite({
         <button type="button" className={stil.zurueck} onClick={onZurueck} aria-label={zurueckText}>
           ‹
         </button>
+        {rechts && <div className={stil.seitenRechts}>{rechts}</div>}
         {kopfbild}
         <div className={stil.seitenTitel}>
           <h1>{titel}</h1>

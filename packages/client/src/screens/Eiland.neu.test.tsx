@@ -116,7 +116,7 @@ describe('Eiland im neuen Hub', () => {
     const onBack = vi.fn();
     render(<Eiland onBack={onBack} />);
     await durchatmen();
-    fireEvent.click(screen.getByRole('button', { name: 'Zurück zur Spielseite' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zurück zu allen Spielen' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

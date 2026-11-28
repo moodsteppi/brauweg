@@ -143,6 +143,8 @@ export function GameSelect({
   anfangsSpiel,
   anfangsWeg,
   anfangsHeute,
+  anfangsSammlung,
+  anfangsLernen,
   onBock,
 }: {
   me: Me;
@@ -159,8 +161,19 @@ export function GameSelect({
   onSignOut: () => void;
   /** Nach der Kontoloeschung: zurueck zur Anmeldung. */
   onDeleted: () => void;
-  /** Nur für die Probe `?dev=hub`: mit welchem Reiter und welcher Spielseite sie öffnet. */
+  /**
+   * Mit welchem Reiter das Hub öffnet: in der Probe `?dev=hub`, und seit dem
+   * 28.11.2026 abends auch aus App.tsx — wer einen Spieleinstieg verlässt,
+   * landet wieder im Reiter „Spiele", aus dem er kam.
+   */
   anfangsTab?: Tab;
+  /**
+   * Aus der Übersicht eines Spieleinstiegs (EinstiegEcke.tsx): die Sammlung
+   * dieses Spiels, gegebenenfalls gleich mit Blatt, Tisch oder Rückseite.
+   */
+  anfangsSammlung?: { spiel: string; art: SammelBereich | null };
+  /** Ebenso: „Doppelkopf lernen" gleich offen. */
+  anfangsLernen?: boolean;
   anfangsSpiel?: string;
   anfangsWeg?: boolean;
   anfangsHeute?: boolean;
@@ -171,9 +184,9 @@ export function GameSelect({
    */
   onBock?: () => void;
 }): React.JSX.Element {
-  const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
-  const [sammlungSpiel, setSammlungSpiel] = useState('alle');
-  const [sammlungEinstieg, setSammlungEinstieg] = useState<{ spiel: string; art: SammelBereich | null } | null>(null);
+  const [tab, setTab] = useState<Tab>(anfangsTab ?? (anfangsSammlung ? 'blatt' : 'spielen'));
+  const [sammlungSpiel, setSammlungSpiel] = useState(anfangsSammlung?.spiel ?? 'alle');
+  const [sammlungEinstieg, setSammlungEinstieg] = useState<{ spiel: string; art: SammelBereich | null } | null>(anfangsSammlung ?? null);
   const [shopZiel, setShopZiel] = useState<{ spiel: string; artikel?: string }>({ spiel: 'alle' });
   const zumTagesShop = (spiel: string, artikel?: string): void => { setShopZiel({ spiel: ['doppelkopf', 'skat', 'brochess', 'allgemein'].includes(spiel) ? spiel : 'alle', artikel }); setSchrankOffen(false); setTab('shop'); };
   /** Neues Hub: das Spiel, dessen Spielseite im Reiter „Spiele" offen ist. */
@@ -196,7 +209,7 @@ export function GameSelect({
   const [schrankOffen, setSchrankOffen] = useState(false);
   const [klanghalleOffen, setKlanghalleOffen] = useState(false);
   /** Doppelkopf lernen: Lernpfad als Vollbild. */
-  const [lernenOffen, setLernenOffen] = useState(false);
+  const [lernenOffen, setLernenOffen] = useState(anfangsLernen === true && imUmfang('lernpfad'));
   // Allein der Umfang der Ausgabe entscheidet (umfang.ts): Fehlt der Teil
   // dort, fehlt sein Einstieg — die Route sperrt der Server ohnehin. Bis zum
   // 23.10.2026 stand davor `inApp`, und die Webseite hing der App hinterher

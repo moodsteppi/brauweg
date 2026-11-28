@@ -38,7 +38,7 @@ export default {
   'filler.menue.freunde': 'Invite friends',
   'filler.menue.bots': 'Play against 3 bots',
   'filler.menue.vierSuche': 'The search gathers players for a table of four for 30 seconds – bots fill the free seats.',
-  'filler.zurueckZurSpielseite': 'Back to the game page',
+  'filler.zurueckZurSpielseite': 'Back to all games',
   'filler.menue.suchen': 'Find online match…',
   'filler.menue.bot': 'Play against a bot',
   'filler.menue.text': 'Recolor your territory and swallow everything that borders it.',

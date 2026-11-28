@@ -50,7 +50,7 @@ export default {
   'filler.menue.freunde': 'Freunde einladen',
   'filler.menue.bots': 'Gegen 3 Bots spielen',
   'filler.menue.vierSuche': 'Die Suche sammelt 30 Sekunden lang Mitspieler für einen Vierertisch – freie Plätze füllen Bots.',
-  'filler.zurueckZurSpielseite': 'Zurück zur Spielseite',
+  'filler.zurueckZurSpielseite': 'Zurück zu allen Spielen',
   'filler.menue.suchen': 'Online Match suchen…',
   'filler.menue.bot': 'Gegen Bot spielen',
   'filler.menue.text': 'Färbe dein Gebiet um und schlucke, was daran grenzt.',

@@ -34,7 +34,7 @@ export default {
   'mememory.mehrSeite.bald': 'bald',
 
   'mememory.menue.unter': 'Zwei Bilder, ein Paar, zwei bis vier Spieler.',
-  'mememory.menue.zurueck': 'Zurück zur Spielseite',
+  'mememory.menue.zurueck': 'Zurück zu allen Spielen',
   'mememory.menue.online': 'Online Match suchen…',
   'mememory.menue.ki': 'Gegen die KI',
   'mememory.menue.kiText': 'Bis zu drei Gegner, jeder mit eigener Spielstärke.',

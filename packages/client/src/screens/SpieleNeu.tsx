@@ -16,9 +16,10 @@ import { BRO_SPIELE } from '../broremote/spiele';
 import { bannerFuer } from './StartNeu';
 import { SammelIcon, SammlungVorschau, type SammelBereich } from './SammlungVorschau';
 import { HubBildIcon } from './HubBildIcon';
+import { Herz } from './EinstiegEcke';
 
 /**
- * Der Reiter „Spiele" im neuen Hub und die Spielseite davor
+ * Der Reiter „Spiele" im neuen Hub und die Übersichtsseite eines Spiels
  * (Entwurf „Nachtblau & Gold", Fassung 4 vom 26.09.2026).
  *
  * Spiele stehen nach Kategorien. Die Kategorien kennt nur der Client: Im
@@ -26,8 +27,12 @@ import { HubBildIcon } from './HubBildIcon';
  * Ordnung für die Anzeige. Ein Spiel, das in keiner steht, landet unter
  * „Weitere" und fällt so nie still heraus.
  *
- * Ein Tipp auf ein Spiel öffnet seine Spielseite, erst „Zum Spiel" führt in
- * die eigene Lobby des Spiels (Robin, 26.09.2026).
+ * Ein Tipp auf ein Spiel führt seit dem 28.11.2026 abends direkt in seinen
+ * Spieleinstieg (Spielarten und Quick-Play). Die Übersicht mit Ausstattung,
+ * Trophäen und Rangliste (`SpielSeite`) öffnet dort der runde Eckknopf
+ * (EinstiegEcke.tsx) — vorher stand sie davor, und jedes Spiel kostete einen
+ * Tipp mehr (Robin: „möglichst wenig Klicks ins Spiel"). Über `offen` lässt
+ * sie sich im Reiter weiter zeigen (Probe `?dev=hub&tab=spiele&spiel=…`).
  */
 
 /*
@@ -103,6 +108,8 @@ function KategorieZeichen({ id }: { id: string }): React.JSX.Element {
   if (id === 'broremote') return <Symbol><path d="M3 4h14v11H3z M6 20h8 M10 15v5"/><rect x="18" y="11" width="4" height="11" rx="1"/></Symbol>;
   if (id === 'solo') return <Symbol><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></Symbol>;
   if (id === 'bald') return <Symbol><path d="M6 3h12 M6 21h12 M7 3v4l5 5-5 5v4 M17 3v4l-5 5 5 5v4"/></Symbol>;
+  if (id === 'favoriten') return <Symbol>{FAVORIT_ZEICHEN}</Symbol>;
+  if (id === 'zuletzt') return <Symbol>{ZULETZT_ZEICHEN}</Symbol>;
   return <Symbol>{KATEGORIEN.find(k => k.id === id)?.icon ?? <path d="M4 7h16v14H4z M8 7V3h8v4"/>}</Symbol>;
 }
 
@@ -142,15 +149,6 @@ const SOLO: Readonly<Record<string, { name: () => string; bild: string; stil?: R
   browort: { name: () => 'Browort', bild: '/hub/browort-icon.webp' },
 };
 
-/** Das Herz als SVG — ein Zeichen reicht, eine Grafik wäre eine Bestellung (Plan, Abschnitt 7). */
-function Herz({ voll }: { voll: boolean }): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill={voll ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-      <path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />
-    </svg>
-  );
-}
-
 /** Das kleine Herz an einer Favoriten-Kachel; der Name steht für das Vorlesen dabei. */
 function FavoritMarke(): React.JSX.Element {
   return (
@@ -162,45 +160,29 @@ function FavoritMarke(): React.JSX.Element {
 }
 
 /**
- * „Deine Spiele" ganz oben im Reiter (Robin, B4): zwei Reihen, Favoriten in
- * der gespeicherten Reihenfolge, darunter zuletzt gespielt ohne die
- * Favoriten. Eine leere Reihe entfällt, beide leer — der ganze Abschnitt
- * (kein leerer Kasten bei einem neuen Konto).
+ * Die Kacheln von Favoriten und „Zuletzt gespielt" (Robin, B4): Favoriten in
+ * der gespeicherten Reihenfolge, zuletzt gespielt ohne die Favoriten — ein
+ * Spiel steht so nie zweimal übereinander. Eine leere Liste heißt: kein Chip
+ * und keine Reihe (kein leerer Kasten bei einem neuen Konto).
  */
-function DeineSpiele({
-  favoriten,
-  zuletzt,
-  kachelFuer,
-}: {
-  favoriten: readonly string[];
-  zuletzt: readonly string[];
-  kachelFuer: (id: string, favorit: boolean) => React.JSX.Element | null;
-}): React.JSX.Element | null {
+function deineKacheln(
+  favoriten: readonly string[],
+  zuletzt: readonly string[],
+  kachelFuer: (id: string, favorit: boolean) => React.JSX.Element | null,
+): { favoriten: React.JSX.Element[]; zuletzt: React.JSX.Element[] } {
   const fav = favoriten.map((id) => kachelFuer(id, true)).filter((k): k is React.JSX.Element => k !== null);
   const schonDa = new Set(favoriten);
   const zul = [...new Set(zuletzt)]
     .filter((id) => !schonDa.has(id))
     .map((id) => kachelFuer(id, false))
     .filter((k): k is React.JSX.Element => k !== null);
-  if (fav.length === 0 && zul.length === 0) return null;
-  return (
-    <section className="hb-blk hb-deine" aria-label={t('spielwahl.deine.titel')}>
-      <h2 className="hb-ab">{t('spielwahl.deine.titel')}</h2>
-      {fav.length > 0 && (
-        <div className="hb-deine-reihe" role="group" aria-label={t('spielwahl.deine.favoriten')}>
-          <h3 className="hb-deine-unter">{t('spielwahl.deine.favoriten')}</h3>
-          <div className="hb-reihe">{fav}</div>
-        </div>
-      )}
-      {zul.length > 0 && (
-        <div className="hb-deine-reihe" role="group" aria-label={t('spielwahl.deine.zuletzt')}>
-          <h3 className="hb-deine-unter">{t('spielwahl.deine.zuletzt')}</h3>
-          <div className="hb-reihe">{zul}</div>
-        </div>
-      )}
-    </section>
-  );
+  return { favoriten: fav, zuletzt: zul };
 }
+
+/** Uhr mit Pfeil zurück — „Zuletzt gespielt" im Chip und über der Reihe. */
+const ZULETZT_ZEICHEN = <path d="M4 12a8 8 0 1 0 2.4-5.7 M4 4v4h4 M12 8v4l3 2" />;
+/** Dasselbe Herz wie auf der Kachel, als Umriss für Chip und Überschrift. */
+const FAVORIT_ZEICHEN = <path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />;
 
 function kategorieVon(gameId: string): Kategorie | null {
   return KATEGORIEN.find((k) => k.spiele.includes(gameId)) ?? null;
@@ -265,7 +247,7 @@ export function SpieleNeu({
   const [abstimmFehler, setAbstimmFehler] = useState<string | null>(null);
   const unterwegs = useRef(new Set<string>());
   const [sendet, setSendet] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<string>('alle');
+  const [filterWahl, setFilter] = useState<string>('alle');
   /** „Kommt bald" in der App: zu, bis jemand hineinsieht. */
   const [baldOffen, setBaldOffen] = useState(false);
 
@@ -339,6 +321,7 @@ export function SpieleNeu({
   const trophaeen = (id: string): number => me.stats.find((s) => s.gameId === id)?.trophies ?? 0;
   const bekannt = new Set(KATEGORIEN.flatMap((k) => k.spiele));
   const weitere = spielbar.filter((g) => !bekannt.has(g.id));
+  // Eine Funktion statt eines Werts: `filter` steht erst unten fest, wenn die Register-Chips bekannt sind.
   const zeige = (id: string): boolean => filter === 'alle' || filter === id;
 
   // Spiele, ueber die erst abgestimmt wird, gibt es noch nicht — also auch
@@ -374,7 +357,7 @@ export function SpieleNeu({
     const spiel = spielbar.find((g) => g.id === id);
     if (spiel && inAppSichtbar(id)) {
       return (
-        <button type="button" className="hb-sk" key={id} onClick={() => onOeffne(id)}>
+        <button type="button" className="hb-sk" key={id} onClick={() => onPick(id)}>
           <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(id)})` }} />
           <strong>{t(spiel.nameKey)}</strong>
           {trophaeen(id) > 0 ? (
@@ -452,7 +435,7 @@ export function SpieleNeu({
   );
 
   const karte = (g: GameSummary): React.JSX.Element => (
-    <button type="button" className="hb-sk" key={g.id} onClick={() => onOeffne(g.id)}>
+    <button type="button" className="hb-sk" key={g.id} onClick={() => onPick(g.id)}>
       <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(g.id)})` }} />
       <strong>{t(g.nameKey)}</strong>
       {trophaeen(g.id) > 0 ? (
@@ -466,6 +449,19 @@ export function SpieleNeu({
     </button>
   );
 
+  const deine = deineKacheln(favoriten, (me.zuletzt ?? []).map((z) => z.spiel), deineKachel);
+  /* Favoriten und „Zuletzt gespielt" als die ersten Register nach „Alle" —
+     nur, wenn dahinter etwas steht (ein Chip vor einer leeren Liste wäre ein
+     leerer Bildschirm, siehe chipsFuer). */
+  const registerChips = [
+    { id: 'alle', titel: t('spielwahl.alle') },
+    ...(deine.favoriten.length > 0 ? [{ id: 'favoriten', titel: t('spielwahl.deine.favoriten') }] : []),
+    ...(deine.zuletzt.length > 0 ? [{ id: 'zuletzt', titel: t('spielwahl.deine.zuletzt') }] : []),
+    ...chips,
+  ];
+  // Verschwindet das gewählte Register (letzter Favorit entfernt), gilt wieder „Alle".
+  const filter = registerChips.some((k) => k.id === filterWahl) ? filterWahl : 'alle';
+
   return (
     <div className="hb-spiele hb-einheitlich">
       <header className="hb-kopfzeile">
@@ -474,15 +470,8 @@ export function SpieleNeu({
 
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
       <div className="hb-spiele-rolle">
-        {/* „Deine Spiele" steht vor den Registern (Robin, B4) und rollt mit
-            weg; die Register kleben danach oben, wie vorher über der Liste. */}
-        <DeineSpiele
-          favoriten={favoriten}
-          zuletzt={(me.zuletzt ?? []).map((z) => z.spiel)}
-          kachelFuer={deineKachel}
-        />
         <div className="hb-chips kategorie-register hb-chips-klebend" role="tablist" aria-label={t('spielwahl.kategorien')}>
-          {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
+          {registerChips.map((k) => (
             <button
               type="button"
               role="tab"
@@ -499,6 +488,31 @@ export function SpieleNeu({
             </button>
           ))}
         </div>
+
+        {/* Favoriten und „Zuletzt gespielt" stehen seit dem 28.11.2026 abends
+            UNTER den Registern, als erste Reihen von „Alle" und im selben
+            Kachelstil wie die Kategorien (Robin: vorher ein eigener Kasten
+            darüber, der die Register nach unten schob). */}
+        {deine.favoriten.length > 0 && zeige('favoriten') && (
+          <section className="hb-blk" aria-label={t('spielwahl.deine.favoriten')}>
+            <h2 className="hb-ab">
+              <Symbol>{FAVORIT_ZEICHEN}</Symbol>
+              {t('spielwahl.deine.favoriten')}
+              <span className="hb-ab-zusatz">{deine.favoriten.length}</span>
+            </h2>
+            <div className="hb-reihe">{deine.favoriten}</div>
+          </section>
+        )}
+        {deine.zuletzt.length > 0 && zeige('zuletzt') && (
+          <section className="hb-blk" aria-label={t('spielwahl.deine.zuletzt')}>
+            <h2 className="hb-ab">
+              <Symbol>{ZULETZT_ZEICHEN}</Symbol>
+              {t('spielwahl.deine.zuletzt')}
+              <span className="hb-ab-zusatz">{deine.zuletzt.length}</span>
+            </h2>
+            <div className="hb-reihe">{deine.zuletzt}</div>
+          </section>
+        )}
 
         {zeige('broremote') && <section className="hb-blk"><h2 className="hb-ab"><Symbol><path d="M3 4h15v11H3z M7 20h7 M10 15v5 M19 12h4v10h-4z"/></Symbol>BroRemote<span className="hb-ab-zusatz">2</span></h2><div className="hb-reihe">{BRO_SPIELE.map(g => <a className="hb-sk" key={g.id} href={`/broremote?spiel=${g.id}`} style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:g.id === 'building' ? `url(${g.bild}), url(/broremote/bauwelt.webp)` : `url(${g.bild})`,backgroundSize:g.id === 'building' ? 'auto 95%, cover' : 'cover',backgroundRepeat:'no-repeat',backgroundPosition:'center'}}/><strong>{g.name}</strong><small>{g.spieler}</small></a>)}</div></section>}
         {KATEGORIEN.map((k) => {
@@ -644,33 +658,38 @@ export function SpieleNeu({
 }
 
 /**
- * Die Spielseite: großes Banner, die eigenen Trophäen in diesem Spiel, der
- * Beitrag zum gemeinsamen Trophäenweg, Blatt und Tisch aus der Sammlung und
- * die Rangliste. „Zum Spiel" öffnet die eigene Lobby des Spiels.
+ * Die Übersichtsseite eines Spiels: großes Banner, die eigenen Trophäen in
+ * diesem Spiel, der Beitrag zum gemeinsamen Trophäenweg, Blatt und Tisch aus
+ * der Sammlung und die Rangliste.
  *
- * Die Reiterleiste bleibt dabei sichtbar (Apple: Tab-Leiste auf jeder
- * Push-Ebene), der Zurück-Pfeil führt zur Übersicht.
+ * Seit dem 28.11.2026 abends öffnet sie der Eckknopf im Spieleinstieg als
+ * Blatt darüber (EinstiegEcke.tsx). Dort fehlen „Zum Spiel" und das Herz:
+ * Man steht ja schon im Spiel, und das Herz sitzt neben dem Eckknopf. Im
+ * Reiter (`offen`) bleibt die alte Fassung mit beidem.
  */
-function SpielSeite({
+export function SpielSeite({
   game,
   me,
   onZurueck,
+  zurueckText = t('spielwahl.seite.zurueck'),
   onZumSpiel,
   onSammlung,
   onLernen,
   favorit,
   onFavorit,
-  favoritFehler,
+  favoritFehler = null,
 }: {
-  game: GameSummary;
+  /** Mehr als Kennung, Name und Sitze braucht die Seite nicht — der Einstieg hat keine ganze Spielliste. */
+  game: Pick<GameSummary, 'id' | 'nameKey' | 'seatCounts'>;
   me: Me;
   onZurueck: () => void;
-  onZumSpiel: () => void;
+  zurueckText?: string;
+  onZumSpiel?: () => void;
   onSammlung: (art?: SammelBereich) => void;
   onLernen?: () => void;
-  favorit: boolean;
-  onFavorit: (an: boolean) => void;
-  favoritFehler: string | null;
+  favorit?: boolean;
+  onFavorit?: (an: boolean) => void;
+  favoritFehler?: string | null;
 }): React.JSX.Element {
   const [rangliste, setRangliste] = useState<RankingEntry[] | null>(null);
   useEffect(() => {
@@ -694,7 +713,7 @@ function SpielSeite({
   // Verglichen wird der Text: Feldherr ist „Echtzeit" in „Echtzeit" — doppelt stünde es sonst da.
   const zusatz = ZUSATZ.has(game.id) ? t(`spielwahl.zusatz.${game.id}`) : null;
   const unterzeile = [
-    tf('spielwahl.spieler', { spanne: sitzSpanne(game.seatCounts) }),
+    game.seatCounts.length > 0 ? tf('spielwahl.spieler', { spanne: sitzSpanne(game.seatCounts) }) : null,
     einzahl,
     zusatz && zusatz !== einzahl ? zusatz : null,
   ]
@@ -714,7 +733,7 @@ function SpielSeite({
   return (
     <div className="hb-spielseite">
       <div className="hb-sp-kopf" style={{ backgroundImage: `url(${bannerFuer(game.id)})` }}>
-        <button type="button" className="hb-rund" onClick={onZurueck} aria-label={t('spielwahl.seite.zurueck')}>
+        <button type="button" className="hb-rund" onClick={onZurueck} aria-label={zurueckText}>
           <Symbol>
             <path d="M15 5l-7 7 7 7" />
           </Symbol>
@@ -723,15 +742,17 @@ function SpielSeite({
             (Plan, Abschnitt 5). aria-pressed sagt den Zustand, der Name
             bleibt gleich — „Favorit entfernen" und „merken" im Wechsel
             verwirren beim Vorlesen mehr, als sie helfen. */}
-        <button
-          type="button"
-          className={`hb-rund hb-sp-herz${favorit ? ' is-an' : ''}`}
-          aria-pressed={favorit}
-          aria-label={tf('spielwahl.favorit.knopf', { spiel: t(game.nameKey) })}
-          onClick={() => onFavorit(!favorit)}
-        >
-          <Herz voll={favorit} />
-        </button>
+        {onFavorit && (
+          <button
+            type="button"
+            className={`hb-rund hb-sp-herz${favorit ? ' is-an' : ''}`}
+            aria-pressed={favorit === true}
+            aria-label={tf('spielwahl.favorit.knopf', { spiel: t(game.nameKey) })}
+            onClick={() => onFavorit(!favorit)}
+          >
+            <Herz voll={favorit === true} />
+          </button>
+        )}
         <div className="hb-sp-titel">
           <h1>{t(game.nameKey)}</h1>
           <span>{unterzeile}</span>
@@ -739,10 +760,12 @@ function SpielSeite({
       </div>
       <div className="hb-sp-inhalt">
         {favoritFehler && <p role="alert" className="hb-text">{favoritFehler}</p>}
-        <button type="button" className="hb-kn is-gold is-haupt is-breit hb-sp-start" onClick={onZumSpiel}>
-          <img src="/hub/start-einstiege/play.webp" alt="" draggable={false} />
-          {t('spielwahl.seite.zumSpiel')}
-        </button>
+        {onZumSpiel && (
+          <button type="button" className="hb-kn is-gold is-haupt is-breit hb-sp-start" onClick={onZumSpiel}>
+            <img src="/hub/start-einstiege/play.webp" alt="" draggable={false} />
+            {t('spielwahl.seite.zumSpiel')}
+          </button>
+        )}
 
         {MIT_THEMEN.has(game.id) && (
           <section className="hb-blk hb-sp-ausstattung">

@@ -16,7 +16,7 @@ export default {
   'eiland.suche.gefunden.mehr': '{n} players found',
   'eiland.abbrechen': 'Cancel',
   'eiland.menue.unter': '2 players · you move at the same time',
-  'eiland.zurueckZurSpielseite': 'Back to the game page',
+  'eiland.zurueckZurSpielseite': 'Back to all games',
   'eiland.menue.suchen': 'Find online match…',
   'eiland.menue.text':
     'Claim land, collect ornaments and beat the other player to it. You both move at the same time – and whoever wants the same field has to fight for it.',

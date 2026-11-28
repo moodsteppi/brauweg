@@ -126,11 +126,15 @@ describe('Poker im neuen Hub', () => {
     });
   });
 
+  // Der Preis steht an der Karte (groß sichtbar, klein als Beschreibung) und
+  // für die gewählte zusätzlich in der Zeile darunter (SpielartKarten.tsx).
   it('die Karte nennt, was die Spielart an BroJetons kostet', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
-    expect(screen.getByRole('button', { name: /^Hoch/ }).getAttribute('aria-describedby')).toBeTruthy();
-    expect(screen.getByText(/Kostet 2000 BroJetons/)).toBeInTheDocument();
+    const hoch = screen.getByRole('button', { name: /^Hoch/ });
+    expect(hoch).toHaveAccessibleDescription(/Kostet 2000 BroJetons/);
+    fireEvent.click(hoch);
+    expect(document.querySelector('.spa-beschreibung')).toHaveTextContent(/Kostet 2000 BroJetons/);
   });
 
   it('Quick-Play sucht über die Schlange in der gewählten Spielart — ohne Tischliste', async () => {

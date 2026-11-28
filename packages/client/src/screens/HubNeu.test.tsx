@@ -244,7 +244,11 @@ describe('Neues Hub', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 
-  it('öffnet ein Spiel erst über seine Spielseite, „Zum Spiel" führt in die Lobby', async () => {
+  // Seit dem 28.11.2026 abends führt ein Tipp direkt in den Einstieg (Robin:
+  // „möglichst wenig Klicks ins Spiel"); bis dahin kam erst die Spielseite,
+  // und „Zum Spiel" führte weiter. Die Übersicht liegt jetzt hinter dem
+  // Eckknopf im Einstieg (EinstiegEcke.test.tsx).
+  it('öffnet ein Spiel mit einem Tipp direkt in seinem Einstieg', async () => {
     const { onPick } = await zeige();
     fireEvent.click(within(reiter()).getByRole('button', { name: 'Spiele' }));
     await act(async () => {});
@@ -252,12 +256,8 @@ describe('Neues Hub', () => {
     const karten = screen.getAllByRole('button').filter((b) => /^(Doppelkopf|Skat)/.test(b.textContent ?? ''));
     expect(karten[0]).toHaveTextContent(/^Doppelkopf/);
     fireEvent.click(karten[0]!);
-    await act(async () => {});
-    expect(screen.getByRole('heading', { name: 'Doppelkopf' })).toBeInTheDocument();
-    expect(screen.getByText(/Platz 64/)).toBeInTheDocument();
-    expect(onPick).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Zum Spiel' }));
     expect(onPick).toHaveBeenCalledWith('doppelkopf');
+    expect(screen.queryByRole('button', { name: 'Zum Spiel' })).toBeNull();
   });
 
   it('lässt für kommende Spiele abstimmen', async () => {

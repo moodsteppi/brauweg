@@ -116,15 +116,19 @@
   --accent: var(--spe-akzent);
 }
 .spe .fl-spielart .aw-raster {
-  gap: 10px;
+  gap: 6px;
 }
 /* Ausdrücklich: Die Knopf-Rückstellung des Hubs (`:is(.hb, .spe) button`)
-   wiegt mehr als `.aw-kachel` und nähme Grund und Rand sonst weg. */
+   wiegt mehr als `.aw-kachel` und nähme Grund und Rand sonst weg.
+   Kompakt wie die Spielartkarten der anderen Einstiege (spielarten.css):
+   vier in einer Reihe, kleines Brett, nur der Name. */
 .spe .fl-spielart .aw-kachel {
-  border-radius: 16px;
+  min-height: 44px;
+  border-radius: 12px;
   border: 1.5px solid var(--hb-kontur);
   background: var(--hb-karte);
-  padding: 8px 8px 10px;
+  padding: 4px 4px 6px;
+  gap: 3px;
 }
 .spe .fl-spielart .aw-kachel.is-an {
   border: 2px solid var(--spe-akzent);
@@ -133,10 +137,10 @@
   background: color-mix(in srgb, var(--spe-akzent) 16%, var(--hb-karte));
 }
 .spe .fl-spielart .aw-titel {
-  font: 800 15px var(--hb-txt);
+  font: 800 13px var(--hb-txt);
 }
 .spe .fl-spielart-text {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   font: 700 13px/1.4 var(--hb-txt);
   color: var(--hb-leise);
@@ -149,7 +153,7 @@
 .spe .spe-wisch {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
   touch-action: pan-y;
 }
 
