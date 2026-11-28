@@ -215,6 +215,17 @@ export interface GameMeta {
    */
   readonly sitzeNurMitRegelsatz?: readonly number[];
   /**
+   * Die Tischgroesse der Mitspielersuche, wenn sie NICHT die groesste aus
+   * `seatCounts` sein soll. Muss in `seatCounts` stehen.
+   *
+   * Seit dem 28.11.2026, fuer Tafelrunde (Robin: "Wieso sind es jetzt 8
+   * Spieler Standard?"): Die Suche baute dort seit dem 05.09.2026 Tische zu
+   * acht und fuellte sie mit Bots, obwohl Bot-Tisch, Lobby und alle Messungen
+   * auf vier stehen. Acht bleiben fuer den verabredeten Tisch erlaubt — nur
+   * die Suche nimmt sie nicht mehr. Fehlt das Feld, gilt die groesste Zahl.
+   */
+  readonly suchSitze?: number;
+  /**
    * Laenge der Geberrotation bei gegebener Spielerzahl. Die Rundenzahl einer
    * Partie muss ein Vielfaches davon sein, damit jeder gleich oft gibt.
    */

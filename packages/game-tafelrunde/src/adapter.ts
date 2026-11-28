@@ -195,6 +195,9 @@ const meta: GameMeta = {
    */
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche baut Tische zu viert wie der Bot-Tisch, nicht zu acht
+  // (Robin, 28.11.2026). Abgestimmt und gemessen ist das Spiel zu viert.
+  suchSitze: 4,
   rotationSize: () => rotationSize(),
   suggestedRounds: () => suggestedRounds(),
   /**

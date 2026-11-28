@@ -91,6 +91,12 @@ export interface EigeneSicht {
    * wo Schluss ist, weiss das Modul. Wahlfrei fuer Tische aus der Zeit davor.
    */
   feldplaetzeNaechsteRunde?: number;
+  /**
+   * Gegen wen man im Kampf dieser Runde antritt, schon in der Ruestphase
+   * (seit dem 28.11.2026). `geist`: Es kommt das Abbild dieses Bretts. Null im
+   * Kampf und fuer Ausgeschiedene; wahlfrei fuer Tische aus der Zeit davor.
+   */
+  naechsterGegner?: { sitz: number; geist: boolean } | null;
   belegt: number;
   einkommen: number;
   /*

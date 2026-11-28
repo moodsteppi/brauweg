@@ -287,9 +287,22 @@ export function Spieltisch({
   // --- Wer gezeigt wird -----------------------------------------------------
 
   const zeile = (sitz: number): Sitzzeile | undefined => sitze.find((s) => s.seat === sitz);
-  const gegnerJetzt = gegnerDieseRunde(sicht.kaempfe, sicht.ich);
+  /* In der Ruestphase kennt die Sicht den naechsten Gegner schon
+     (`naechsterGegner`, Robin 28.11.2026) — er ist dort der Vorschlag fuer das
+     obere Brett und in der Leiste rot umrandet wie im Kampf. */
+  const naechster = eigenes?.naechsterGegner ?? null;
+  const gegnerJetzt = gegnerDieseRunde(sicht.kaempfe, sicht.ich) ?? naechster?.sitz ?? null;
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
-  const gegner = sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0];
+  const gegner =
+    sicht.gegner.find((g) => g.sitz === gezeigterGegner) ??
+    sicht.gegner.find((g) => g.sitz === naechster?.sitz) ??
+    lebendeGegner[0] ??
+    sicht.gegner[0];
+  const gegnerTitel = (sitz: number): string => {
+    const name = sitzName(zeile(sitz), sitz, sitze);
+    if (naechster?.sitz !== sitz) return tz('neu.feldVon', { name });
+    return tz(naechster.geist ? 'neu.naechsterGeist' : 'neu.naechsterGegner', { name });
+  };
 
   /* Wessen Kampf: der Angetippte (wenn er antritt), sonst meiner, sonst irgendeiner. */
   const schauKaempfe = kampfbild?.kaempfe ?? [];
@@ -437,7 +450,9 @@ export function Spieltisch({
             gegner={
               eigenes && gegner ? (
                 <>
-                <p className={stil.feldName}>{tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz, sitze) })}</p>
+                <p className={stil.feldName} data-naechster={naechster?.sitz === gegner.sitz ? '' : undefined}>
+                  {gegnerTitel(gegner.sitz)}
+                </p>
                 <Hexbrett
                   reihen={sicht.brettReihen}
                   spalten={sicht.brettSpalten}

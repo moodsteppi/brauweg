@@ -152,7 +152,11 @@ Entfernen des alten Bildschirms). Oberfläche nur noch
 `docs/ASSETS-TAFELRUNDE-NEU.md`). Fähigkeiten mit Mana und Markeneffekte im
 Regelkern (`docs/TAFELRUNDE-FAEHIGKEITEN.md`). Kein Neuwürfeln und kein
 Aufstieg mehr: Die Feldplätze folgen der Runde (2 bis 7), Preise 2/3/4. Jede
-Einheit zählt für eine Marke nur einmal. Plan und Entscheidungen:
+Einheit zählt für eine Marke nur einmal. Seit dem 28.11. sucht „Mitspieler
+suchen“ Tische zu viert statt zu acht (`suchSitze` in der Meta), die Rüstphase
+zeigt den nächsten Gegner (`naechsterGegner` in der eigenen Sicht), und im
+Kampf schauen die Figuren nach links oder rechts zu ihrem Ziel (gespiegelt,
+die Bildfolgen haben nur eine Richtung). Plan und Entscheidungen:
 `docs/TAFELRUNDE-NEU-UMSETZUNG.md`. In der App steht das Spiel weiter auf
 „Bald“. Der Absatz darunter beschreibt den Stand davor.
 

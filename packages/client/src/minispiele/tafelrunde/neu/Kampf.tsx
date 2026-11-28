@@ -243,6 +243,10 @@ export function Kampf({
           <Raster reihen={arenaReihen} spalten={brettSpalten} klasse={stil.arenaRaster} />
           {anzeige.stand.figuren.map((f) => (
             <Kampffigur
+              blicktLinks={blicktLinks(f.blick, (platz) => {
+                const p = gezeichneterPlatz(platz, felder, gedreht);
+                return wabenLage(mass, Math.floor(p / brettSpalten), p % brettSpalten).links;
+              })}
               key={f.id}
               f={f}
               einheit={katalog[f.einheitId]}
@@ -278,7 +282,24 @@ export function Kampf({
   );
 }
 
+/**
+ * Schaut die Figur nach links? Aus ihrem letzten Blick (`FigurNeu.blick`),
+ * gemessen an der GEZEICHNETEN Lage — bei gedrehter Arena ist links und rechts
+ * vertauscht. null: kein Blick bisher oder senkrecht (gleiche Spalte), dann
+ * bleibt die Grundrichtung der Seite.
+ */
+function blicktLinks(
+  blick: FigurNeu['blick'],
+  links: (platz: number) => number,
+): boolean | null {
+  if (!blick) return null;
+  const dx = links(blick.nach) - links(blick.von);
+  if (Math.abs(dx) < 0.01) return null;
+  return dx < 0;
+}
+
 function Kampffigur({
+  blicktLinks: links,
   f,
   einheit,
   voll,
@@ -292,6 +313,8 @@ function Kampffigur({
   effekte,
   gib,
 }: {
+  /** Siehe `blicktLinks`; null heisst Grundrichtung (unten rechts, oben links). */
+  blicktLinks: boolean | null;
   f: FigurNeu;
   einheit: Einheit | undefined;
   voll: number | null;
@@ -341,7 +364,7 @@ function Kampffigur({
           {mana !== null && <Manabalken anteil={mana} voll={mana >= 1} />}
         </span>
       )}
-      {einheit && <Figur einheit={einheit} klasse={stil.arenaFigur} spiegeln={seite === 'oben'} gib={gib} />}
+      {einheit && <Figur einheit={einheit} klasse={stil.arenaFigur} spiegeln={links ?? seite === 'oben'} gib={gib} />}
       {einheit && !f.tot && <RolleZeichen rolle={einheit.rolle} klasse={stil.sockel} />}
       {effekte.map((x) => (
         <Effektbild key={x.schluessel} name={x.name} wirker={x.wirker} />

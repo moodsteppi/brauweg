@@ -18,8 +18,11 @@ import { isReadyToStart, tableRules, tableWithSeats } from '../src/tables/servic
 const SPIEL = 'tafelrunde';
 const FENSTER_MS = 30_000;
 
-/** Tafelrunde spielt zu acht — die groesste Sitzzahl, die das Modul kennt. */
-const SITZE = 8;
+/**
+ * Tafelrunde sucht zu viert: `suchSitze` im Modul (seit dem 28.11.2026, vorher
+ * die groesste Sitzzahl, acht). Acht bleiben fuer den verabredeten Tisch.
+ */
+const SITZE = 4;
 
 interface Stand {
   ctx: TestContext;
@@ -267,7 +270,7 @@ test('Wer nachfragt, waehrend sein Tisch gerade entsteht, sucht noch — und bek
   assert.deepEqual(s.angestupst, [annasStand.tischId], 'genau ein Tisch');
 });
 
-test('Acht Menschen starten sofort, ohne die 30 Sekunden abzusitzen', async (t) => {
+test('Ein voller Tisch Menschen startet sofort, ohne die 30 Sekunden abzusitzen', async (t) => {
   const s = await stand();
   t.after(() => s.close());
 
@@ -281,10 +284,10 @@ test('Acht Menschen starten sofort, ohne die 30 Sekunden abzusitzen', async (t) 
 
   // Die Uhr steht seit dem ersten Suchenden still: Ohne die Voll-Regel waere
   // hier noch nichts passiert.
-  assert.ok(letzter, 'mit dem achten Menschen geht es sofort los');
+  assert.ok(letzter, 'mit dem vierten Menschen geht es sofort los');
 
   const { table, seats } = await tableWithSeats(s.ctx.db, letzter);
-  assert.equal(seats.filter((sitz) => sitz.accountId).length, SITZE, 'acht Menschen, kein Bot');
+  assert.equal(seats.filter((sitz) => sitz.accountId).length, SITZE, 'nur Menschen, kein Bot');
   assert.equal(table.seats, SITZE);
 });
 
@@ -340,7 +343,7 @@ test('Wer nicht mehr nachfragt, faellt aus der Schlange', async (t) => {
   assert.deepEqual(await tischeVon(s, bert), [], 'der Abgehaengte sitzt an keinem Tisch');
 });
 
-test('Ein Suchender allein bekommt nach 30 Sekunden sieben Bots', async (t) => {
+test('Ein Suchender allein bekommt nach 30 Sekunden drei Bots', async (t) => {
   const s = await stand();
   t.after(() => s.close());
 
@@ -354,7 +357,7 @@ test('Ein Suchender allein bekommt nach 30 Sekunden sieben Bots', async (t) => {
   const { table, seats } = await tableWithSeats(s.ctx.db, annasStand.tischId);
   assert.equal(table.seats, SITZE);
   assert.equal(seats.filter((sitz) => sitz.accountId).length, 1);
-  assert.equal(isReadyToStart(table, seats), true, 'sieben Bots fuellen auf, der Tisch startet');
+  assert.equal(isReadyToStart(table, seats), true, 'drei Bots fuellen auf, der Tisch startet');
 });
 
 test('Die Suche ueber HTTP: beginnen, nachfragen, abbrechen', async (t) => {

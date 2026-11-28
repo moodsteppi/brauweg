@@ -48,7 +48,9 @@ import {
   darfHandeln,
   einkommen,
   heerVon,
+  lebendeSitze,
   platzierungen,
+  setzeAn,
   sieger,
   sitzeVon,
 } from './partie.js';
@@ -95,6 +97,19 @@ export interface EigeneSicht {
    * naechste Runde" zeigen kann, ohne die Regel nachzurechnen.
    */
   readonly feldplaetzeNaechsteRunde: number;
+  /**
+   * Gegen wen dieser Sitz im Kampf DIESER Runde antritt — schon waehrend der
+   * Vorbereitung (Robin, 28.11.2026: "In der Vorbereitungsrunde soll man
+   * sehen, gegen wen man als Naechstes spielt"). `geist` heisst: Es tritt das
+   * Abbild dieses Bretts an, der Sitz selbst kaempft woanders.
+   *
+   * Die Paarung haengt nur an Saat, Runde und den lebenden Sitzen, und die
+   * aendern sich zwischen Vorbereitung und Kampf nicht (ausgeschieden wird
+   * erst beim Abrechnen). Deshalb steht sie hier schon fest und ist dieselbe
+   * wie spaeter in `kaempfe`. Ausserhalb der Vorbereitung und fuer
+   * Ausgeschiedene null; der laufende Kampf steht dann in `paarungen`.
+   */
+  readonly naechsterGegner: { readonly sitz: number; readonly geist: boolean } | null;
   /** Darf dieser Sitz gerade ueberhaupt handeln? */
   readonly darfHandeln: boolean;
   /**
@@ -495,6 +510,22 @@ function grundsicht(
   };
 }
 
+/** Siehe `EigeneSicht.naechsterGegner`. */
+function naechsterGegner(
+  partie: TafelrundePartie,
+  sitz: number,
+): { sitz: number; geist: boolean } | null {
+  if (partie.phase !== 'vorbereitung') return null;
+  if (heerVon(partie, sitz).ausRunde !== null) return null;
+  // Dieselbe Auswahl wie `kampfVon`: Wer nur als Geist eines anderen antritt,
+  // kaempft selbst in einer anderen Paarung.
+  const an = setzeAn(lebendeSitze(partie), partie.saat, partie.runde).find(
+    (a) => a.a === sitz || (a.b === sitz && !a.geist),
+  );
+  if (!an) return null;
+  return { sitz: an.a === sitz ? an.b : an.a, geist: an.a === sitz && an.geist };
+}
+
 export function sichtFuer(
   partie: TafelrundePartie,
   sitz: number,
@@ -517,6 +548,7 @@ export function sichtFuer(
     einkommen: einkommen(heer, partie.regeln),
     wuerfeRunde: heer.wuerfeRunde,
     feldplaetzeNaechsteRunde: feldplaetze(levelFuerRunde(partie.runde + 1)),
+    naechsterGegner: naechsterGegner(partie, sitz),
     darfHandeln: darfHandeln(partie, sitz),
     synergien: synergienVon(heer.brett),
   };
