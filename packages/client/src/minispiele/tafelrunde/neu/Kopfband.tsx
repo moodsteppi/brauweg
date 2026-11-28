@@ -96,7 +96,6 @@ export function Kopfband({
   const rest = useRestzeit(frist);
   const reihe: Leistenplatz[] = leistenplaetze(sicht.eigenes, sicht.gegner, gegnerJetzt);
   const offen = reihe.filter((p) => p.ausRunde === null).length;
-  const bereit = reihe.filter((p) => p.ausRunde === null && p.bereit).length;
   const zeile = (sitz: number): Sitzzeile | undefined => sitze.find((s) => s.seat === sitz);
   const schild = uiHintergrund('spielerschild', '--tn-schild');
   // Die Kopfknoepfe bekommen denselben runden Knopf wie Bereit, aber
@@ -111,11 +110,13 @@ export function Kopfband({
         </button>
         <div className={stil.phase}>
           <strong>{tz('runde', { n: sicht.runde })}</strong>
+          {/* Seit dem 28.11.2026 in der Ruestphase nur „Feld 6/6" (Robin: „Runde 5
+              oben reicht", „Platzierungsphase 0 von 4 bereit brauchen wir auch
+              nicht"). Wer bereit ist, zeigt der Haken an seinem Schild. */}
           <span>
-            {tz(`phase.${sicht.phase}`)}
-            {/* Die Ruestphase endet, wenn alle bereit sind — die Zahl sagt,
-                wie weit das ist; die Restzeit nur, wenn der Server eine setzt. */}
-            {sicht.phase === 'vorbereitung' && ` · ${tz('phase.bereitZaehler', { bereit, offen })}`}
+            {sicht.phase === 'vorbereitung' && sicht.eigenes && sicht.eigenes.ausRunde === null
+              ? tz('neu.feld', { belegt: sicht.eigenes.belegt, plaetze: sicht.eigenes.feldplaetze })
+              : tz(`phase.${sicht.phase}`)}
           </span>
         </div>
         {rest !== null && (

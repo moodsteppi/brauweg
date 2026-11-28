@@ -238,6 +238,7 @@ export default {
   'tafelrunde.ui.neu.naechsterGegner': 'Nächster Gegner: {name}',
   'tafelrunde.ui.neu.naechsterGeist': 'Nächster Gegner: Abbild von {name}',
   'tafelrunde.ui.neu.gold': 'Gold',
+  'tafelrunde.ui.neu.goldNur': '{n} Gold',
   'tafelrunde.ui.neu.goldstand': '{n} Gold, nächste Runde +{plus}',
   'tafelrunde.ui.neu.stufe': 'Stufe {n}',
   'tafelrunde.ui.neu.marken': 'Marken',

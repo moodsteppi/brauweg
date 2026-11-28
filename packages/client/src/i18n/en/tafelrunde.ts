@@ -223,6 +223,7 @@ export default {
   'tafelrunde.ui.neu.naechsterGegner': 'Next rival: {name}',
   'tafelrunde.ui.neu.naechsterGeist': 'Next rival: copy of {name}',
   'tafelrunde.ui.neu.gold': 'gold',
+  'tafelrunde.ui.neu.goldNur': '{n} gold',
   'tafelrunde.ui.neu.goldstand': '{n} gold, +{plus} next round',
   'tafelrunde.ui.neu.stufe': 'Tier {n}',
   'tafelrunde.ui.neu.marken': 'Traits',

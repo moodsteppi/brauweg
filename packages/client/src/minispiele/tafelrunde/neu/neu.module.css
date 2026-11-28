@@ -3682,3 +3682,57 @@
 .markenRand .markenchip small {
   font-size: 10px;
 }
+
+/*
+ * Seit dem 28.11.2026 (Robin: unten Platz sparen): Gold oben rechts,
+ * gegenueber der Markenspalte, und der Bereit-Knopf rechts ueber der Bank.
+ */
+.goldRand {
+  position: absolute;
+  z-index: 6;
+  top: calc(max(6px, env(safe-area-inset-top)) + 150px);
+  right: max(4px, calc(50% - 15rem + 4px));
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(5, 11, 29, 0.72);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.goldRand[data-bild] {
+  /* Dieselbe Plakette wie die Goldanzeige der Shopleiste im Kampf. */
+  background: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  border: 0 solid transparent;
+  border-image: var(--tn-plakette) 26 fill / 9px / 0 stretch;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5));
+  min-height: 38px;
+  padding: 0 12px;
+}
+.bankZeile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 30rem;
+}
+.bankZeile > .bereitknopf {
+  position: absolute;
+  z-index: 4;
+  right: 10px;
+  bottom: calc(100% + 8px);
+}
+.spielerKachel[data-bereit]::after,
+.spielerKachel[data-bild][data-bereit]::after {
+  /* Ein Haken statt eines Punktes: Wer bereit ist, sieht man am Schild
+     (die Zahl „0 von 4 bereit" ist seit dem 28.11.2026 weg). */
+  content: '✓';
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+}
