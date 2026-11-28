@@ -164,11 +164,20 @@ async function main(): Promise<void> {
    * ADMIN_VERTRETUNG an ist (Vorgabe: staging), sonst ist niemand Admin.
    */
   const admins = adminVertretungAn(config.stage) ? new AdminListe(db, process.env.ADMIN_EMAILS) : undefined;
+  /*
+   * Quick-Play zaehlt die Wartenden der Arenen (src/schnellspiel.ts). Die
+   * Gateways brauchen den laufenden HTTP-Server und entstehen erst nach
+   * `listen` — bis dahin zaehlen die Arenen null, danach fragt der Rueckruf
+   * die echten.
+   */
+  const arenen: { tanks?: TanksOnlineGateway; ice?: IceGateway } = {};
   const app = await buildApp({
     admins,
     db,
     runtime,
     vermittlung,
+    arenaWartende: (arena) =>
+      (arena === 'tanks-online' ? arenen.tanks : arenen.ice)?.wartendeOnline() ?? 0,
     push,
     auth: {
       db,
@@ -202,6 +211,8 @@ async function main(): Promise<void> {
   await app.listen({ port: config.port, host: '0.0.0.0' });
   const tanksOnline = new TanksOnlineGateway(app.server, config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
   const ice = new IceGateway(app.server, config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
+  arenen.tanks = tanksOnline;
+  arenen.ice = ice;
   const broremote = new BroRemoteGateway(app.server,
     config.env === 'development' ? [] : [config.publicUrl, ...APP_ORIGINS]);
   app.server.on('upgrade', (anfrage, socket) => {

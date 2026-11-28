@@ -73,6 +73,11 @@ const meta: GameMeta = {
   nameKey: 'game.wizard',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Sechsertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Wer allein sucht, saesse
+  // sonst nach 30 s mit fuenf Bots am Tisch, und jede Runde dauerte laenger.
+  // Sechs bleiben fuer den verabredeten Tisch.
+  suchSitze: 4,
   // Bewusst 1: Die kanonische Rundenzahl (60/Spieler) geht durch keine
   // Sitzzahl auf. Die ausfuehrliche Begruendung steht in ruleset.ts.
   rotationSize: () => rotationSize(),

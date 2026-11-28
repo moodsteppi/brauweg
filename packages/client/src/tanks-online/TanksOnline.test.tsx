@@ -173,3 +173,23 @@ it('gibt nicht angemeldeten Gästen automatisch einen Gastnamen', async () => {
   expect(screen.getByText('Gast')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Quick Play/ })).toBeEnabled();
 });
+it('startet mit ?schnell=1 (Quick-Play vom Start) sofort die Online-Suche', async () => {
+  window.history.replaceState(null, '', '/tanks-online?schnell=1');
+  try {
+    await act(async () => {
+      render(<TanksOnline />);
+    });
+    expect(Leitung.alle).toHaveLength(1);
+    const a = Leitung.alle[0];
+    act(() => a.onopen?.());
+    expect(a.post[0]).toMatchObject({ art: 'online', name: 'Emile', version: 1 });
+  } finally {
+    window.history.replaceState(null, '', '/');
+  }
+});
+it('ohne ?schnell=1 wartet die Arena auf den Knopf', async () => {
+  await act(async () => {
+    render(<TanksOnline />);
+  });
+  expect(Leitung.alle).toHaveLength(0);
+});

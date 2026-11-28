@@ -58,6 +58,11 @@ const meta: GameMeta = {
   nameKey: 'game.easypoker',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Sechsertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): fuenf Bots um einen
+  // einzelnen Suchenden machen eine Runde nur laenger. Sechs bleiben fuer
+  // die Lobby.
+  suchSitze: 4,
   rotationSize: (seats) => rotationSize(seats),
   suggestedRounds: (seats) => suggestedRounds(seats),
   /**

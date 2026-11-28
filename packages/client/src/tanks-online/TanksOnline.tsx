@@ -5,6 +5,7 @@ import { useTanksOnline } from './useTanksOnline';
 import { OnlineLeinwand } from './OnlineLeinwand';
 import { OnlineSteuerung } from './OnlineSteuerung';
 import { wort } from './text';
+import { useZuletztMelden } from '../zuletzt';
 import './online.css';
 export default function TanksOnline() {
   const netz = useTanksOnline();
@@ -50,6 +51,24 @@ export default function TanksOnline() {
     if (name !== null)
       netz.los({ art, name, code: code.trim().toUpperCase(), ohneBots });
   };
+  // „Zuletzt gespielt" (seit dem 28.11.2026): Die Arena hat keinen Tisch,
+  // den der Server sieht, also meldet sie sich beim Öffnen selbst.
+  useZuletztMelden('tanks-online');
+  /*
+   * Quick-Play schickt mit `?schnell=1` hierher (Startseite, Plan Abschnitt 4):
+   * dann sofort die Online-Suche, dieselbe Aktion wie der Knopf „Quick Play"
+   * — ohne Zwischenmenü. Erst wenn der Name da ist (sonst verweigert `los`),
+   * genau einmal, und nicht über eine Partie hinweg, die sich fortsetzen
+   * ließe: Die gehört dem Spieler, Quick-Play soll sie nicht wegwerfen.
+   */
+  const [schnellGestartet, setSchnellGestartet] = useState(false);
+  useEffect(() => {
+    if (schnellGestartet || name === null || netz.aktiv || netz.fortsetzen) return;
+    if (new URLSearchParams(location.search).get('schnell') !== '1') return;
+    setSchnellGestartet(true);
+    los('online');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, schnellGestartet, netz.aktiv, netz.fortsetzen]);
   const bots = (wert: boolean) => {
     setOhneBots(wert);
     netz.senden({ art: 'bots', ohneBots: wert });

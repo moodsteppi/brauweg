@@ -82,6 +82,10 @@ const meta: GameMeta = {
   nameKey: 'game.cambio',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Sechsertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Wer allein sucht, saesse
+  // sonst nach 30 s mit fuenf Bots am Tisch. Sechs bleiben fuer die Lobby.
+  suchSitze: 4,
   rotationSize: (seats) => rotationSize(seats),
   suggestedRounds: (seats) => suggestedRounds(seats),
 };

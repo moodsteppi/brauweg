@@ -205,6 +205,9 @@ import {
 import type { Vermittlung } from '../suche/vermittlung.js';
 import type { Suchstand } from '../suche/schlange.js';
 import type { PartyRuntime } from '../runtime/party.js';
+import { schnellspielRouten } from './schnellspiel-routen.js';
+import { type ArenaWartende, sichtbarImUmfang, vorliebenFuer } from '../schnellspiel.js';
+import { zuletztFuer } from '../zuletzt.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
 
@@ -337,6 +340,14 @@ export interface AppDeps {
    * sie nicht aufbauen.
    */
   readonly vermittlung?: Vermittlung;
+  /**
+   * Quick-Play (src/schnellspiel.ts): wie viele Menschen in den Online-Lobbys
+   * der Arenen warten. Die Gateways entstehen erst nach `listen`, deshalb ein
+   * Rueckruf statt der Objekte (index.ts). Fehlt er, zaehlen die Arenen null.
+   */
+  readonly arenaWartende?: ArenaWartende;
+  /** Nur Tests: fester Zufall fuer Quick-Play (Schritt 4 und Gleichstaende). */
+  readonly schnellspielZufall?: (n: number) => number;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
@@ -1282,6 +1293,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       lernserieKurz(deps.db, accountId),
       browortKurz(deps.db, accountId),
     ]);
+    // Startseiten-Umbau (28.11.2026): Favoriten, Quick-Play-Auswahl und
+    // „zuletzt gespielt" — nur, was diese Ausgabe anbietet (wie `stats`).
+    const sichtbar = (spiel: string) => sichtbarImUmfang(umfang, spiel);
+    const [vorlieben, zuletzt] = await Promise.all([
+      vorliebenFuer(deps.db, accountId),
+      zuletztFuer(deps.db, accountId, sichtbar),
+    ]);
     return reply.send({
       ...rest,
       /**
@@ -1349,6 +1367,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       stats: stats.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       clubs,
       activeTable,
+      /**
+       * Favoriten (Reihenfolge des Hinzufuegens) und Quick-Play-Auswahl
+       * (null = alle Kandidaten; src/schnellspiel.ts). Die Auswahl geht
+       * ungefiltert hinaus — sie gilt fuer alle Geraete, das Zahnrad-Blatt
+       * schneidet sie mit den Kandidaten seiner Plattform.
+       */
+      vorlieben: { favoriten: vorlieben.favoriten.filter(sichtbar), schnellspiel: vorlieben.schnellspiel },
+      /** Zuletzt gespielt, neueste zuerst, hoechstens acht (src/zuletzt.ts). */
+      zuletzt,
       /** Darf dieses Konto sich am Tisch verdeckt vom Bot vertreten lassen (admin.ts)? */
       adminVertretung: (await deps.admins?.istAdmin(account.id)) ?? false,
     });
@@ -2752,6 +2779,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     sucheVermittlung().verlaesst(gameId, accountId);
     return reply.send({ ok: true });
+  });
+
+  // Quick-Play, Favoriten, „zuletzt gespielt" (Startseiten-Umbau, 28.11.2026).
+  schnellspielRouten(app, {
+    db: deps.db,
+    requireAccount,
+    plattform: plattformVon,
+    umfang,
+    vermittlung: deps.vermittlung,
+    arenaWartende: deps.arenaWartende,
+    notify: (tableId) => deps.runtime.notify(tableId),
+    pruefeAppTisch,
+    mitWartenden,
+    zufall: deps.schnellspielZufall,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
   // -------------------------------------------------------------------------

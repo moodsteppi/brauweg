@@ -97,4 +97,24 @@ describe("Ice-Clash-Verbindung", () => {
     act(() => vi.advanceTimersByTime(5000));
     expect(Leitung.alle).toHaveLength(1);
   });
+  it("startet mit ?schnell=1 (Quick-Play vom Start) nach dem Kontoladen sofort die Online-Suche", async () => {
+    window.history.replaceState(null, "", "/ice-clash?schnell=1");
+    try {
+      await act(async () => {
+        render(<IceClash />);
+      });
+      expect(Leitung.alle).toHaveLength(1);
+      const a = Leitung.alle[0];
+      act(() => a.onopen?.());
+      expect(a.post[0]).toMatchObject({ art: "online", version: 2 });
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
+  it("ohne ?schnell=1 wartet die Arena auf den Knopf", async () => {
+    await act(async () => {
+      render(<IceClash />);
+    });
+    expect(Leitung.alle).toHaveLength(0);
+  });
 });
