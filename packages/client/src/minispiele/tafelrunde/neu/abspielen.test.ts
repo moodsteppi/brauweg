@@ -35,6 +35,23 @@ function bericht(ereignisse: unknown[]): Kampfbericht {
 }
 
 describe('abspielen (TafelrundeNeu)', () => {
+  it('merkt sich den Blick: beim Laufen das neue Feld, beim Schlagen das Ziel, beim Brand nichts', () => {
+    const b = bericht([
+      { art: 'bewegung', zeitMs: 100, wer: 0, von: 40, nach: 33 },
+      { art: 'treffer', zeitMs: 200, wer: 1, ziel: 0, schaden: 5, lebenDanach: 95 },
+      { art: 'treffer', zeitMs: 300, wer: 0, ziel: 0, schaden: 3, lebenDanach: 92, quelle: 'brand' },
+    ]);
+    let stand = spieleBisNeu(anfangsstandNeu(b), b, 0);
+    expect(stand.figuren[0]!.blick).toBeNull();
+    stand = spieleBisNeu(stand, b, 100);
+    expect(stand.figuren[0]!.blick).toEqual({ von: 40, nach: 33 });
+    stand = spieleBisNeu(stand, b, 200);
+    expect(stand.figuren[1]!.blick).toEqual({ von: 5, nach: 33 });
+    // Der Brand nennt das Ziel selbst als `wer` — er dreht niemanden.
+    stand = spieleBisNeu(stand, b, 300);
+    expect(stand.figuren[0]!.blick).toEqual({ von: 40, nach: 33 });
+  });
+
   it('fuehrt das Mana beider Beteiligten aus dem Treffer und leert es beim Wirken', () => {
     const b = bericht([
       { art: 'treffer', zeitMs: 100, wer: 0, ziel: 1, schaden: 10, lebenDanach: 190, manaWer: 10, manaZiel: 5 },

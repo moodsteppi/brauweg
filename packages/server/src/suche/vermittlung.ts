@@ -57,11 +57,13 @@ export interface VermittlungOptionen extends SchlangeOptionen {
  * Die groesste Tischgroesse, die das Spiel kann.
  *
  * Robins Wunsch ist "alle Gefundenen, Rest mit Bots" — also der groesste
- * Tisch, den das Modul zulaesst. Fuer Tafelrunde sind das acht.
+ * Tisch, den das Modul zulaesst. Ausnahme ist ein Modul mit `suchSitze`:
+ * Tafelrunde sucht seit dem 28.11.2026 vier statt acht (siehe dort).
  */
 function zielSitze(gameId: GameId): number {
-  const counts = requireModule(gameId).meta.seatCounts;
-  return Math.max(...counts);
+  const meta = requireModule(gameId).meta;
+  if (meta.suchSitze !== undefined && meta.seatCounts.includes(meta.suchSitze)) return meta.suchSitze;
+  return Math.max(...meta.seatCounts);
 }
 
 /**

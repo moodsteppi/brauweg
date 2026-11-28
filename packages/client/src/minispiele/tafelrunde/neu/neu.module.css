@@ -1470,6 +1470,11 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
 }
 
+/* Der naechste Gegner in der Ruestphase: in der Farbe seiner Leistenkachel. */
+.feldName[data-naechster] {
+  color: #ffb4a8;
+}
+
 .feldName {
   margin: 0 0 4px;
   font-size: 11px;

@@ -77,6 +77,25 @@ describe('Eigene Sicht', () => {
     }
   });
 
+  it('nennt schon in der Vorbereitung den Gegner, der dann im Kampf wirklich kommt', () => {
+    // Zu fuenft, damit auch der Geist vorkommt: Einer bleibt uebrig.
+    for (const saat of [SAAT, '00112233445566778899aabbccddeeff', 'ffeeddccbbaa99887766554433221100']) {
+      let p = erstellePartie(DEFAULT_REGELN, [0, 1, 2, 3, 4], saat);
+      const angesagt = new Map([0, 1, 2, 3, 4].map((s) => [s, sichtFuer(p, s).eigenes!.naechsterGegner]));
+      for (const sitz of [0, 1, 2, 3, 4]) p = fuehreAus(p, sitz, { typ: 'bereit' });
+      assert.equal(p.phase, 'kampf');
+      for (const [sitz, gegner] of angesagt) {
+        assert.ok(gegner, `Sitz ${sitz} hat einen Gegner`);
+        const kampf = p.kaempfe.find((k) => k.a === sitz || (k.b === sitz && !k.geist))!;
+        const echt = kampf.a === sitz ? kampf.b : kampf.a;
+        assert.equal(gegner.sitz, echt, `Saat ${saat}, Sitz ${sitz}`);
+        assert.equal(gegner.geist, kampf.a === sitz && kampf.geist);
+      }
+      // Im Kampf steht die Paarung in `paarungen`, hier nicht mehr.
+      assert.equal(sichtFuer(p, 0).eigenes!.naechsterGegner, null);
+    }
+  });
+
   it('sagt, was die naechste Runde einbringt', () => {
     const p = mitHeer(neu(), 0, { gold: 30, serie: { art: 'niederlage', laenge: 5 } });
     // 5 Grundeinkommen + 3 Zins + 3 Serienbonus

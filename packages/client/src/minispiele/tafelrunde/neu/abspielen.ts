@@ -114,6 +114,17 @@ export interface FigurNeu extends Figur {
   readonly zustaende: Readonly<Partial<Record<Kampfzustand, number | null>>>;
   /** Wann die Figur zuletzt ihre Faehigkeit gewirkt hat — fuer das Aufleuchten. */
   readonly faehigkeitAb: number | null;
+  /**
+   * Wohin die Figur zuletzt geschaut hat, als Paar von Arenaplaetzen: beim
+   * Laufen vom alten zum neuen Feld, beim Schlagen vom eigenen Feld zum Ziel.
+   * Der Bildschirm macht daraus links oder rechts (Robin, 28.11.2026: "koennen
+   * sich die Truppen drehen im Kampf zu der Einheit, die sie angreifen?").
+   * Links/rechts und nicht mehr, weil die Bildfolgen aus EINER Richtung
+   * gerendert sind; gespiegelt schaut die Figur zur anderen Seite. null, bis
+   * sie das erste Mal laeuft oder schlaegt — dann gilt die Grundrichtung der
+   * Seite.
+   */
+  readonly blick: { readonly von: number; readonly nach: number } | null;
 }
 
 export interface AbspielstandNeu {
@@ -133,6 +144,7 @@ export function anfangsstandNeu(bericht: Kampfbericht): AbspielstandNeu {
       schild: f.schild ?? 0,
       zustaende: {},
       faehigkeitAb: null,
+      blick: null,
     })),
     effekte: [],
   };
@@ -168,7 +180,21 @@ export function wendeAnNeu(stand: AbspielstandNeu, e: Kampfereignis, nr: number)
   };
 
   switch (e.art) {
+    case 'bewegung': {
+      const von = stand.figuren.find((f) => f.id === e.wer)?.platz;
+      if (von !== undefined && von !== e.nach) {
+        figuren = aendere(figuren, e.wer, (f) => ({ ...f, blick: { von, nach: e.nach } }));
+      }
+      break;
+    }
     case 'treffer': {
+      // Nur echte Schlaege drehen: Beim Brand nennt das Protokoll das Ziel
+      // selbst als `wer`, und Selbst-Treffer haben keine Richtung.
+      const schlaeger = figuren.find((f) => f.id === e.wer);
+      const ziel = figuren.find((f) => f.id === e.ziel);
+      if (schlaeger && ziel && e.wer !== e.ziel && schlaeger.platz !== ziel.platz) {
+        figuren = aendere(figuren, e.wer, (f) => ({ ...f, blick: { von: schlaeger.platz, nach: ziel.platz } }));
+      }
       if (e.manaWer !== undefined) figuren = aendere(figuren, e.wer, (f) => ({ ...f, mana: e.manaWer! }));
       figuren = aendere(figuren, e.ziel, (f) => ({
         ...f,

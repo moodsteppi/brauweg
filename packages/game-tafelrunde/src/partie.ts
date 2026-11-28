@@ -859,6 +859,12 @@ export interface Ansetzung {
  * Runde antritt, ruestet gezielt gegen dieses eine Brett. Genau das soll ein
  * Auto-Battler nicht sein: Man baut gegen das FELD, nicht gegen einen Gegner.
  *
+ * Seit dem 28.11.2026 sieht man die Paarung DIESER Runde trotzdem schon in der
+ * Vorbereitung (`EigeneSicht.naechsterGegner`, Wunsch Robin). Das ist kein
+ * Widerspruch: Gemischt wird weiter jede Runde neu, man kennt also nur den
+ * naechsten Kampf, nicht den Turnus — und Bretter tauscht man in einer Runde
+ * kaum gezielt um.
+ *
  * Absichtlich NICHT ausgeschlossen ist, zweimal hintereinander auf denselben
  * Gegner zu treffen. Das kommt vor, und es auszuschliessen hiesse, sich die
  * vorige Runde zu merken — ein Zustand mehr im Snapshot fuer einen Nachteil,

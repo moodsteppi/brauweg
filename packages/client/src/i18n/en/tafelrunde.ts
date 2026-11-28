@@ -215,6 +215,8 @@ export default {
   'tafelrunde.ui.neu.wartesaal.einladen': 'Invite friends',
   'tafelrunde.ui.neu.deinFeld': 'Your field',
   'tafelrunde.ui.neu.feldVon': '{name}\'s field',
+  'tafelrunde.ui.neu.naechsterGegner': 'Next rival: {name}',
+  'tafelrunde.ui.neu.naechsterGeist': 'Next rival: copy of {name}',
   'tafelrunde.ui.neu.gold': 'gold',
   'tafelrunde.ui.neu.goldstand': '{n} gold, +{plus} next round',
   'tafelrunde.ui.neu.stufe': 'Tier {n}',
