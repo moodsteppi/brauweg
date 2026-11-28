@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api, ApiError, type TableRow } from '../api';
+import { api, ApiError, type Spielart } from '../api';
 import { cardName, isRed, rankLabel, suitSymbol, t } from '../i18n';
 import { tf } from '../i18n/einsetzen';
 import type {
@@ -15,6 +15,10 @@ import { GastHinweis } from '../tisch/GastHinweis';
 import { HbBlatt } from './HbBlatt';
 import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
 import './poker-einstieg.css';
+import { Einladung } from '../minispiele/partykiste/Einladung';
+import { SpielartKarten, SuchWarten, quickplayUnter, spielartName } from '../spielarten/SpielartKarten';
+import { useSchnellsuche } from '../spielarten/useSchnellsuche';
+import { useSpielarten } from '../spielarten/useSpielarten';
 
 /** Farbe von Poker im Hub: der grüne Filz unter den Jetons im Banner. */
 const AKZENT = '#34c38a';
@@ -25,9 +29,10 @@ const SITZ_WAHL = [2, 3, 4, 5, 6].map((n) => ({ wert: n, text: String(n) }));
  *
  * Ein Bildschirm mit zwei Gesichtern, wie bei Feldherr und Mememory: ohne
  * Tisch das Hauptmenue, mit Tisch der Filz. Der Tisch wird HIER gehalten und
- * nicht ueber App.tsx geroutet — die Match-Suche muss den Tisch unter
- * Umstaenden wechseln (Wettrennen-Regel weiter unten), und ein Wechsel ueber
- * zwei Bildschirmzustaende hinweg waere ein Flackern.
+ * nicht ueber App.tsx geroutet — Suche, Wartebereich und Filz gehen
+ * ineinander ueber, und ein Wechsel ueber zwei Bildschirmzustaende hinweg
+ * waere ein Flackern. (Bis zum 28.11.2026 musste die Suche ueber die
+ * Tischliste den Tisch sogar wechseln koennen; seitdem sucht die Schlange.)
  *
  * Arbeitsteilung mit dem Spielmodul: Dieser Bildschirm bildet KEINE Pokerregel
  * nach (DESIGN-DOKO). Die vier Schaltflaechen entstehen aus `legalActions`,
@@ -72,32 +77,25 @@ const ONLINE_SITZE = 6;
 
 type PokerRegeln = { startJetons: number; kleinerBlind: number; grosserBlind: number };
 
-/**
- * Drei fertige Einsaetze. Feiner drehen geht im Blatt darunter — Buy-in
- * und Blinds gehoeren an den Tisch, nicht fest ins Spiel.
+/*
+ * HIER STANDEN BIS ZUM 28.11.2026 DIE DREI EINSAETZE (Locker, Abend, Hoch)
+ * als `EINSATZ_VORGABEN`. Sie sind jetzt die Spielarten des Moduls
+ * (packages/game-easypoker/src/spielarten.ts) und kommen ueber
+ * `useSpielarten` vom Server: Ein Einsatz ist ein Regelsatz, und der gehoert
+ * dem Modul. Selbst zusammenstellen geht weiter im Einsatzblatt.
  */
-const EINSATZ_VORGABEN: readonly { id: string; regelsatz: PokerRegeln }[] = [
-  { id: 'locker', regelsatz: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
-  { id: 'abend', regelsatz: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } },
-  { id: 'hoch', regelsatz: { startJetons: 2_000, kleinerBlind: 20, grosserBlind: 40 } },
-];
 
-/**
- * Die Vorgaben als Auswahl. Gewählt wird über die feste `id`, angezeigt der
- * übersetzte Name — sonst hinge die Auswahl am Wortlaut der Sprache.
- */
-function vorgabeWerte(): { wert: string; text: string; unter: string }[] {
-  return EINSATZ_VORGABEN.map((v) => ({
-    wert: v.id,
-    text: t(`poker.vorgabe.${v.id}`),
-    unter: tf('poker.einsatz.kurz', { einsatz: v.regelsatz.startJetons, blinds: blindsText(v.regelsatz) }),
-  }));
+/** Der Einsatz aus dem Regelsatz einer Spielart — die drei Zahlen, sonst nichts. */
+function einsatzAus(art: Spielart | null): PokerRegeln | null {
+  const c = art?.config;
+  if (!c || typeof c.startJetons !== 'number' || typeof c.kleinerBlind !== 'number' || typeof c.grosserBlind !== 'number') {
+    return null;
+  }
+  return { startJetons: c.startJetons, kleinerBlind: c.kleinerBlind, grosserBlind: c.grosserBlind };
 }
 
 const BUY_IN_STUFEN = [200, 500, 1_000, 2_000, 5_000] as const;
 const SB_STUFEN = [1, 2, 5, 10, 25, 50, 100] as const;
-
-const REGELSATZ_VORGABE = EINSATZ_VORGABEN[0]!.regelsatz;
 
 function blindsZuBuyIn(buyIn: number): Pick<PokerRegeln, 'kleinerBlind' | 'grosserBlind'> {
   const kleinerBlind = Math.max(1, Math.round(buyIn / 100));
@@ -108,28 +106,8 @@ function regelsatzOk(r: PokerRegeln): boolean {
   return r.kleinerBlind >= 1 && r.grosserBlind > r.kleinerBlind && r.startJetons >= r.grosserBlind * 10;
 }
 
-function gleicherEinsatz(zeile: TableRow, r: PokerRegeln): boolean {
-  const s = zeile.stakes;
-  return (
-    !!s &&
-    s.startJetons === r.startJetons &&
-    s.kleinerBlind === r.kleinerBlind &&
-    s.grosserBlind === r.grosserBlind
-  );
-}
-
 function blindsText(r: Pick<PokerRegeln, 'kleinerBlind' | 'grosserBlind'>): string {
   return `${r.kleinerBlind}/${r.grosserBlind}`;
-}
-
-/** Die fertige Vorgabe, die genau diesem Einsatz entspricht — oder keine. */
-function vorgabeFuer(r: PokerRegeln): (typeof EINSATZ_VORGABEN)[number] | undefined {
-  return EINSATZ_VORGABEN.find(
-    (v) =>
-      v.regelsatz.startJetons === r.startJetons &&
-      v.regelsatz.kleinerBlind === r.kleinerBlind &&
-      v.regelsatz.grosserBlind === r.grosserBlind,
-  );
 }
 
 function pokerFehler(err: unknown, fallback: string): string {
@@ -425,20 +403,23 @@ function Jetonzahl({ wert }: { wert: number }): React.JSX.Element {
  */
 function Einsatzblatt({
   regelsatz,
+  spielarten,
   onChange,
   onClose,
 }: {
   regelsatz: PokerRegeln;
+  /** Die drei Einsaetze des Moduls als Ausgangspunkt. */
+  spielarten: readonly Spielart[];
   onChange: (r: PokerRegeln) => void;
   onClose: () => void;
 }): React.JSX.Element {
   const bbStufen = [...new Set(SB_STUFEN.map((n) => n * 2))];
-  const vorgabe = EINSATZ_VORGABEN.find(
-    (v) =>
-      v.regelsatz.startJetons === regelsatz.startJetons &&
-      v.regelsatz.kleinerBlind === regelsatz.kleinerBlind &&
-      v.regelsatz.grosserBlind === regelsatz.grosserBlind,
-  );
+  const gleich = (a: PokerRegeln | null): boolean =>
+    !!a &&
+    a.startJetons === regelsatz.startJetons &&
+    a.kleinerBlind === regelsatz.kleinerBlind &&
+    a.grosserBlind === regelsatz.grosserBlind;
+  const vorgabe = spielarten.find((art) => gleich(einsatzAus(art)));
 
   const chipreihe = (name: string, stufen: readonly number[], an: (zahl: number) => boolean, waehle: (zahl: number) => void) => (
     <SpielAbschnitt titel={name}>
@@ -463,11 +444,18 @@ function Einsatzblatt({
       <SpielAbschnitt titel={t('poker.einsatz.vorgabe')}>
         <SpielWahl
           name={t('poker.einsatz.vorgabeName')}
-          werte={vorgabeWerte()}
+          werte={spielarten.map((art) => {
+            const e = einsatzAus(art)!;
+            return {
+              wert: art.id,
+              text: spielartName('easypoker', art.id),
+              unter: tf('poker.einsatz.kurz', { einsatz: e.startJetons, blinds: blindsText(e) }),
+            };
+          })}
           wert={vorgabe?.id ?? ''}
           onWahl={(id) => {
-            const v = EINSATZ_VORGABEN.find((x) => x.id === id);
-            if (v) onChange(v.regelsatz);
+            const e = einsatzAus(spielarten.find((x) => x.id === id) ?? null);
+            if (e) onChange(e);
           }}
         />
       </SpielAbschnitt>
@@ -520,18 +508,30 @@ export function EasyPoker({
   onBack: () => void;
 }): React.JSX.Element {
   const [tischId, setTischId] = useState<string | null>(startTisch ?? null);
-  /** Tisch, den ich selbst aufgemacht habe — nur dann wird gewechselt. */
-  const [eigenerTisch, setEigenerTisch] = useState<string | null>(null);
+  /**
+   * Der Freundestisch, den ich aufgemacht habe — dort steht im Wartebereich
+   * die Einladung (Code, Link, QR). Bis zum 28.11.2026 hiess das Feld
+   * `eigenerTisch` und steuerte die Wettrennen-Regel der Tischlisten-Suche;
+   * die Suche laeuft jetzt ueber die Schlange des Servers.
+   */
+  const [freundeTisch, setFreundeTisch] = useState<string | null>(null);
   const [sucht, setSucht] = useState(false);
   const [aktiv, setAktiv] = useState<number | null>(null);
   const [name, setName] = useState(gelesenerName);
   const [sitzeWahl, setSitzeWahl] = useState(2);
   const [fehler, setFehler] = useState<string | null>(null);
   const [regelnOffen, setRegelnOffen] = useState(false);
-  const [regelsatz, setRegelsatz] = useState<PokerRegeln>(REGELSATZ_VORGABE);
+  /**
+   * Die Spielarten des Moduls (Locker, Abend, Hoch) als Karten. Quick-Play
+   * sucht in der gewaehlten; Bots und Freunde nehmen sie auch — oder den
+   * eigenen Einsatz aus dem Blatt („Eigene Regeln"), solange einer gesetzt ist.
+   */
+  const spielartwahl = useSpielarten('easypoker');
+  const art = spielartwahl.gewaehlt;
+  const [eigenerEinsatz, setEigenerEinsatz] = useState<PokerRegeln | null>(null);
+  const regelsatz: PokerRegeln | null = eigenerEinsatz ?? einsatzAus(art);
+  const setRegelsatz = setEigenerEinsatz;
   const [broJetons, setBroJetons] = useState<number | null>(null);
-  const [lobbyOffen, setLobbyOffen] = useState(false);
-  const [tische, setTische] = useState<TableRow[] | null>(null);
   const [tischEinsatz, setTischEinsatz] = useState<PokerRegeln | null>(null);
   /** Das Einsatzblatt hängt am Menü. */
   const [einsatzOffen, setEinsatzOffen] = useState(false);
@@ -650,171 +650,69 @@ export function EasyPoker({
   const sofortSpielen = useCallback(async (): Promise<void> => {
     setFehler(null);
     setSucht(true);
+    if (!regelsatz) return;
     try {
       const { id } = await api.createTable({
         gameId: 'easypoker',
-        config: regelsatz,
+        config: { ...art?.config, ...regelsatz },
         seats: sitzeWahl,
         rounds: haendeFuer(sitzeWahl),
         visibility: 'on_request',
         fillWithBots: true,
       });
-      setEigenerTisch(null);
+      setFreundeTisch(null);
       setTischId(id);
     } catch (err) {
       setSucht(false);
       setFehler(pokerFehler(err, t('poker.fehler.aufmachen')));
     }
-  }, [sitzeWahl, regelsatz]);
+  }, [sitzeWahl, regelsatz, art]);
 
   /**
-   * Einen Gegner finden: an einem offenen Tisch Platz nehmen, sonst selbst
-   * einen aufmachen.
+   * Quick-Play: Mitspieler suchen — seit dem 28.11.2026 ueber die Schlange des
+   * Servers in der gewaehlten Spielart, wie bei Farbduell.
    *
-   * Die Plattform hat keine Warteschlange; gesucht wird deshalb ueber die
-   * gewoehnliche Tischliste. Das reicht, weil `joinTable` serverseitig
-   * absichert, dass zwei gleichzeitige Beitritte nicht denselben Platz
-   * bekommen — der Verlierer des Rennens bekommt einen Fehler und sucht weiter.
+   * Bis dahin stand hier eine Suche ueber die Tischliste (offenen Tisch mit
+   * gleichem Einsatz nehmen, sonst selbst einen aufmachen) samt
+   * Wettrennen-Regel fuer zwei gleichzeitig aufgemachte Tische. Die Schlange
+   * topft nach `variante`, also nach Einsatz, und fuellt nach 30 Sekunden mit
+   * Bots auf — wer allein sucht, wartet nicht mehr bis zum Verfall.
    */
-  const suche = useCallback(async (): Promise<void> => {
-    setFehler(null);
-    setSucht(true);
-    try {
-      const zeilen = await api.tables('easypoker');
-      const offen = zeilen
-        .filter(
-          (zeile) =>
-            zeile.occupied < zeile.seats &&
-            gleicherEinsatz(zeile, regelsatz) &&
-            (broJetons === null || broJetons >= regelsatz.startJetons),
-        )
-        .sort((a, b) => b.occupied - a.occupied || a.id.localeCompare(b.id));
-      const ziel = offen[0];
-      if (ziel) {
-        await api.joinTable(ziel.id);
-        setEigenerTisch(null);
-        setLobbyOffen(false);
-        setTischId(ziel.id);
-        return;
-      }
-      const { id } = await api.createTable({
-        gameId: 'easypoker',
-        config: regelsatz,
-        seats: ONLINE_SITZE,
-        rounds: haendeFuer(ONLINE_SITZE),
-      });
-      setEigenerTisch(id);
-      setLobbyOffen(false);
-      setTischId(id);
-    } catch (err) {
-      setSucht(false);
-      setFehler(pokerFehler(err, t('poker.fehler.suche')));
-    }
-  }, [regelsatz, broJetons]);
+  const suche = useSchnellsuche('easypoker', (id) => {
+    setFreundeTisch(null);
+    setTischId(id);
+  });
 
-  const oeffneLobby = useCallback(async (): Promise<void> => {
-    setFehler(null);
-    setLobbyOffen(true);
-    setTische(null);
-    try {
-      setTische(await api.tables('easypoker'));
-    } catch {
-      setFehler(t('poker.fehler.liste'));
-      setTische([]);
-    }
-  }, []);
-
-  const trittBei = useCallback(
-    async (id: string): Promise<void> => {
-      setFehler(null);
-      setSucht(true);
-      try {
-        await api.joinTable(id);
-        setEigenerTisch(null);
-        setLobbyOffen(false);
-        setTischId(id);
-      } catch (err) {
-        setSucht(false);
-        setFehler(pokerFehler(err, t('poker.fehler.platzWeg')));
-        void oeffneLobby();
-      }
-    },
-    [oeffneLobby],
-  );
-
-  const eigenenTisch = useCallback(async (): Promise<void> => {
+  /**
+   * Mit Freunden: ein privater Tisch fuer sechs, im Wartebereich die
+   * Einladung. Privat (`on_request`) statt oeffentlich: Ohne Tischliste
+   * faende einen oeffentlichen Tisch ohnehin nur, wer den Code hat.
+   */
+  const freundeAufmachen = useCallback(async (): Promise<void> => {
+    if (!regelsatz) return;
     setFehler(null);
     setSucht(true);
     try {
       const { id } = await api.createTable({
         gameId: 'easypoker',
-        config: regelsatz,
+        config: { ...art?.config, ...regelsatz },
         seats: ONLINE_SITZE,
         rounds: haendeFuer(ONLINE_SITZE),
+        visibility: 'on_request',
       });
-      setEigenerTisch(id);
-      setLobbyOffen(false);
+      setFreundeTisch(id);
       setTischId(id);
     } catch (err) {
       setSucht(false);
       setFehler(pokerFehler(err, t('poker.fehler.aufmachen')));
     }
-  }, [regelsatz]);
-
-  /**
-   * Das Wettrennen aufloesen.
-   *
-   * Tippen zwei Leute gleichzeitig auf "Suchen", sieht keiner den Tisch des
-   * anderen und beide machen einen auf. Wechselten danach BEIDE zum jeweils
-   * anderen, taeten sie das fuer immer. Deshalb bewegt sich nur einer: der mit
-   * der groesseren Tischkennung. Die Kennungen sind auf beiden Geraeten
-   * dieselben, also braucht die Regel keine Absprache.
-   */
-  const wechseltGerade = useRef(false);
-  useEffect(() => {
-    if (!tischId || !eigenerTisch || tischId !== eigenerTisch) return;
-    if (tisch.table && tisch.table.status !== 'waiting') return;
-    let lebt = true;
-    const pruefe = (): void => {
-      void api
-        .tables('easypoker')
-        .then(async (zeilen: TableRow[]) => {
-          if (!lebt || wechseltGerade.current) return;
-          const kleiner = zeilen
-            .filter(
-              (z) => z.occupied < z.seats && z.id < tischId && gleicherEinsatz(z, regelsatz),
-            )
-            .sort((a, b) => a.id.localeCompare(b.id))[0];
-          if (!kleiner) return;
-          wechseltGerade.current = true;
-          try {
-            // Kein leaveTable davor: joinTable raeumt serverseitig alle
-            // anderen Warteplaetze desselben Kontos ab.
-            await api.joinTable(kleiner.id);
-            if (!lebt) return;
-            setEigenerTisch(null);
-            setTischId(kleiner.id);
-          } catch {
-            /* Der Tisch war schneller voll. Beim naechsten Takt weiter. */
-          } finally {
-            wechseltGerade.current = false;
-          }
-        })
-        .catch(() => {});
-    };
-    const takt = window.setInterval(pruefe, 2500);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, [tischId, eigenerTisch, tisch.table?.status, regelsatz]);
+  }, [regelsatz, art]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
     setSucht(false);
     setTischId(null);
-    setEigenerTisch(null);
-    setLobbyOffen(false);
+    setFreundeTisch(null);
     if (id) void api.leaveTable(id).catch(() => {});
   }, [tischId]);
 
@@ -822,7 +720,7 @@ export function EasyPoker({
     setGesendetBei(null);
     setGehobeneKarte(null);
     setTischId(null);
-    setEigenerTisch(null);
+    setFreundeTisch(null);
     setSucht(false);
   }, []);
 
@@ -895,94 +793,34 @@ export function EasyPoker({
   // Hauptmenue
   // -------------------------------------------------------------------------
 
+  if (!tischId && suche.suchstand) {
+    return (
+      <SuchWarten
+        gameId="easypoker"
+        stand={suche.suchstand}
+        unter={art ? `${t('poker.titel')} · ${spielartName('easypoker', art.id)}` : t('poker.titel')}
+        akzent={AKZENT}
+        onAbbrechen={suche.brichAb}
+      />
+    );
+  }
+
   if (!tischId) {
-    const reicht = broJetons === null || broJetons >= regelsatz.startJetons;
-    const startbar = reicht && regelsatzOk(regelsatz) && !sucht;
+    const einsatzDerArt = einsatzAus(art);
+    const reicht = broJetons === null || regelsatz === null || broJetons >= regelsatz.startJetons;
+    const startbar = regelsatz !== null && reicht && regelsatzOk(regelsatz) && !sucht;
+    // Quick-Play spielt immer den Einsatz der Karte, nicht den eigenen: Die
+    // Schlange topft nach Spielart, ein eigener Einsatz faende niemanden.
+    const quickBar =
+      einsatzDerArt !== null && (broJetons === null || broJetons >= einsatzDerArt.startJetons) && !suche.startet;
+    const unterQuick = quickplayUnter('easypoker', art);
 
     /*
-     * Spieleinstieg-Baukasten (seit 26.09.2026): Hauptmenü und Online-Tisch
-     * im Nachtblau-Rahmen. Der Filz bleibt, wie er ist.
+     * Spieleinstieg wie bei Farbduell (28.11.2026): Einsatz-Karten, darunter
+     * Quick-Play in Gold, Gegen Bots und Mit Freunden in Blau, klein „Eigene
+     * Regeln" (das Einsatzblatt). Die Liste der offenen Tische ist weg —
+     * Robin: Tischlisten verwirren. Der Filz bleibt, wie er ist.
      */
-    if (lobbyOffen) {
-      const liste = tische ?? [];
-      return (
-        <SpielRahmen
-          gameId="easypoker"
-          titel={t('poker.lobby.titel')}
-          unter={tf('poker.einsatz.lang', { einsatz: regelsatz.startJetons, blinds: blindsText(regelsatz) })}
-          akzent={AKZENT}
-          onBack={() => {
-            setLobbyOffen(false);
-            setFehler(null);
-          }}
-          zurueckText={t('poker.lobby.zurueck')}
-          rechts={infoKnopfNeu}
-          fuss={
-            <>
-              <button
-                className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
-                type="button"
-                onClick={() => void suche()}
-                disabled={!startbar}
-              >
-                {t('poker.lobby.suchen')}
-                <small>{t('poker.lobby.suchenUnter')}</small>
-              </button>
-              <button
-                className="hb-kn is-blau is-breit spe-kn-unter"
-                type="button"
-                onClick={() => void eigenenTisch()}
-                disabled={!startbar}
-              >
-                {t('poker.lobby.eigener')}
-                <small>{t('poker.lobby.eigenerUnter')}</small>
-              </button>
-            </>
-          }
-        >
-          {fehler && <p className="hb-fehler">{fehler}</p>}
-          <SpielAbschnitt titel={t('poker.lobby.offene')} zusatz={tische === null ? undefined : liste.length}>
-            <div className="hb-liste">
-              {tische === null ? (
-                <p className="spe-leer">{t('poker.lobby.laedt')}</p>
-              ) : liste.length === 0 ? (
-                <p className="spe-leer">{t('poker.lobby.leer')}</p>
-              ) : (
-                liste.map((zeile) => {
-                  const buyIn = zeile.stakes?.startJetons ?? regelsatz.startJetons;
-                  const zuTeuer = broJetons !== null && broJetons < buyIn;
-                  return (
-                    <button
-                      key={zeile.id}
-                      className="spe-zeile spe-tisch"
-                      type="button"
-                      disabled={sucht || zuTeuer}
-                      onClick={() => void trittBei(zeile.id)}
-                    >
-                      <span>
-                        <strong>{zeile.host ?? t('poker.lobby.tisch')}</strong>
-                        <small className="pk-einsatz">
-                          <span className="poker-jeton-zeichen" aria-hidden="true" />
-                          {buyIn}
-                          {zeile.stakes ? ` · ${blindsText(zeile.stakes)}` : null}
-                        </small>
-                      </span>
-                      <span className="spe-zahl">
-                        {zeile.occupied}/{zeile.seats}
-                      </span>
-                      <span className={`pk-bei${zuTeuer ? ' is-zu-hoch' : ''}`}>{t(zuTeuer ? 'poker.lobby.zuHoch' : 'poker.lobby.beitreten')}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </SpielAbschnitt>
-          {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
-        </SpielRahmen>
-      );
-    }
-
-    const vorgabe = vorgabeFuer(regelsatz);
     return (
       <SpielRahmen
         gameId="easypoker"
@@ -996,21 +834,39 @@ export function EasyPoker({
             <button
               className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
               type="button"
+              data-einstieg="quickplay"
+              onClick={() => {
+                setFehler(null);
+                void suche.starte(art?.config);
+              }}
+              disabled={!quickBar}
+            >
+              {t('einstieg.quickplay')}
+              {unterQuick && <small>{unterQuick}</small>}
+            </button>
+            <button
+              className="hb-kn is-blau is-breit spe-kn-unter"
+              type="button"
+              data-einstieg="bots"
               onClick={() => void sofortSpielen()}
               disabled={!startbar}
             >
-              {t('poker.menue.sofort')}
+              {t('einstieg.bots')}
               <small>{tf('poker.menue.sofortUnter', { n: sitzeWahl })}</small>
             </button>
             <button
               className="hb-kn is-blau is-breit"
               type="button"
-              onClick={() => void oeffneLobby()}
-              disabled={sucht}
+              data-einstieg="freunde"
+              onClick={() => void freundeAufmachen()}
+              disabled={!startbar}
             >
-              {t('poker.menue.online')}
-              <span className="pk-aktiv">({aktiv ?? '…'})</span>
+              {t('einstieg.freunde')}
             </button>
+            <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => setEinsatzOffen(true)}>
+              {t('einstieg.eigeneRegeln')}
+            </button>
+            <p className="hb-klein">{tf('poker.warten.aktiv', { n: aktiv ?? '…' })}</p>
           </>
         }
       >
@@ -1019,10 +875,44 @@ export function EasyPoker({
           <strong>{broJetons ?? '…'}</strong>
           <em>BroJetons</em>
         </p>
-        {!reicht && (
+        {!reicht && regelsatz && (
           <p className="hb-fehler">{tf('poker.menue.fehltJetons', { n: regelsatz.startJetons })}</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
+        {suche.fehler && <p className="hb-fehler">{t(suche.fehler)}</p>}
+        {spielartwahl.spielarten && spielartwahl.spielarten.length > 0 && (
+          <SpielAbschnitt titel={t('poker.menue.einsatz')}>
+            <SpielartKarten
+              gameId="easypoker"
+              spielarten={spielartwahl.spielarten}
+              gewaehlt={eigenerEinsatz ? null : (art?.id ?? null)}
+              onWahl={(id) => {
+                setEigenerEinsatz(null);
+                spielartwahl.waehle(id);
+              }}
+              // Poker zieht BroJetons ein — das gehoert auf die Karte.
+              hinweis={(a) => {
+                const e = einsatzAus(a);
+                return e ? tf('einstieg.kostet', { n: e.startJetons }) : null;
+              }}
+            />
+            {eigenerEinsatz && (
+              <div className="hb-liste">
+                <button type="button" className="spe-zeile" onClick={() => setEinsatzOffen(true)}>
+                  <span>
+                    <strong>{t('poker.menue.eigenerEinsatz')}</strong>
+                    <small>
+                      {tf('poker.einsatz.lang', { einsatz: eigenerEinsatz.startJetons, blinds: blindsText(eigenerEinsatz) })}
+                    </small>
+                  </span>
+                  <span className="hb-pf" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              </div>
+            )}
+          </SpielAbschnitt>
+        )}
         <SpielAbschnitt titel={t('poker.menue.name')}>
           <input
             className="hb-feld"
@@ -1036,32 +926,6 @@ export function EasyPoker({
             onChange={(e) => merkeName(e.target.value)}
           />
         </SpielAbschnitt>
-        <SpielAbschnitt titel={t('poker.menue.einsatz')}>
-          <SpielWahl
-            name={t('poker.menue.einsatz')}
-            werte={vorgabeWerte()}
-            wert={vorgabe?.id ?? ''}
-            onWahl={(id) => {
-              const v = EINSATZ_VORGABEN.find((x) => x.id === id);
-              if (v) setRegelsatz(v.regelsatz);
-            }}
-          />
-          <div className="hb-liste">
-            <button type="button" className="spe-zeile" onClick={() => setEinsatzOffen(true)}>
-              <span>
-                <strong>{t(vorgabe ? 'poker.menue.eigenenEinsatz' : 'poker.menue.eigenerEinsatz')}</strong>
-                {!vorgabe && (
-                  <small>
-                    {tf('poker.einsatz.lang', { einsatz: regelsatz.startJetons, blinds: blindsText(regelsatz) })}
-                  </small>
-                )}
-              </span>
-              <span className="hb-pf" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          </div>
-        </SpielAbschnitt>
         <SpielAbschnitt
           titel={t('poker.menue.spieler')}
           zusatz={
@@ -1072,8 +936,13 @@ export function EasyPoker({
         >
           <SpielWahl name={t('poker.menue.spielerzahl')} werte={SITZ_WAHL} wert={sitzeWahl} onWahl={setSitzeWahl} />
         </SpielAbschnitt>
-        {einsatzOffen && (
-          <Einsatzblatt regelsatz={regelsatz} onChange={setRegelsatz} onClose={() => setEinsatzOffen(false)} />
+        {einsatzOffen && regelsatz && (
+          <Einsatzblatt
+            regelsatz={regelsatz}
+            spielarten={spielartwahl.spielarten ?? []}
+            onChange={setRegelsatz}
+            onClose={() => setEinsatzOffen(false)}
+          />
         )}
         {regelnOffen && <Regelblatt onClose={() => setRegelnOffen(false)} />}
       </SpielRahmen>
@@ -1153,6 +1022,7 @@ export function EasyPoker({
             </ul>
           </SpielAbschnitt>
         )}
+        {freundeTisch === tischId && <Einladung spiel="easypoker" tischId={tischId} neu />}
         <GastHinweis sitze={plaetze} className="hb-klein pk-mitte" />
         <div className="poker-punkte-lauf pk-lauf" aria-hidden="true">
           <span />
