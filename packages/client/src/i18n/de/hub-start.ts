@@ -185,7 +185,10 @@ export default {
   'start.bock.unter': 'Mehrere Spiele, ein Sieger',
   'start.bock.aria': 'BroweG-Bock: mehrere Spiele, ein Sieger',
   'start.bock.bald': 'Bald',
-  'start.schild': 'Zu den Spielen',
+  // Zweizeilig (Robin, 28.11.2026): in einer Zeile füllte die Schrift das
+  // ganze Brett bis an die Pfeilspitze. Der Umbruch wirkt über `pre-line`.
+  'start.schildName': 'Zu den Spielen',
+  'start.schild': 'Zu den\nSpielen',
 
   // Weiterspielen-Pop-ups
   'weiter.gross.laeuft': 'Du bist noch in einer Runde',

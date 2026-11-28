@@ -170,6 +170,8 @@ export function StartNeu({
           type="button"
           className={`start-schild${SCHILD_BILD ? ' mit-bild' : ''}`}
           onClick={onAlleSpiele}
+          // Der sichtbare Text bricht um (zweizeilig); der Name bleibt eine Zeile.
+          aria-label={t('start.schildName')}
           style={SCHILD_BILD ? { backgroundImage: `url(${SCHILD_BILD})` } : undefined}
         >
           <span>{t('start.schild')}</span>

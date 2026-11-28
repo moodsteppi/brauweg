@@ -398,7 +398,10 @@
   }
 }
 .hb .start-schild > span {
-  font: 400 clamp(17px, 5vw, 22px) / 1.05 var(--hb-anz);
+  /* Zwei Zeilen („Zu den / Spielen“, Umbruch im Text): pre-line, damit der
+     Zeilenwechsel aus dem Wörterbuch gilt und sonst nichts umbricht. */
+  white-space: pre-line;
+  font: 400 clamp(18px, 5.4vw, 23px) / 0.98 var(--hb-anz);
   letter-spacing: 0.01em;
   text-align: center;
   text-shadow:

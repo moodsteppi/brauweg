@@ -180,7 +180,8 @@ export default {
   'start.bock.unter': 'Several games, one winner',
   'start.bock.aria': 'BroweG Bock: several games, one winner',
   'start.bock.bald': 'Soon',
-  'start.schild': 'To the games',
+  'start.schildName': 'To the games',
+  'start.schild': 'To the\ngames',
 
   // Keep-playing pop-ups
   'weiter.gross.laeuft': 'You are still in a round',
