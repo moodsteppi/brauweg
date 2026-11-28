@@ -204,14 +204,6 @@
     padding: 14px 10px;
     height: 176px;
   }
-  .hb .start-schild {
-    width: 172px;
-    height: 80px;
-  }
-  .hb .start-schild.mit-bild {
-    width: 184px;
-    height: 92px;
-  }
   .hb .start-kachel > img {
     height: 78px;
   }
@@ -322,118 +314,6 @@
   background: #4a2f6bee;
   border-color: #c9a7ff80;
   color: #f1e6ff;
-}
-
-/* Das Schild „Zu den Spielen" in der Mitte, wo früher der Play-Kreis saß.
-   Ohne geliefertes Bild ein Holzbrett aus CSS mit Messingkante — die Schrift
-   ist in beiden Fällen echtes HTML. */
-.hb .start-schild {
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 190px;
-  height: 88px;
-  display: grid;
-  place-items: center;
-  padding: 0 18px;
-  border: 4px solid #5a3a1f;
-  border-radius: 16px;
-  background:
-    repeating-linear-gradient(0deg, #ffffff07 0 2px, transparent 2px 9px),
-    linear-gradient(180deg, #8a5a32, #5e3b1f 62%, #4a2e18);
-  box-shadow:
-    0 0 0 2px #cda762,
-    inset 0 2px 0 #ffffff26,
-    inset 0 -3px 0 #0000004d,
-    0 10px 22px #000a;
-  color: #fff1cf;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 180ms ease,
-    filter 180ms ease,
-    box-shadow 180ms ease;
-}
-/* Zwei Messingnägel, damit das Brett nach Schild aussieht und nicht nach Knopf. */
-.hb .start-schild:not(.mit-bild)::before,
-.hb .start-schild:not(.mit-bild)::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  margin-top: -4px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffe7a6, #a87a32);
-  box-shadow: 0 1px 1px #0008;
-}
-.hb .start-schild::before {
-  left: 9px;
-}
-.hb .start-schild::after {
-  right: 9px;
-}
-.hb .start-schild.mit-bild {
-  /* Das Bild ist ein Pfeil nach rechts (2:1, docs/ASSETS-START-NEU.md); die
-     Schrift sitzt auf dem Brett links der Spitze, nicht in der Bildmitte. */
-  width: 212px;
-  height: 106px;
-  /* In px: Prozent rechnen gegen die Breite des Mosaiks, nicht des Schilds. */
-  padding: 0 40px 4px 16px;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background-color: transparent;
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  filter: drop-shadow(0 8px 12px #000a);
-}
-@media (hover: hover) and (pointer: fine) {
-  .hb .start-schild.mit-bild:hover {
-    box-shadow: none;
-    filter: brightness(1.12) drop-shadow(0 0 14px #f6c34d90);
-  }
-}
-.hb .start-schild > span {
-  /* Zwei Zeilen („Zu den / Spielen“, Umbruch im Text): pre-line, damit der
-     Zeilenwechsel aus dem Wörterbuch gilt und sonst nichts umbricht. */
-  white-space: pre-line;
-  font: 400 clamp(18px, 5.4vw, 23px) / 0.98 var(--hb-anz);
-  letter-spacing: 0.01em;
-  text-align: center;
-  text-shadow:
-    0 2px 0 #3b2412,
-    0 0 8px #0009;
-}
-.hb .start-schild:focus-visible {
-  outline: 3px solid #fff0c7;
-  outline-offset: 6px;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hb .start-schild:hover {
-    transform: translate(-50%, -50%) scale(1.05);
-    filter: brightness(1.12);
-    box-shadow:
-      0 0 0 2px #cda762,
-      0 0 25px #f6c34d80,
-      0 10px 24px #0008;
-  }
-}
-.hb .start-schild:active {
-  transform: translate(-50%, -50%) scale(0.97);
-  filter: brightness(1.15);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hb .start-schild {
-    transition: none;
-  }
-  .hb .start-schild:hover,
-  .hb .start-schild:active {
-    transform: translate(-50%, -50%);
-  }
 }
 
 /* Seitensymbole: senkrecht am rechten Rand, ein Stück über dem Mosaik
@@ -856,4 +736,53 @@
 }
 .hb .start-wahl-hinweis {
   color: #ffc5b3;
+}
+
+/* Mittelknopf „Zu den Spielen“ (Robin, 28.11.2026: Controller-Medaillon statt
+   Pfeilschild). Sitzt wie früher der Play-Kreis mittig über dem Mosaik. */
+.hb .start-mitte {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: 132px;
+  height: 132px;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  filter: drop-shadow(0 8px 14px #000b);
+  transition: transform 140ms ease-out, filter 140ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb .start-mitte img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hb .start-mitte:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+.hb .start-mitte:focus-visible {
+  outline: 3px solid #fff0c7;
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hb .start-mitte:hover {
+    transform: translate(-50%, -50%) scale(1.055);
+    filter: brightness(1.1) drop-shadow(0 0 16px #f6c34d90);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb .start-mitte {
+    transition: none;
+  }
+}
+@media (max-width: 350px) {
+  .hb .start-mitte {
+    width: 118px;
+    height: 118px;
+  }
 }

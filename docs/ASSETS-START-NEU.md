@@ -1,11 +1,18 @@
-# Startseite neu (28.11.2026): Schild und BroweG-Bock
+# Startseite neu (28.11.2026): Mittelknopf, BroweG-Bock, Spielarten
 
 Bestellung nach CLAUDE.md Regel 5. Gehört zu `docs/STARTSEITE-UMBAU-PLAN.md`.
 Stil wie `docs/ASSETS-START-EINSTIEGE.md`: warme Pinguin-Spielstube, dunkles
 Walnussholz, Waldgrün, Messing/Gold, gerendert wie `aufgaben.webp` und
 `lernen.webp` (beide als Stilvorlage an den Generator gegeben).
 
-## 1. Schild „Zu den Spielen“ — `hub/start-einstiege/schild.webp`
+## 1. Mittelknopf „Zu den Spielen“ — `hub/start-einstiege/spiele.webp`
+
+**Seit dem 28.11.2026 abends:** grünes Medaillon mit goldenem Controller
+(Entwurf 3 von sechs, `art/mittelknopf/`), 448², ~60 kB, ohne Schrift; der
+Name steht am Knopf. Das Pfeilschild unten wirkte aufgesetzt (Robin) und ist
+entfernt — der Abschnitt bleibt als Geschichte.
+
+### Früher: Schild — `hub/start-einstiege/schild.webp` (entfernt)
 
 - Breites, **leeres** Holzschild als Pfeil nach rechts, Walnuss mit Messingrand
   und Nieten, vertiefte Mittelfläche für den Text.

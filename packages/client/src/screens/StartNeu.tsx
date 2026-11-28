@@ -45,7 +45,12 @@ export function sicherAb(trophies: number): number {
  * (CLAUDE.md) —, und das Schild fällt auf seinen CSS-Holzgrund zurück.
  */
 const BOCK_BILD: string | null = '/hub/start-einstiege/bock.webp';
-const SCHILD_BILD: string | null = '/hub/start-einstiege/schild.webp';
+/**
+ * Der Mittelknopf „Zu den Spielen": grünes Medaillon mit goldenem Controller
+ * (Robin, 28.11.2026, Entwurf 3 von sechs; das Pfeilschild davor wirkte
+ * aufgesetzt). Ohne Schrift im Bild — der Name steht am Knopf.
+ */
+const SPIELE_BILD = '/hub/start-einstiege/spiele.webp';
 
 export function StartNeu({
   me,
@@ -164,17 +169,15 @@ export function StartNeu({
           />
           <RahmenEcken />
         </button>
-        {/* Das Schild ersetzt den Play-Kreis: Die Schrift ist echtes HTML,
-            nichts davon steckt im Bild (Regel 5). */}
+        {/* Mittelknopf zu den Spielen (Controller-Medaillon) — er wischt auf den
+            Spiele-Reiter wie früher der Play-Kreis. */}
         <button
           type="button"
-          className={`start-schild${SCHILD_BILD ? ' mit-bild' : ''}`}
+          className="start-mitte"
           onClick={onAlleSpiele}
-          // Der sichtbare Text bricht um (zweizeilig); der Name bleibt eine Zeile.
           aria-label={t('start.schildName')}
-          style={SCHILD_BILD ? { backgroundImage: `url(${SCHILD_BILD})` } : undefined}
         >
-          <span>{t('start.schild')}</span>
+          <img src={SPIELE_BILD} alt="" draggable={false} />
         </button>
         {/* Robin (A1): senkrecht am rechten Rand, schwebend über dem Mosaik,
             wie die Seitensymbole in Handyspielen. Die Zahl steht im Namen,
