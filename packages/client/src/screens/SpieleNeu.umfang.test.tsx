@@ -92,6 +92,6 @@ describe('Umfang im Client', () => {
     fireEvent.click(kopf);
     expect(screen.queryByText('Pro-Subway')).toBeNull();
     // Der Mehrkampf bleibt unabhängig vom Umfang einzelner Spiele angekündigt.
-    expect(screen.getByText('Brauweg-Bock')).toBeTruthy();
+    expect(screen.getByText('BroweG-Bock')).toBeTruthy();
   });
 });

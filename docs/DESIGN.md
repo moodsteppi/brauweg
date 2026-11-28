@@ -157,7 +157,11 @@ Probe mit Beispielkonto nur im Dev-Server: `/?dev=hub&iphone`, dazu
 `&tab=spiele|blatt|clan|shop|profil`, `&spiel=doppelkopf`, `&weg`, `&heute`,
 `&ohneclan` (Clansuche), `&krieg=laeuft|suche|angefragt|keiner|anfrage` und
 `&tipp=Text|Text` (tippt nacheinander auf Knöpfe mit diesem Namen — für
-Bildschirmfotos von Blättern und Unterseiten). Der Entwurf, an dem gemessen
+Bildschirmfotos von Blättern und Unterseiten). Seit dem Startseiten-Umbau
+(28.11.2026) außerdem `&tisch=laeuft|wartet|pausiert|keiner` (Weiterspielen-
+Pop-ups), `&schnell=suche|tisch|arena|keins|fehler` (was Quick-Play antwortet),
+`&neu` (keine Favoriten, nichts zuletzt gespielt) und `&bock` (Bock-Kachel
+verdrahtet statt „Bald"). Der Entwurf, an dem gemessen
 wird, liegt außerhalb des Repos (Entwurfsordner „redesign-2026-09",
 Fassung 4).
 

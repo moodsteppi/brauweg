@@ -128,6 +128,80 @@ export function chipsFuer(spielbar: readonly string[], app: boolean): readonly {
   return app ? [...chips, { id: 'bald', titel: t('spielwahl.kategorie.bald') }] : chips;
 }
 
+/** Arenen außerhalb der Tischschicht — Ziel und Bild wie in ihren Registern. */
+const ARENEN: Readonly<Record<string, { name: string; bild: string }>> = {
+  'tanks-online': { name: 'BroTanks Online', bild: '/broremote/ausbau/tanks.webp' },
+  'ice-clash': { name: 'Bro Ice Clash', bild: '/ice-clash/titel.webp' },
+};
+
+/** Solo-Spiele mit Bild wie im Register „Allein". Namen als Funktion: t() muss beim Zeichnen laufen. */
+const SOLO: Readonly<Record<string, { name: () => string; bild: string; stil?: React.CSSProperties }>> = {
+  prosubway: { name: () => t('modus.prosubway'), bild: '/hub/banner-prosubway.webp' },
+  kartenmanufaktur: { name: () => 'Kartenmanufaktur', bild: '/manufaktur/werkstatt-hero.webp' },
+  flyingbro: { name: () => 'Flying Bro', bild: '/flyingbro/bro-pelle-flug.webp', stil: { backgroundSize: 'contain', backgroundRepeat: 'no-repeat' } },
+  browort: { name: () => 'Browort', bild: '/hub/browort-icon.webp' },
+};
+
+/** Das Herz als SVG — ein Zeichen reicht, eine Grafik wäre eine Bestellung (Plan, Abschnitt 7). */
+function Herz({ voll }: { voll: boolean }): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" className="hb-ic" aria-hidden="true" fill={voll ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />
+    </svg>
+  );
+}
+
+/** Das kleine Herz an einer Favoriten-Kachel; der Name steht für das Vorlesen dabei. */
+function FavoritMarke(): React.JSX.Element {
+  return (
+    <span className="hb-sk-herz">
+      <Herz voll />
+      <span className="hb-sk-herz-text">{t('spielwahl.favorit.marke')}</span>
+    </span>
+  );
+}
+
+/**
+ * „Deine Spiele" ganz oben im Reiter (Robin, B4): zwei Reihen, Favoriten in
+ * der gespeicherten Reihenfolge, darunter zuletzt gespielt ohne die
+ * Favoriten. Eine leere Reihe entfällt, beide leer — der ganze Abschnitt
+ * (kein leerer Kasten bei einem neuen Konto).
+ */
+function DeineSpiele({
+  favoriten,
+  zuletzt,
+  kachelFuer,
+}: {
+  favoriten: readonly string[];
+  zuletzt: readonly string[];
+  kachelFuer: (id: string, favorit: boolean) => React.JSX.Element | null;
+}): React.JSX.Element | null {
+  const fav = favoriten.map((id) => kachelFuer(id, true)).filter((k): k is React.JSX.Element => k !== null);
+  const schonDa = new Set(favoriten);
+  const zul = [...new Set(zuletzt)]
+    .filter((id) => !schonDa.has(id))
+    .map((id) => kachelFuer(id, false))
+    .filter((k): k is React.JSX.Element => k !== null);
+  if (fav.length === 0 && zul.length === 0) return null;
+  return (
+    <section className="hb-blk hb-deine" aria-label={t('spielwahl.deine.titel')}>
+      <h2 className="hb-ab">{t('spielwahl.deine.titel')}</h2>
+      {fav.length > 0 && (
+        <div className="hb-deine-reihe" role="group" aria-label={t('spielwahl.deine.favoriten')}>
+          <h3 className="hb-deine-unter">{t('spielwahl.deine.favoriten')}</h3>
+          <div className="hb-reihe">{fav}</div>
+        </div>
+      )}
+      {zul.length > 0 && (
+        <div className="hb-deine-reihe" role="group" aria-label={t('spielwahl.deine.zuletzt')}>
+          <h3 className="hb-deine-unter">{t('spielwahl.deine.zuletzt')}</h3>
+          <div className="hb-reihe">{zul}</div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function kategorieVon(gameId: string): Kategorie | null {
   return KATEGORIEN.find((k) => k.spiele.includes(gameId)) ?? null;
 }
@@ -141,6 +215,7 @@ export function SpieleNeu({
   onBald,
   onSammlung,
   onLernen,
+  onKontoNeu,
 }: {
   me: Me;
   /** Das Spiel, dessen Spielseite offen ist, oder null für die Übersicht. */
@@ -152,7 +227,33 @@ export function SpieleNeu({
   onSammlung: (art?: SammelBereich) => void;
   /** „Doppelkopf lernen" auf der Doppelkopf-Seite — nur gesetzt, wenn es im Umfang steht. */
   onLernen?: () => void;
+  /** `/api/me` neu laden, nachdem sich ein Favorit geändert hat. */
+  onKontoNeu?: () => void;
 }): React.JSX.Element {
+  /*
+   * Favoriten, wie der Server sie zuletzt bestätigt hat. Bis die Wurzel `me`
+   * neu geladen hat, gilt die Antwort von `favoritSetzen` — sonst spränge das
+   * Herz nach dem Tippen kurz zurück.
+   */
+  const [favoritenStand, setFavoritenStand] = useState<string[] | null>(null);
+  const favoriten = favoritenStand ?? me.vorlieben?.favoriten ?? [];
+  const [favoritFehler, setFavoritFehler] = useState<string | null>(null);
+  const favoritSetzen = (spiel: string, an: boolean): void => {
+    const vorher = favoriten;
+    setFavoritFehler(null);
+    // Sofort umschalten; schlägt das Speichern fehl, gilt wieder der alte Stand.
+    setFavoritenStand(an ? [...vorher.filter((id) => id !== spiel), spiel] : vorher.filter((id) => id !== spiel));
+    api
+      .favoritSetzen(spiel, an)
+      .then((antwort) => {
+        setFavoritenStand(antwort.favoriten);
+        onKontoNeu?.();
+      })
+      .catch(() => {
+        setFavoritenStand(vorher);
+        setFavoritFehler(t('spielwahl.favorit.fehler'));
+      });
+  };
   const [games, setGames] = useState<GameSummary[] | null>(null);
   const [voted, setVoted] = useState<Set<string>>(new Set());
   const [abstimmFehler, setAbstimmFehler] = useState<string | null>(null);
@@ -222,6 +323,9 @@ export function SpieleNeu({
         onZumSpiel={() => onPick(offenesSpiel.id)}
         onSammlung={onSammlung}
         onLernen={offenesSpiel.id === 'doppelkopf' ? onLernen : undefined}
+        favorit={favoriten.includes(offenesSpiel.id)}
+        onFavorit={(an) => favoritSetzen(offenesSpiel.id, an)}
+        favoritFehler={favoritFehler}
       />
     );
   }
@@ -252,6 +356,62 @@ export function SpieleNeu({
   const chips = [...chipsFuer(spielbar.map((g) => g.id), inApp), ...(soloDa ? [{id:'solo',titel:t('spielwahl.allein')}] : [])];
   // Auf beiden Plattformen abstimmen, soweit der Releaseumfang es erlaubt.
   const mitAbstimmung = imUmfang('abstimmung');
+
+  /*
+   * Eine Kachel für „Deine Spiele" — nur für Spiele, die es hier gibt: Ein
+   * Favorit oder ein zuletzt gespieltes Spiel, das auf dieser Plattform fehlt
+   * (App-Freigabe, Umfang), führte sonst ins Leere. Arenen und Solo-Spiele
+   * haben dasselbe Ziel wie in ihren Registern.
+   */
+  const deineKachel = (id: string, favorit: boolean): React.JSX.Element | null => {
+    const herz = favorit ? <FavoritMarke /> : null;
+    const spiel = spielbar.find((g) => g.id === id);
+    if (spiel && inAppSichtbar(id)) {
+      return (
+        <button type="button" className="hb-sk" key={id} onClick={() => onOeffne(id)}>
+          <span className="hb-sk-bild" style={{ backgroundImage: `url(${bannerFuer(id)})` }} />
+          <strong>{t(spiel.nameKey)}</strong>
+          {trophaeen(id) > 0 ? (
+            <span className="hb-pk">
+              <img src="/hub/symbol-pokal.webp" alt="" />
+              {zahl(trophaeen(id))}
+            </span>
+          ) : (
+            <small>{tf('spielwahl.spieler', { spanne: sitzSpanne(spiel.seatCounts) })}</small>
+          )}
+          {herz}
+        </button>
+      );
+    }
+    const arena = ARENEN[id];
+    if (arena) {
+      return (
+        <a className="hb-sk" key={id} href={`/${id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <span className="hb-sk-bild" style={{ backgroundImage: `url(${arena.bild})` }} />
+          <strong>{arena.name}</strong>
+          <small>{t('spielwahl.deine.arena')}</small>
+          {herz}
+        </a>
+      );
+    }
+    const solo = SOLO[id];
+    const soloHier =
+      (id === 'prosubway' && !inApp && mitProSubway) ||
+      (id === 'kartenmanufaktur' && mitManufaktur) ||
+      (id === 'flyingbro' && mitFlyingbro) ||
+      (id === 'browort' && mitBrowort);
+    if (solo && soloHier) {
+      return (
+        <button type="button" className="hb-sk" key={id} onClick={() => onSolo(id)}>
+          <span className="hb-sk-bild" style={{ backgroundImage: `url(${solo.bild})`, ...solo.stil }} />
+          <strong>{solo.name()}</strong>
+          <small>{t('spielwahl.deine.solo')}</small>
+          {herz}
+        </button>
+      );
+    }
+    return null;
+  };
 
   const baldUnter = (g: GameSummary): string =>
     g.id === 'prosubway' ? t('spielwahl.prosubway.bald') : g.id === 'mehrkampf' ? t('spielwahl.mehrkampf.unter') : tf('spielwahl.spieler', { spanne: sitzSpanne(g.seatCounts) });
@@ -307,26 +467,33 @@ export function SpieleNeu({
       </header>
 
       {abstimmFehler && <p role="alert" className="hb-text">{abstimmFehler}</p>}
-      <div className="hb-chips kategorie-register" role="tablist" aria-label={t('spielwahl.kategorien')}>
-        {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === k.id}
-            key={k.id}
-            className={`hb-chip${filter === k.id ? ' is-an' : ''}`}
-            onClick={() => {
-              setFilter(k.id);
-              if (k.id === 'bald') setBaldOffen(true);
-            }}
-          >
-            <KategorieZeichen id={k.id} />
-            {k.id === 'denken' ? t('spielwahl.chip.denken') : k.titel}
-          </button>
-        ))}
-      </div>
-
       <div className="hb-spiele-rolle">
+        {/* „Deine Spiele" steht vor den Registern (Robin, B4) und rollt mit
+            weg; die Register kleben danach oben, wie vorher über der Liste. */}
+        <DeineSpiele
+          favoriten={favoriten}
+          zuletzt={(me.zuletzt ?? []).map((z) => z.spiel)}
+          kachelFuer={deineKachel}
+        />
+        <div className="hb-chips kategorie-register hb-chips-klebend" role="tablist" aria-label={t('spielwahl.kategorien')}>
+          {[{ id: 'alle', titel: t('spielwahl.alle') }, ...chips].map((k) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={filter === k.id}
+              key={k.id}
+              className={`hb-chip${filter === k.id ? ' is-an' : ''}`}
+              onClick={() => {
+                setFilter(k.id);
+                if (k.id === 'bald') setBaldOffen(true);
+              }}
+            >
+              <KategorieZeichen id={k.id} />
+              {k.id === 'denken' ? t('spielwahl.chip.denken') : k.titel}
+            </button>
+          ))}
+        </div>
+
         {zeige('broremote') && <section className="hb-blk"><h2 className="hb-ab"><Symbol><path d="M3 4h15v11H3z M7 20h7 M10 15v5 M19 12h4v10h-4z"/></Symbol>BroRemote<span className="hb-ab-zusatz">2</span></h2><div className="hb-reihe">{BRO_SPIELE.map(g => <a className="hb-sk" key={g.id} href={`/broremote?spiel=${g.id}`} style={{textDecoration:'none',color:'inherit'}}><span className="hb-sk-bild" style={{backgroundImage:g.id === 'building' ? `url(${g.bild}), url(/broremote/bauwelt.webp)` : `url(${g.bild})`,backgroundSize:g.id === 'building' ? 'auto 95%, cover' : 'cover',backgroundRepeat:'no-repeat',backgroundPosition:'center'}}/><strong>{g.name}</strong><small>{g.spieler}</small></a>)}</div></section>}
         {KATEGORIEN.map((k) => {
           // Reihenfolge der Kategorie, nicht die des Servers
@@ -465,6 +632,9 @@ function SpielSeite({
   onZumSpiel,
   onSammlung,
   onLernen,
+  favorit,
+  onFavorit,
+  favoritFehler,
 }: {
   game: GameSummary;
   me: Me;
@@ -472,6 +642,9 @@ function SpielSeite({
   onZumSpiel: () => void;
   onSammlung: (art?: SammelBereich) => void;
   onLernen?: () => void;
+  favorit: boolean;
+  onFavorit: (an: boolean) => void;
+  favoritFehler: string | null;
 }): React.JSX.Element {
   const [rangliste, setRangliste] = useState<RankingEntry[] | null>(null);
   useEffect(() => {
@@ -520,12 +693,26 @@ function SpielSeite({
             <path d="M15 5l-7 7 7 7" />
           </Symbol>
         </button>
+        {/* Gegenüber dem Zurück-Knopf, im selben runden Holzknöpfchen
+            (Plan, Abschnitt 5). aria-pressed sagt den Zustand, der Name
+            bleibt gleich — „Favorit entfernen" und „merken" im Wechsel
+            verwirren beim Vorlesen mehr, als sie helfen. */}
+        <button
+          type="button"
+          className={`hb-rund hb-sp-herz${favorit ? ' is-an' : ''}`}
+          aria-pressed={favorit}
+          aria-label={tf('spielwahl.favorit.knopf', { spiel: t(game.nameKey) })}
+          onClick={() => onFavorit(!favorit)}
+        >
+          <Herz voll={favorit} />
+        </button>
         <div className="hb-sp-titel">
           <h1>{t(game.nameKey)}</h1>
           <span>{unterzeile}</span>
         </div>
       </div>
       <div className="hb-sp-inhalt">
+        {favoritFehler && <p role="alert" className="hb-text">{favoritFehler}</p>}
         <button type="button" className="hb-kn is-gold is-haupt is-breit hb-sp-start" onClick={onZumSpiel}>
           <img src="/hub/start-einstiege/play.webp" alt="" draggable={false} />
           {t('spielwahl.seite.zumSpiel')}

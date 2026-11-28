@@ -84,6 +84,7 @@ import { cardLabel, cardName, isRed, t, zahl } from '../i18n';
 import { tf, tn } from '../i18n/einsetzen';
 import { SHOP_RUBRIK } from '../inhaltspakete';
 import { StartNeu } from './StartNeu';
+import { useStartAblauf } from './StartAblauf';
 import { NeuerRahmen } from './HubRahmen';
 import { SpieleNeu } from './SpieleNeu';
 import { TrophaeenwegNeu } from './TrophaeenwegNeu';
@@ -142,6 +143,7 @@ export function GameSelect({
   anfangsSpiel,
   anfangsWeg,
   anfangsHeute,
+  onBock,
 }: {
   me: Me;
   onPick: (gameId: string) => void;
@@ -164,6 +166,12 @@ export function GameSelect({
   anfangsSpiel?: string;
   anfangsWeg?: boolean;
   anfangsHeute?: boolean;
+  /**
+   * Der BroweG-Bock (Kachel oben rechts auf dem Start). Verdrahtet wird er in
+   * App.tsx; fehlt er, zeigt die Kachel ehrlich „Bald“ statt eines toten
+   * Knopfs (DESIGN.md).
+   */
+  onBock?: () => void;
 }): React.JSX.Element {
   const [tab, setTab] = useState<Tab>(anfangsTab ?? 'spielen');
   const [sammlungSpiel, setSammlungSpiel] = useState('alle');
@@ -222,32 +230,19 @@ export function GameSelect({
   const zeigeFeier = Boolean(oeffneLernen) && me.lernen?.belohnt === true && !feierZu && !lernenOffen && !schonGefeiert();
   const trophies = me.stats.reduce((sum, stat) => sum + stat.trophies, 0);
 
-  /**
-   * Wie viele Menschen gerade an irgendeinem Tisch sitzen — die Zahl oben
-   * rechts. null, solange sie nie geladen wurde: Dann bleibt die Pille weg,
-   * eine geratene 0 saehe nach leerer Plattform aus, obwohl nur der Abruf
-   * scheiterte.
+  /*
+   * Weiterspielen-Pop-ups, Quick-Play und die Sperre am laufenden Tisch
+   * (StartAblauf.tsx). Die Online-Zahl samt ihrer 15-s-Abfrage ist seit dem
+   * 28.11.2026 weg — sie stand nur im Kopf, und der zeigt sie nicht mehr.
    */
-  const [online, setOnline] = useState<number | null>(null);
-  useEffect(() => {
-    let lebt = true;
-    const hole = (): void => {
-      void api
-        .aktiveGesamt()
-        .then((antwort) => {
-          if (lebt) setOnline(antwort.aktiv);
-        })
-        .catch(() => {
-          /* Beiwerk. Ein Fehlversuch laesst die letzte Zahl stehen. */
-        });
-    };
-    hole();
-    const takt = window.setInterval(hole, 15000);
-    return () => {
-      lebt = false;
-      window.clearInterval(takt);
-    };
-  }, []);
+  const ablauf = useStartAblauf({
+    me,
+    aufStart: tab === 'spielen',
+    onResume,
+    onKontoNeu: onAvatarChange,
+    onBock,
+    onBald: setBald,
+  });
 
   // Der Münz-Shop ist auf allen Plattformen ein eigener Reiter. Profil öffnet über den Startkopf.
   const kaufbar = true;
@@ -280,24 +275,23 @@ export function GameSelect({
             onBald={setBald}
             onSammlung={(art) => { const spiel = spielseite ?? 'doppelkopf'; setSammlungSpiel(spiel); setSammlungEinstieg({ spiel, art: art ?? null }); setTab('blatt'); }}
             onLernen={oeffneLernen}
+            onKontoNeu={onAvatarChange}
           />
         );
       case 'spielen':
         return (
           <StartNeu
             me={me}
-            activeTable={me.activeTable}
-            onResume={onResume}
-            onPick={(gameId) => {
-              setSpielseite(gameId);
-              setTab('spiele');
-            }}
             onAlleSpiele={() => {
               setSpielseite(null);
               setTab('spiele');
             }}
             onHeute={() => { setHeuteBereich('aufgaben'); setAufgabenOffen(true); }}
             onBelohnungen={() => { setHeuteBereich('truhen'); setAufgabenOffen(true); }}
+            onQuickPlay={ablauf.quickPlay}
+            onZahnrad={ablauf.zahnrad}
+            onBock={ablauf.bock}
+            bockBald={!onBock}
             onLernen={oeffneLernen}
             onBrowort={oeffneBrowort}
           />
@@ -341,6 +335,7 @@ export function GameSelect({
   // Blätter und Vollbilder über dem Rahmen.
   const overlays = (
     <>
+      {ablauf.ebenen}
       {wegOffen && (
         <TrophaeenwegNeu getragen={me.avatar} trophies={trophies} onClose={() => setWegOffen(false)} onGuthaben={onAvatarChange} />
       )}
@@ -431,7 +426,6 @@ export function GameSelect({
       me={me}
       tab={tab}
       tabFolge={tabFolge}
-      online={online}
       trophies={trophies}
       onWeg={() => setWegOffen(true)}
       kaufbar={kaufbar}
