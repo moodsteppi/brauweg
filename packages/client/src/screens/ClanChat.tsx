@@ -81,13 +81,20 @@ export function ClanChat({
   // Danach im Takt nachfragen. Ein Fehler beim Abgleich bleibt stumm: Die
   // Leitung wackelt, der naechste Versuch kommt in drei Sekunden.
   useEffect(() => {
+    let lebt = true;
+    let unterwegs = false;
     const uhr = window.setInterval(() => {
+      // Bereits besuchte Hub-Tabs bleiben montiert. Unsichtbare Chats dürfen
+      // weder weiter pollen noch langsame Anfragen übereinander stapeln.
+      if (unterwegs || document.visibilityState === 'hidden' || spur.current?.closest('[inert]')) return;
+      unterwegs = true;
       void api
         .clubMessages(clubId, juengste.current)
-        .then((antwort) => dazu(antwort.messages))
-        .catch(() => undefined);
+        .then((antwort) => { if (lebt) dazu(antwort.messages); })
+        .catch(() => undefined)
+        .finally(() => { unterwegs = false; });
     }, TAKT_MS);
-    return () => window.clearInterval(uhr);
+    return () => { lebt = false; window.clearInterval(uhr); };
   }, [clubId, dazu]);
 
   // Ans Ende rollen, wenn etwas dazukommt.
@@ -134,7 +141,7 @@ export function ClanChat({
 
       <div className="clan-chat-spur" ref={spur}>
         {laedt && <Ladekreis />}
-        {!laedt && zeilen.length === 0 && (
+        {!laedt && !fehler && zeilen.length === 0 && (
           <p className="muted clan-chat-hinweis">
             {t('clanchat.leer')}
           </p>

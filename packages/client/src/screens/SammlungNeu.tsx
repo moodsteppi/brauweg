@@ -1,3 +1,4 @@
+import { HubBildIcon } from './HubBildIcon';
 import { useEffect, useRef, useState } from "react";
 import { api, type Me, type Shop, type RegalWare } from "../api";
 import { decksFor, RUECKEN } from "../decks";
@@ -188,7 +189,7 @@ export function SammlungNeu({
           className="sam-shoplink"
           onClick={() => onShop?.(offen?.spiel ?? filter)}
         >
-          {t("sammlung.zumShop")}
+          <HubBildIcon motiv="shop" />{t("sammlung.zumShop")}
         </button>
       </header>
       <div
