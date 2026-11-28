@@ -35,7 +35,7 @@ export default {
   'game.wuerfelglanz': 'Würfelglanz',
   'game.brobluff': 'Bro Bluff',
   'game.dreckbro': 'DreckBro',
-  'modus.mehrkampf': 'Brauweg-Bock',
+  'modus.mehrkampf': 'BroweG-Bock',
   'modus.prosubway': 'Pro-Subway',
   'modus.prosubway.hint': 'Solo · Coins for the hub',
 } satisfies Woerterbuch;
