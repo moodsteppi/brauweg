@@ -1424,6 +1424,25 @@
 }
 
 /* Ein leichter Schleier, damit Raster und Figuren auf jedem Bild lesbar bleiben. */
+.schauplatz[data-schauplatz='hafen'] {
+  background-color: #6b4a2e;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(120, 220, 230, 0.35), transparent 70%),
+    linear-gradient(180deg, #2f6f86 0%, #7a5634 30%, #8a6440 70%, #2f6f86 100%);
+}
+.schauplatz[data-schauplatz='kristall'] {
+  background-color: #3b3a6e;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(170, 150, 255, 0.4), transparent 70%),
+    radial-gradient(40% 25% at 50% 0%, rgba(120, 200, 255, 0.3), transparent 70%),
+    linear-gradient(180deg, #2a2a58 0%, #45458a 55%, #6a62b0 100%);
+}
+.schauplatz[data-bild] {
+  /* Mit gemalter Arena ist der Tischgrund nur Kulisse: dasselbe Bild,
+     unscharf und dunkler, damit die passgenaue Arena davor steht. */
+  filter: blur(14px) brightness(0.5) saturate(1.15);
+  transform: scale(1.12);
+}
 .schauplatz::after {
   /* Oben und unten ins Dunkle, wo Kopfband und Laden liegen; in der Mitte
      frei, damit der Schauplatz der Schauplatz bleibt. */
@@ -1452,7 +1471,9 @@
   /* Die Breite folgt dem Seitenverhaeltnis aus `rastermass` (am Element),
      begrenzt durch die Hoehe des Feldes — Container-Einheiten statt einer
      festen Zahl, damit 375 px und 430 px dieselbe Komposition bekommen. */
-  width: min(100%, 92cqh * var(--verhaeltnis, 1.47));
+  /* 84 % wie im Kampf: Die Mauern der Arena (`.arenabild`) stehen links und
+     rechts neben dem Brett. */
+  width: min(84%, 92cqh * var(--verhaeltnis, 1.47));
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2304,8 +2325,43 @@
   position: relative;
   /* Die Arena so gross, wie Breite UND Hoehe es zulassen — das
      Seitenverhaeltnis steht am Element (aus `rastermass`). */
-  width: min(100cqw, 100cqh * var(--verhaeltnis, 0.61));
+  /* Ersatz zuerst: Versteht ein Browser die Container-Einheiten nicht, faellt
+     die zweite Zeile weg, und ohne Breite haette die Arena (nur absolut
+     gesetzte Kinder) die Breite null — der Kampf waere unsichtbar. */
+  width: 84%;
+  max-height: 100%;
+  /* 84 % und nicht 100 %: Rundum steht die gemalte Arena (`.arenabild`), und
+     ihre Mauern sollen links und rechts noch zu sehen sein. */
+  width: min(84cqw, 86cqh * var(--verhaeltnis, 0.61));
   aspect-ratio: var(--verhaeltnis, 0.61);
+}
+
+/*
+ * Das Arenabild hinter dem Feld (`Arenabild` in Feld.tsx). Bestellt ist die
+ * Kampfflaeche mit 70 % der Bildbreite und 75 % der Bildhoehe, das Bild steht
+ * im Verhaeltnis 2:3. Also 1/0,7 = 142,86 % so breit wie das Feld, mittig.
+ */
+.arenabild {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  width: 142.86%;
+  aspect-ratio: 2 / 3;
+  translate: -50% -50%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+}
+
+/* Nur die eigene Haelfte: Die Unterkante der Kampfflaeche liegt bei 87,5 %
+   der Bildhoehe — um 12,5 % nach unten geschoben, sitzt sie auf der
+   Unterkante des Bretts. */
+.arenabild[data-art='haelfte'] {
+  top: auto;
+  bottom: 0;
+  translate: -50% 12.5%;
 }
 
 .arenaRaster {
@@ -3246,4 +3302,340 @@
   height: 5px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.45);
+}
+
+/*
+ * HOLZ UND MESSING (seit dem 28.11.2026). Robin nach dem Test am iPhone:
+ * Bank, Uhr, Namen und Lebensanzeigen sahen „noch so KI-generiert flau" aus
+ * und brauchten eigene Grafik. Die Teile liegen freigestellt unter
+ * `public/tafelrunde/neu/ui/` (`uiBild`), kommen als Variable am Element an
+ * (`uiHintergrund` in grafik.tsx) und gelten nur mit `data-bild` — ohne Bild
+ * bleibt alles oben Gezeichnete stehen.
+ *
+ * Wo ein Teil in der Breite mitwachsen muss (Schild, Plakette, Wimpel, Bank,
+ * Balken), steht es als `border-image` mit Kappen da: Gestreckt wird nur die
+ * Mitte, runde Enden, Nieten und Eisenwinkel bleiben in ihrem Verhaeltnis.
+ * Die Kappenbreite ist jeweils Hoehe × Kappe/Bildhoehe — sonst wuerden die
+ * Enden gestaucht. Die Masse sind aus dem Alphakanal der Bilder gemessen.
+ */
+
+/* Innenteil des Lebensbalkens: schneidet die Fuellung an die Rundung. Ohne
+   Rahmenbild deckt er den Balken genau, der Look bleibt wie vorher. */
+.lebensInnen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Gold und Feld als eine Gruppe — ohne Plakette einfach nebeneinander. */
+.ladenPlakette {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --- Spielerschild (480 × 149): runde Fassung links (Mitte bei x 70,
+   Durchmesser gut 115), Plakette rechts mit runder Kappe. --- */
+.mitspieler:has(.spielerKachel[data-bild]) {
+  /* Luft fuer das Leuchten: Die Leiste rollt waagerecht und schneidet
+     deshalb auch oben und unten ab, was ueber die Kachel hinausragt — mit
+     zu wenig Polster stand der Schein als harte Kante da. Die negativen
+     Raender holen das Polster zurueck, die Kacheln bleiben, wo sie waren. */
+  margin-top: -3px;
+  margin-bottom: -8px;
+  padding-top: 9px;
+  padding-bottom: 10px;
+}
+
+.spielerKachel[data-bild] {
+  --tn-kachel-h: 44px;
+  --tn-kachel-licht: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
+  height: var(--tn-kachel-h);
+  min-height: 0;
+  gap: 0;
+  /* Gesicht (30 px) mittig in der Fassung: Mitte bei 70,5/149 der Hoehe. */
+  padding: 0 10px 0 calc(var(--tn-kachel-h) * 70.5 / 149 - 15px);
+  border-radius: 0;
+  border: 0 solid transparent;
+  border-image: var(--tn-schild) 0 60 0 142 fill / 0 calc(var(--tn-kachel-h) * 60 / 149) 0
+    calc(var(--tn-kachel-h) * 142 / 149) / 0 stretch;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  color: #fff3d6;
+  /* Zustaende als farbiges Leuchten um die Kontur des Schilds — ein
+     Kastenrand saehe auf dem gemalten Messing aufgeklebt aus. */
+  filter: var(--tn-kachel-licht);
+}
+
+.spielerKachel[data-bild][data-ich] {
+  --tn-kachel-licht: drop-shadow(0 0 1.5px var(--tn-gruen-hell)) drop-shadow(0 0 1.5px var(--tn-gruen-hell))
+    drop-shadow(0 0 6px rgba(111, 220, 142, 0.95));
+}
+
+.spielerKachel[data-bild][data-gegner] {
+  --tn-kachel-licht: drop-shadow(0 0 1.5px #ff6b75) drop-shadow(0 0 1.5px #ff6b75) drop-shadow(0 0 6px rgba(255, 90, 100, 0.95));
+}
+
+/* Angetippt: heller und golden umglommen; beim Gegner bleibt das Rot. */
+.spielerKachel[data-bild][data-gezeigt] {
+  --tn-kachel-licht: brightness(1.25) drop-shadow(0 0 1.5px var(--tn-gold-hell)) drop-shadow(0 0 1.5px var(--tn-gold-hell))
+    drop-shadow(0 0 6px rgba(255, 215, 90, 0.9));
+}
+
+.spielerKachel[data-bild][data-gezeigt][data-gegner] {
+  --tn-kachel-licht: brightness(1.25) drop-shadow(0 0 1.5px #ff6b75) drop-shadow(0 0 1.5px #ff6b75)
+    drop-shadow(0 0 6px rgba(255, 90, 100, 0.95));
+}
+
+.spielerKachel[data-bild][data-aus] {
+  opacity: 0.6;
+  filter: grayscale(1) brightness(0.75);
+}
+
+.spielerKachel[data-bild][data-bereit]::after {
+  top: 2px;
+  right: 4px;
+  box-shadow: 0 0 0 1.5px #3a2208, 0 0 5px var(--tn-gruen-hell);
+}
+
+.spielerKachel[data-bild] .kachelGesicht {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Ohne Profilbild: ein Messingbuchstabe in der dunklen Fassung statt der
+   bunten Scheibe — die saehe in der Fassung wie ein Fremdkoerper aus. */
+.spielerKachel[data-bild] .kachelGesicht[data-ersatz] {
+  background: radial-gradient(circle at 50% 40%, #3a2412, #160c05 75%);
+  color: #f3cf74;
+  font-size: 16px;
+  text-shadow: 0 1px 2px #000;
+}
+
+.spielerKachel[data-bild] .kachelText {
+  /* Der Text beginnt erst auf der Plakette, hinter der Fassung. */
+  padding-left: calc(var(--tn-kachel-h) * 71.5 / 149 - 15px + 4px);
+}
+
+.spielerKachel[data-bild] .kachelName {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.spielerKachel[data-bild] .kachelLeben {
+  color: #ffd7a0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* --- Uhr (256 × 288): Medaille mit Sanduhr oben; die Scheibe sitzt bei
+   49 % / 54 % und misst 80 % der Breite. --- */
+.uhr[data-bild] {
+  width: 43px;
+  min-width: 0;
+  height: 48px;
+  /* Die Zahl auf die Scheibenmitte: Grid zentriert im Inhaltskasten, der
+     Kasten wird um den Versatz der Scheibe verschoben. */
+  padding: 4px 1px 0 0;
+  border-radius: 0;
+  background: var(--tn-medaille) center / 100% 100% no-repeat;
+  box-shadow: none;
+  color: #fff3d6;
+  font-size: 18px;
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.6);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+.uhr[data-bild][data-knapp] {
+  background: var(--tn-medaille) center / 100% 100% no-repeat;
+  color: #ff8a93;
+  filter: drop-shadow(0 0 4px rgba(217, 75, 85, 0.95));
+}
+
+/* --- Runde Knoepfe (192 × 196). Oben abgedunkelt und entsaettigt, damit der
+   gruene Bereit-Haken unten der eine leuchtende Knopf bleibt. --- */
+.kopfKnopf[data-bild],
+.bereitknopf[data-bild] {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.kopfKnopf[data-bild]::before,
+.bereitknopf[data-bild]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--tn-knopf) center / contain no-repeat;
+}
+
+.kopfKnopf[data-bild] {
+  color: #f1e2bd;
+  text-shadow: 0 1px 2px #000;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+.kopfKnopf[data-bild]::before {
+  filter: saturate(0.25) brightness(0.55);
+}
+
+.bereitknopf[data-bild] {
+  width: 48px;
+  height: 48px;
+  color: #ffffff;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5));
+  animation: bereitGlanz 1.8s ease-in-out infinite;
+}
+
+.bereitknopf[data-bild] .haken {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7));
+}
+
+@keyframes bereitGlanz {
+  50% {
+    filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 7px rgba(111, 220, 142, 0.95));
+  }
+}
+
+/* Bereit gemeldet: die Emaille leuchtet hellgruen auf, der Haken wird dunkel
+   — wie vorher „gruen gefuellt", nur auf dem Messingknopf. */
+.bereitknopf[data-bild][data-bereit] {
+  color: #052512;
+  animation: none;
+  filter: drop-shadow(0 0 7px rgba(111, 220, 142, 0.95));
+}
+
+.bereitknopf[data-bild][data-bereit] .haken {
+  filter: none;
+}
+
+.bereitknopf[data-bild][data-bereit]::after {
+  content: '';
+  position: absolute;
+  /* Die Emaille misst 81 % des Knopfes. */
+  inset: 9.5%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #c8f8d4, var(--tn-gruen-hell) 45%, var(--tn-gruen) 100%);
+  box-shadow: inset 0 -3px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Bank (1024 × 145): Brett mit Messingkappen, Eisenwinkel darunter. Die
+   Kappen samt Winkel (je 130 px) bleiben fest, das Brett streckt sich. --- */
+.bank[data-bild] {
+  --tn-brett-h: 32px;
+  /* Die Fuesse stehen auf der Oberkante des Bretts, nicht davor. */
+  padding-bottom: calc(var(--tn-brett-h) - 9px);
+}
+
+.bank[data-bild]::before {
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: var(--tn-brett-h);
+  border-radius: 0;
+  border: 0 solid transparent;
+  border-image: var(--tn-bankbrett) 0 130 fill / 0 calc(var(--tn-brett-h) * 130 / 145) / 0 stretch;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+}
+
+.bank[data-bild] .bankplatz::after {
+  /* Der Stellplatz als heller Fleck auf der Brettkante. */
+  bottom: -4%;
+  height: 14%;
+  background: radial-gradient(closest-side, rgba(255, 225, 170, 0.28), rgba(255, 225, 170, 0.04));
+}
+
+/* --- Lebensbalken (Rahmen 384 × 35, Rand 6 px, runde Kappen 17 px) --- */
+.lebensbalken[data-bild] {
+  height: 9px;
+  border-radius: 5px;
+  background: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  overflow: visible;
+}
+
+.lebensbalken[data-bild] .lebensInnen {
+  inset: 1.5px;
+  border-radius: 3px;
+  background: rgba(16, 9, 3, 0.88);
+}
+
+.lebensbalken[data-bild] .leben {
+  /* Etwas Woelbung: heller oben, satter unten — die flache Fuellung wirkte
+     im Messingrahmen wie ausgeschnitten. */
+  background: linear-gradient(180deg, #a6f5bb, var(--tn-gruen-hell) 45%, #2f9a50);
+}
+
+.lebensbalken[data-bild][data-seite='oben'] .leben {
+  background: linear-gradient(180deg, #ffb0b6, #ff6b75 45%, #c0303c);
+}
+
+.lebensbalken[data-bild]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 0 solid transparent;
+  border-image: var(--tn-balken) 7 17 / 2.2px 5.2px / 0 stretch;
+  pointer-events: none;
+}
+
+/* --- Wimpel (rot 512 × 86, blau 512 × 97): Stange oben, Stoff darunter,
+   Schwalbenschwanz an beiden Enden (je 56 px). --- */
+.kampfSeite {
+  align-items: center;
+}
+
+.kampfSeite strong[data-bild] {
+  --tn-wimpel-h: 30px;
+  display: inline-block;
+  box-sizing: border-box;
+  min-width: 112px;
+  max-width: 64%;
+  height: var(--tn-wimpel-h);
+  /* Der Stoff beginnt unter der Stange: die Schrift ein Stueck nach unten. */
+  padding: 3px 20px 0;
+  line-height: calc(var(--tn-wimpel-h) - 3px);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0 solid transparent;
+  border-image: var(--tn-wimpel) 0 56 fill / 0 18px / 0 stretch;
+  color: #fff6e0;
+  font-size: 15px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+}
+
+/* --- Plakette (512 × 122): Holz mit Messingrand und Eckniete. --- */
+.ladenPlakette[data-bild],
+.shopleisteGold[data-bild] {
+  box-sizing: border-box;
+  border: 0 solid transparent;
+  border-image: var(--tn-plakette) 26 fill / 9px / 0 stretch;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5));
+}
+
+.ladenPlakette[data-bild] {
+  min-height: 42px;
+  padding: 2px 14px;
+}
+
+.shopleisteGold[data-bild] {
+  min-height: 38px;
+  padding: 0 12px;
 }

@@ -26,6 +26,10 @@
  * Rahmens), `preis` das, was der Kauf kostet. Angezeigt und verglichen wird
  * der Preis aus dem Katalog, nie eine Umrechnung aus der Stufe.
  *
+ * GOLD UND FELD stehen seit dem 28.11.2026 auf einer gemalten Holzplakette,
+ * der Bereit-Haken auf einem runden Messingknopf (`uiBild`); ohne Bild der
+ * gezeichnete Look von vorher.
+ *
  * DIE KARTE IST EINE SCHALTFLAECHE (Tipp kauft), und in eine Schaltflaeche
  * darf kein zweiter Knopf. Der Griff zum
  * Einheitenblatt liegt deshalb DANEBEN, oben rechts ueber der Karte.
@@ -36,7 +40,17 @@ import { useState } from 'react';
 import { kartenBild, kartenRahmen } from '../../../figuren3d/grafik-neu';
 import type { EigeneSicht, Einheit } from '../sicht';
 import { einheitName, rollenName, tz } from '../text';
-import { Figur, Kartenrahmen, Kurzname, MarkeZeichen, Muenze, RolleZeichen, kostenStufe, preisVon } from './grafik';
+import {
+  Figur,
+  Kartenrahmen,
+  Kurzname,
+  MarkeZeichen,
+  Muenze,
+  RolleZeichen,
+  kostenStufe,
+  preisVon,
+  uiHintergrund,
+} from './grafik';
 import stil from './neu.module.css';
 
 /**
@@ -202,16 +216,20 @@ export function Laden({
         </button>
       )}
       <div className={stil.ladenKopf}>
-        <span className={stil.goldstand} aria-label={tz('neu.goldstand', { n: eigenes.gold, plus: eigenes.einkommen })}>
-          <Muenze />
-          <strong>{eigenes.gold}</strong>
-          {/* Was die naechste Runde bringt — Zins und Serie wirken sonst wie Zufall. */}
-          <em>+{eigenes.einkommen}</em>
-        </span>
-        <span className={stil.feldstand}>
-          {tz('neu.feld', { belegt: eigenes.belegt, plaetze: eigenes.feldplaetze })}
-          {waechst && <small>{tz('neu.feldNaechste', { n: naechste })}</small>}
-        </span>
+        {/* Gold und Feld zusammen auf der Plakette, der Knopf daneben: Auf
+            dem Holz waere der runde Knopf ein Fremdkoerper. */}
+        <div className={stil.ladenPlakette} {...uiHintergrund('plakette', '--tn-plakette')}>
+          <span className={stil.goldstand} aria-label={tz('neu.goldstand', { n: eigenes.gold, plus: eigenes.einkommen })}>
+            <Muenze />
+            <strong>{eigenes.gold}</strong>
+            {/* Was die naechste Runde bringt — Zins und Serie wirken sonst wie Zufall. */}
+            <em>+{eigenes.einkommen}</em>
+          </span>
+          <span className={stil.feldstand}>
+            {tz('neu.feld', { belegt: eigenes.belegt, plaetze: eigenes.feldplaetze })}
+            {waechst && <small>{tz('neu.feldNaechste', { n: naechste })}</small>}
+          </span>
+        </div>
         {onBereit && (
           <button
             type="button"
@@ -221,6 +239,7 @@ export function Laden({
             aria-label={tz(eigenes.bereit ? 'laden.bereitGemeldet' : 'laden.bereit')}
             disabled={eigenes.bereit || !darfHandeln}
             onClick={onBereit}
+            {...uiHintergrund('knopf-rund', '--tn-knopf')}
           >
             <Haken />
           </button>
@@ -268,7 +287,7 @@ export function Shopleiste({
 }): React.JSX.Element {
   return (
     <button type="button" className={stil.shopleiste} onClick={onOeffnen} aria-label={tz('neu.ladenOeffnen')}>
-      <span className={stil.shopleisteGold} aria-hidden="true">
+      <span className={stil.shopleisteGold} aria-hidden="true" {...uiHintergrund('plakette', '--tn-plakette')}>
         <Muenze />
         <strong>{eigenes.gold}</strong>
       </span>

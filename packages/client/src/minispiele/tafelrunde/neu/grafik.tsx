@@ -21,6 +21,7 @@ import {
   effektBild,
   figurNeuBlatt,
   kartenRahmen,
+  uiBild,
   zeichenBild,
 } from '../../../figuren3d/grafik-neu';
 import { Figur3D } from '../Figur3D';
@@ -29,6 +30,23 @@ import { markenFarbe, markenGlyphe } from '../marken';
 import { einheitName, rollenName } from '../text';
 import type { Effektname } from './abspielen';
 import stil from './neu.module.css';
+
+/**
+ * Ein gemaltes UI-Teil (Holz und Messing, `uiBild`) als Hintergrund: die
+ * Variable mit dem Bild und `data-bild` als Schalter fuers Stylesheet. Ohne
+ * Bild kommt beides nicht, dann bleibt der gezeichnete Look von vorher.
+ *
+ * Hintergrund und kein `<img>`: Die Teile werden per `border-image` in
+ * Kappen und Mitte zerlegt (Schild, Wimpel, Plakette), damit runde Enden bei
+ * anderer Breite nicht verzerren — das kann nur CSS.
+ */
+export function uiHintergrund(
+  name: string,
+  variable: string,
+): { 'data-bild'?: ''; style?: React.CSSProperties } {
+  const bild = uiBild(name);
+  return bild ? { 'data-bild': '', style: { [variable]: `url(${bild})` } as React.CSSProperties } : {};
+}
 
 /** Was ein Bild von einer Einheit wissen muss. */
 export interface Bildeinheit {
