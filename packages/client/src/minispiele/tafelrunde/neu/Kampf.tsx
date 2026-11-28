@@ -42,7 +42,8 @@ import {
   spieleBisNeu,
   zustandAktiv,
 } from './abspielen';
-import { Raster } from './Feld';
+import type { Schauplatz } from '../../../figuren3d/grafik-neu';
+import { Arenabild, Raster } from './Feld';
 import { Effektbild, Figur, RolleZeichen, Sterne } from './grafik';
 import stil from './neu.module.css';
 
@@ -127,6 +128,7 @@ export function Kampf({
   nameVon,
   verblasst,
   rundeBisMs = 0,
+  schauplatz,
   nachEnde,
 }: {
   /** Der abzuspielende Kampf (der eigene oder der eines angetippten Sitzes). */
@@ -150,6 +152,8 @@ export function Kampf({
    * wie ein ewig langer Ladebildschirm").
    */
   rundeBisMs?: number;
+  /** Fuer die gemalte Arena hinter dem Feld (`Arenabild`); ohne Angabe keine. */
+  schauplatz?: Schauplatz;
   /** Was nach dem Ende ueber der Arena steht (das Rundenende), mit dem Stand der Uhr. */
   nachEnde?: (ende: { sieger: Seite | null; seite: Seite | null; schaden: number; zeitMs: number }) => ReactNode;
 }): React.JSX.Element | null {
@@ -239,6 +243,7 @@ export function Kampf({
       </p>
       <div className={stil.arenaRahmen}>
         <div className={stil.arena} style={{ '--verhaeltnis': mass.seitenverhaeltnis } as React.CSSProperties}>
+          {schauplatz && <Arenabild schauplatz={schauplatz} art="ganz" />}
           {/* Das Raster nur als Hauch: Im Kampf ist es Orientierung, nicht Bedienung. */}
           <Raster reihen={arenaReihen} spalten={brettSpalten} klasse={stil.arenaRaster} />
           {anzeige.stand.figuren.map((f) => (

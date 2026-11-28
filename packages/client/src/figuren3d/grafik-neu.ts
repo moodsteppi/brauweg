@@ -71,8 +71,14 @@ export function figurNeuBlatt(kennung: string): string | null {
 // Schauplaetze, Kartenrahmen, Zeichen, Effekte, Titel
 // ---------------------------------------------------------------------------
 
-/** Die Schauplaetze in der Reihenfolge, in der sie je Runde wechseln. */
-export const SCHAUPLAETZE = ['burghof', 'dorfplatz', 'herbstwald', 'vulkan'] as const;
+/**
+ * Die Schauplaetze. Seit dem 28.11.2026 sechs echte Arenen mit Rand,
+ * Mittellinie und Boden mit Struktur (Robin: "Was ist aus unseren Arenen
+ * geworden?"). Die erste Fassung waren ruhige, fast leere Flaechen mit Deko
+ * nur in den Ecken — im Spiel sahen sie aus wie gar keine Arena. Bestellung
+ * und Bildzeilen: docs/ASSETS-TAFELRUNDE-NEU.md, Abschnitt Arenen.
+ */
+export const SCHAUPLAETZE = ['burghof', 'dorfplatz', 'herbstwald', 'vulkan', 'hafen', 'kristall'] as const;
 export type Schauplatz = (typeof SCHAUPLAETZE)[number];
 
 /** Welcher Schauplatz in dieser Runde gilt (Runde ab 1). */
@@ -135,11 +141,14 @@ export function titelBild(): string | null {
 
 /** Alles ausser den Figuren, was schon unter `public/tafelrunde/neu/` liegt. */
 const VORHANDEN: ReadonlySet<string> = new Set<string>([
-  // 27.11.2026: Schauplaetze (szene, 60-116 kB), Rahmen, Zeichen, Effekte (wappen)
+  // 27.11.2026: Rahmen, Zeichen, Effekte (wappen). Schauplaetze seit dem
+  // 28.11.2026 als Arenen neu (szene).
   'feld/burghof',
   'feld/dorfplatz',
   'feld/herbstwald',
   'feld/vulkan',
+  'feld/hafen',
+  'feld/kristall',
   'karten/rahmen-1',
   'karten/rahmen-2',
   'karten/rahmen-3',

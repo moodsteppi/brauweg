@@ -1424,6 +1424,25 @@
 }
 
 /* Ein leichter Schleier, damit Raster und Figuren auf jedem Bild lesbar bleiben. */
+.schauplatz[data-schauplatz='hafen'] {
+  background-color: #6b4a2e;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(120, 220, 230, 0.35), transparent 70%),
+    linear-gradient(180deg, #2f6f86 0%, #7a5634 30%, #8a6440 70%, #2f6f86 100%);
+}
+.schauplatz[data-schauplatz='kristall'] {
+  background-color: #3b3a6e;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(170, 150, 255, 0.4), transparent 70%),
+    radial-gradient(40% 25% at 50% 0%, rgba(120, 200, 255, 0.3), transparent 70%),
+    linear-gradient(180deg, #2a2a58 0%, #45458a 55%, #6a62b0 100%);
+}
+.schauplatz[data-bild] {
+  /* Mit gemalter Arena ist der Tischgrund nur Kulisse: dasselbe Bild,
+     unscharf und dunkler, damit die passgenaue Arena davor steht. */
+  filter: blur(14px) brightness(0.5) saturate(1.15);
+  transform: scale(1.12);
+}
 .schauplatz::after {
   /* Oben und unten ins Dunkle, wo Kopfband und Laden liegen; in der Mitte
      frei, damit der Schauplatz der Schauplatz bleibt. */
@@ -1452,7 +1471,9 @@
   /* Die Breite folgt dem Seitenverhaeltnis aus `rastermass` (am Element),
      begrenzt durch die Hoehe des Feldes — Container-Einheiten statt einer
      festen Zahl, damit 375 px und 430 px dieselbe Komposition bekommen. */
-  width: min(100%, 92cqh * var(--verhaeltnis, 1.47));
+  /* 84 % wie im Kampf: Die Mauern der Arena (`.arenabild`) stehen links und
+     rechts neben dem Brett. */
+  width: min(84%, 92cqh * var(--verhaeltnis, 1.47));
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2304,8 +2325,43 @@
   position: relative;
   /* Die Arena so gross, wie Breite UND Hoehe es zulassen — das
      Seitenverhaeltnis steht am Element (aus `rastermass`). */
-  width: min(100cqw, 100cqh * var(--verhaeltnis, 0.61));
+  /* Ersatz zuerst: Versteht ein Browser die Container-Einheiten nicht, faellt
+     die zweite Zeile weg, und ohne Breite haette die Arena (nur absolut
+     gesetzte Kinder) die Breite null — der Kampf waere unsichtbar. */
+  width: 84%;
+  max-height: 100%;
+  /* 84 % und nicht 100 %: Rundum steht die gemalte Arena (`.arenabild`), und
+     ihre Mauern sollen links und rechts noch zu sehen sein. */
+  width: min(84cqw, 86cqh * var(--verhaeltnis, 0.61));
   aspect-ratio: var(--verhaeltnis, 0.61);
+}
+
+/*
+ * Das Arenabild hinter dem Feld (`Arenabild` in Feld.tsx). Bestellt ist die
+ * Kampfflaeche mit 70 % der Bildbreite und 75 % der Bildhoehe, das Bild steht
+ * im Verhaeltnis 2:3. Also 1/0,7 = 142,86 % so breit wie das Feld, mittig.
+ */
+.arenabild {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  width: 142.86%;
+  aspect-ratio: 2 / 3;
+  translate: -50% -50%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+}
+
+/* Nur die eigene Haelfte: Die Unterkante der Kampfflaeche liegt bei 87,5 %
+   der Bildhoehe — um 12,5 % nach unten geschoben, sitzt sie auf der
+   Unterkante des Bretts. */
+.arenabild[data-art='haelfte'] {
+  top: auto;
+  bottom: 0;
+  translate: -50% 12.5%;
 }
 
 .arenaRaster {

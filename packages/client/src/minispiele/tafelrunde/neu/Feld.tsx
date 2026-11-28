@@ -28,14 +28,53 @@ import { Figur, RolleZeichen, Sterne } from './grafik';
 import stil from './neu.module.css';
 import { markenFarbe } from '../marken';
 
-/** Der Grund des Feldes: das gemalte Bild oder die Farbflaeche des Schauplatzes. */
+/**
+ * Der Grund des ganzen Tisches: dasselbe Arenabild, aber unscharf und
+ * dunkler, nur als Kulisse um die eigentliche Arena herum (`Arenabild`).
+ * Ohne Bild die Farbflaeche des Schauplatzes.
+ */
 export function Schauplatzgrund({ schauplatz }: { schauplatz: Schauplatz }): React.JSX.Element {
   const bild = feldBild(schauplatz);
   return (
     <div
       className={stil.schauplatz}
       data-schauplatz={schauplatz}
+      data-bild={bild ? '' : undefined}
       style={bild ? { backgroundImage: `url(${bild})` } : undefined}
+      aria-hidden="true"
+    />
+  );
+}
+
+/**
+ * Die gemalte Arena, passgenau HINTER dem Wabenfeld (seit dem 28.11.2026).
+ *
+ * Bildschirmfuellend gestreckt fielen auf dem Handy die Seitenmauern weg, und
+ * Kopfband und Laden deckten die Tore oben und unten — uebrig blieb eine leere
+ * Flaeche, und genau so sah es aus (Robin: "Was ist aus unseren Arenen
+ * geworden?"). Bestellt ist jedes Arenabild so, dass die Kampfflaeche 70 % der
+ * Breite und 75 % der Hoehe einnimmt (docs/ASSETS-TAFELRUNDE-NEU.md). Das Bild
+ * ist deshalb 1/0,7 so breit wie das Feld und mittig darunter gelegt; Mauern
+ * und Tore ragen um das Feld herum.
+ *
+ * `ganz`: beide Haelften (Kampf), Mitte auf Mitte. `haelfte`: nur die eigene
+ * (Ruestphase) — die untere Haelfte der Kampfflaeche deckt sich mit dem Brett,
+ * die Mittellinie liegt an seiner Oberkante, die leere Gegnerhaelfte darueber.
+ */
+export function Arenabild({
+  schauplatz,
+  art,
+}: {
+  schauplatz: Schauplatz;
+  art: 'ganz' | 'haelfte';
+}): React.JSX.Element | null {
+  const bild = feldBild(schauplatz);
+  if (!bild) return null;
+  return (
+    <div
+      className={stil.arenabild}
+      data-art={art}
+      style={{ backgroundImage: `url(${bild})` }}
       aria-hidden="true"
     />
   );
@@ -317,8 +356,11 @@ export function Feld({
   verhaeltnis,
   kopf,
   fremd,
+  schauplatz,
   children,
 }: {
+  /** Fuer das Arenabild hinter dem Brett; ohne Angabe keins. */
+  schauplatz?: Schauplatz;
   /** Breite durch Hoehe eines Bretts (`rastermass`) — daran misst das Stylesheet das Brett. */
   verhaeltnis: number;
   /** Ueberschrift ueber dem Brett (Name und Zurueck), nur beim fremden. */
@@ -339,7 +381,10 @@ export function Feld({
           steht. */}
       <div className={stil.feldInnen}>
         {kopf}
-        <div className={stil.feldEigen}>{children}</div>
+        <div className={stil.feldEigen}>
+          {schauplatz && <Arenabild schauplatz={schauplatz} art="haelfte" />}
+          {children}
+        </div>
       </div>
     </section>
   );

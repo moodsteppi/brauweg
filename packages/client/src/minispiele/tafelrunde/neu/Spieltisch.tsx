@@ -514,6 +514,7 @@ export function Spieltisch({
               nameVon={(sitz) => sitzName(zeile(sitz), sitz, sitze)}
               verblasst={kampfbild.verblasst}
               rundeBisMs={rundeBisMs}
+              schauplatz={schauplatz}
               nachEnde={(ende) => (
                 <Rundenende
                   sieger={ende.sieger}
@@ -577,6 +578,7 @@ export function Spieltisch({
         <>
           <Markenleiste staende={staende} tabelle={synergieTabelle} gewaehlt={marke} onWahl={waehleMarke} />
           <Feld
+            schauplatz={schauplatz}
             verhaeltnis={rastermass(sicht.brettReihen, sicht.brettSpalten).seitenverhaeltnis}
             fremd={fremd !== null}
             kopf={
