@@ -28,6 +28,17 @@
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Eine Spalte, in der der Inhalt die freie Höhe bekommt: Die Spielartkarten
+     wachsen auf großen Handys hinein (spielarten.css). Ist der Inhalt höher,
+     rollt es wie vorher — `flex-shrink: 0` am Inhalt quetscht nichts. */
+  display: flex;
+  flex-direction: column;
+}
+.spe-rolle > .spe-kopf {
+  flex: none;
+}
+.spe-rolle > .spe-inhalt {
+  flex: 1 0 auto;
 }
 /* Das Banner läuft bis unter die Statusleiste — beim Scrollen lief aber auch
    der Text darunter und stand neben der Uhrzeit (13.10.2026, gesehen in der

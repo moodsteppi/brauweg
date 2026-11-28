@@ -887,6 +887,9 @@ export function EasyPoker({
           <SpielAbschnitt titel={t('poker.menue.einsatz')}>
             <SpielartKarten
               gameId="easypoker"
+              // Unter den Karten stehen noch Name und Spielerzahl: eine Reihe,
+              // die nicht in die freie Höhe wächst (sonst rollte der Einstieg).
+              reihe
               spielarten={spielartwahl.spielarten}
               gewaehlt={eigenerEinsatz ? null : (art?.id ?? null)}
               onWahl={(id) => {

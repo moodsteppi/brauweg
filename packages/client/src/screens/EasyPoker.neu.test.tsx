@@ -126,14 +126,15 @@ describe('Poker im neuen Hub', () => {
     });
   });
 
-  // Seit dem 28.11.2026 abends stehen die Karten kompakt in einer Reihe, nur
-  // mit Bild und Namen; Satz und Preis stehen einmal darunter, für die
-  // gewählte Spielart (SpielartKarten.tsx).
-  it('nennt unter den Karten, was die gewählte Spielart an BroJetons kostet', async () => {
+  // Der Preis steht an der Karte (groß sichtbar, klein als Beschreibung) und
+  // für die gewählte zusätzlich in der Zeile darunter (SpielartKarten.tsx).
+  it('die Karte nennt, was die Spielart an BroJetons kostet', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
-    fireEvent.click(screen.getByRole('button', { name: /^Hoch/ }));
-    expect(screen.getByText(/Kostet 2000 BroJetons/)).toBeInTheDocument();
+    const hoch = screen.getByRole('button', { name: /^Hoch/ });
+    expect(hoch).toHaveAccessibleDescription(/Kostet 2000 BroJetons/);
+    fireEvent.click(hoch);
+    expect(document.querySelector('.spa-beschreibung')).toHaveTextContent(/Kostet 2000 BroJetons/);
   });
 
   it('Quick-Play sucht über die Schlange in der gewählten Spielart — ohne Tischliste', async () => {

@@ -38,6 +38,7 @@ export function SpielartKarten({
   vorschau,
   hinweis,
   gesperrt,
+  reihe = false,
 }: {
   gameId: string;
   spielarten: readonly Spielart[];
@@ -49,44 +50,62 @@ export function SpielartKarten({
   hinweis?: (art: Spielart) => string | null;
   /** Der GRUND, warum die Karte nicht waehlbar ist (gekauftes Paket fehlt). */
   gesperrt?: (art: Spielart) => string | null;
+  /**
+   * Auch auf grossen Handys eine Reihe mit fester Bildhoehe, die nicht in die
+   * freie Hoehe waechst — fuer Einstiege, unter deren Karten noch mehr steht
+   * (Poker: Name und Spielerzahl). Untereinander gestellt rollte dort die Seite.
+   */
+  reihe?: boolean;
 }): React.JSX.Element {
   /*
-   * Kompakt seit dem 28.11.2026 abends (Robin: der Einstieg soll auf einem
-   * grossen Handy ohne Rollen passen). Bis vier Spielarten stehen in EINER
-   * Reihe mit kleinem Bild und nur dem Namen; der Satz steht einmal darunter,
-   * fuer die gewaehlte Karte. Vier Saetze in vier schmalen Karten machten
-   * jede Karte doppelt so hoch und waren auf 80 px Breite kaum zu lesen. Mehr
-   * als vier (Golf, sieben Kurse) laufen als waagerecht wischbare Reihe,
-   * statt in Zweierreihen nach unten zu wachsen.
+   * Mit der Bildschirmhoehe (Robin, 28.11.2026 abends, nach den Bildern):
    *
-   * Der Sperrgrund bleibt AN der Karte: Er ist die Nachricht dieser einen
-   * Karte, nicht der gewaehlten.
+   * - Kleine Handys (unter 780 px Hoehe, z. B. 375 x 667): bis vier
+   *   Spielarten in EINER Reihe mit kleinem Bild und nur dem Namen; der Satz
+   *   steht einmal darunter, fuer die gewaehlte Karte. Vier Saetze in vier
+   *   80 px schmalen Karten waeren kaum zu lesen und rollten.
+   * - Grosse Handys: Die Karten fuellen die freie Hoehe bis zu den Knoepfen
+   *   (vier als 2 x 2, zwei oder drei in einer Reihe), mit grossem Bild und
+   *   dem Satz auf jeder Karte — sonst bliebe dort ein grosses Loch.
+   *
+   * Beides entscheidet allein das CSS (spielarten.css, `min-height`-Abfrage):
+   * Der Satz steht deshalb IMMER an der Karte (dort auch fuers Vorlesen, als
+   * Beschreibung) und zusaetzlich als Zeile darunter, die nur das kleine
+   * Format zeigt. Die Zeile ist fuer Vorleser stumm — sie wiederholt nur.
+   *
+   * Mehr als vier (Golf, sieben Kurse) bleiben eine waagerecht wischbare
+   * Reihe; auf grossen Handys mit groesseren Karten. Der Sperrgrund ersetzt
+   * an einer gesperrten Karte den Satz: Er ist die Nachricht dieser Karte.
    */
   const wisch = spielarten.length > 4;
+  const satz = (art: Spielart): string => {
+    const zusatz = hinweis?.(art) ?? null;
+    const text = spielartText(gameId, art.id);
+    return zusatz ? `${text} ${zusatz}` : text;
+  };
   const gewaehlteArt = spielarten.find((a) => a.id === gewaehlt) ?? null;
-  const zusatz = gewaehlteArt ? (hinweis?.(gewaehlteArt) ?? null) : null;
-  const beschreibung = gewaehlteArt ? spielartText(gameId, gewaehlteArt.id) : null;
   return (
-    <>
+    <div className="spa-feld">
       <AuswahlRaster
         label={t('einstieg.spielart')}
-        className={`spa-karten${wisch ? ' is-wisch' : ''}`}
+        className={`spa-karten spa-n${Math.min(spielarten.length, 4)}${wisch ? ' is-wisch' : reihe ? ' is-reihe' : ''}`}
         spalten={wisch ? undefined : Math.max(spielarten.length, 1)}
         gewaehlt={gewaehlt}
         onWahl={(id) => onWahl(id)}
         eintraege={spielarten.map((art) => ({
           kennung: art.id,
           titel: spielartName(gameId, art.id),
+          untertitel: satz(art),
           vorschau: <SpielartBild gameId={gameId} art={art} vorschau={vorschau?.(art) ?? null} />,
           deaktiviert: gesperrt?.(art) ?? undefined,
         }))}
       />
-      {beschreibung && (
-        <p className="spa-beschreibung" aria-live="polite">
-          {zusatz ? `${beschreibung} ${zusatz}` : beschreibung}
+      {gewaehlteArt && (
+        <p className="spa-beschreibung" aria-hidden="true">
+          {satz(gewaehlteArt)}
         </p>
       )}
-    </>
+    </div>
   );
 }
 
