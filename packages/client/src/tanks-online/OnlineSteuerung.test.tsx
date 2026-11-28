@@ -36,22 +36,18 @@ afterEach(() => {
 it('feuert genau einmal mit den zuletzt gewählten Werten und der Zugnummer', () => {
   const senden = vi.fn();
   render(<OnlineSteuerung arti={arti()} verbunden senden={senden} />);
-  fireEvent.change(screen.getByRole('slider', { name: /Winkel/ }), {
-    target: { value: '75' },
-  });
-  fireEvent.change(screen.getByRole('slider', { name: /Kraft/ }), {
-    target: { value: '90' },
-  });
+  fireEvent.click(screen.getByRole('button', { name: 'Winkel +1' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Kraft −1' }));
   fireEvent.click(screen.getByRole('button', { name: 'Polterfass' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Feuer!' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Festlegen' }));
   expect(senden).toHaveBeenCalledWith({
     art: 'feuer',
     zug: 3,
-    winkel: 75,
-    staerke: 90,
+    winkel: 61,
+    staerke: 49,
     waffe: 2,
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Feuer!' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Festgelegt ✓' }));
   expect(senden.mock.calls.filter((c) => c[0].art === 'feuer')).toHaveLength(1);
 });
 it('bei Abbruch der Verbindung sind Eingaben gesperrt; Fahren stoppt bei Loslassen', () => {
@@ -66,8 +62,8 @@ it('bei Abbruch der Verbindung sind Eingaben gesperrt; Fahren stoppt bei Loslass
   fireEvent.keyUp(rechts);
   expect(senden).toHaveBeenLastCalledWith({ art: 'reset' });
   rerender(<OnlineSteuerung arti={arti()} verbunden={false} senden={senden} />);
-  expect(screen.getByRole('button', { name: 'Feuer!' })).toBeDisabled();
-  expect(screen.getByRole('slider', { name: /Winkel/ })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Festlegen' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Winkel +1' })).toBeDisabled();
 });
 it('fremde Züge und verbrauchte Items sind nicht bedienbar', () => {
   const senden = vi.fn();
@@ -80,5 +76,15 @@ it('fremde Züge und verbrauchte Items sind nicht bedienbar', () => {
   );
   expect(screen.getByRole('button', { name: 'Reparieren' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Schild' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Feuer!' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Festlegen' })).toBeDisabled();
+});
+
+it('Grenzen bleiben gesperrt und bestätigte Spieler können nach Wiederverbindung nichts verändern', () => {
+  const senden = vi.fn();
+  const { rerender } = render(<OnlineSteuerung arti={arti({ winkel: 180, staerke: 0 })} verbunden senden={senden} />);
+  expect(screen.getByRole('button', { name: 'Winkel +1' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Kraft −1' })).toBeDisabled();
+  rerender(<OnlineSteuerung arti={arti({ bereit: true, amZug: false })} verbunden senden={senden} />);
+  expect(screen.getByRole('button', { name: 'Festgelegt ✓' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Winkel −1' })).toBeDisabled();
 });

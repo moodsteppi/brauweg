@@ -102,3 +102,26 @@ ist das Gateway direkt in `packages/server/src/index.ts` registriert.
 - BroTanks Online → Gateway: serverseitige Partie, persönliche Steuerung,
   Quick-Play-Suche mit Botveto und Sitzwiederaufnahme.
 - iOS → Online-Arena: Querformatfreigabe und Universal-Link-Pfad.
+
+
+## Gemeinsame Salven (28.11.2026)
+
+BroTanks Online verwendet jetzt 30 Sekunden gemeinsame Planung statt der
+20 Sekunden pro einzelnem Zug. Alle lebenden Spieler dürfen gleichzeitig
+fahren, zielen und ihre Items nutzen. Winkel und Kraft werden am Handy mit
+Plus/Minus um jeweils 1 Grad bzw. 1 Prozentpunkt eingestellt.
+
+„Festlegen“ sperrt die eigene Eingabe serverseitig. Sobald alle verbleibenden
+Spieler (einschließlich Bots) bestätigt haben, beginnt sofort ein gemeinsamer
+3–2–1-Countdown. Nach Ablauf der Planungszeit werden unbestätigte Schüsse mit
+den zuletzt gespeicherten Einstellungen festgelegt. Während des Countdowns
+werden weder Eingaben noch Munition verbraucht. Erst anschließend feuern alle
+lebenden Panzer zusammen. Alle Bahnen verwenden dieselbe Ausgangslage;
+Schaden wird gemeinsam ausgewertet, einschließlich gegenseitigem Ausscheiden.
+Wiederverbindungen erhalten die Bestätigung. Pro Salve gibt es nur eine neue
+Rundennummer, eine Tankfüllung und gegebenenfalls einen Flutanstieg.
+
+Die Regel ist nur in der eigenständigen Online-Arena aktiv. BroRemote und
+dessen lokale Bot-Partien behalten ihre bisherigen Einzelzüge. Die Darstellung
+berechnet die gemeinsamen Flugbahnen aus dem Serverzustand nach, ohne die
+vollständigen Bahnen über jede Zustandsnachricht zu übertragen.
