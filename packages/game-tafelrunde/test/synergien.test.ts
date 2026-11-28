@@ -26,6 +26,7 @@ import {
   synergienVon,
   werteFuer,
   zaehleMarken,
+  FELD_HOECHSTENS,
 } from '../src/index.js';
 
 const SAAT = 'cafebabe0011223344556677889900ff';
@@ -44,17 +45,26 @@ function mitHeer(partie: TafelrundePartie, sitz: number, teil: Partial<Heer>): T
 }
 
 describe('Die Tabelle', () => {
-  it('kennt jede Marke des Katalogs genau einmal, mit genau den Schwellen 2, 3 und 5', () => {
+  /*
+   * Seit dem 27.11.2026 hat jede Marke ihre eigenen Schwellen, weil jede
+   * Einheit nur einmal zaehlt. Die Zusage, die bleibt: Jede Schwelle ist mit
+   * VERSCHIEDENEN Einheiten des Katalogs erreichbar, die oberste auf einem
+   * vollen Brett (FELD_HOECHSTENS), und sie steigen.
+   */
+  it('kennt jede Marke genau einmal, mit erreichbaren, steigenden Schwellen', () => {
     assert.deepEqual(
       SYNERGIEN.map((s) => s.marke),
       MARKEN,
     );
     for (const s of SYNERGIEN) {
-      assert.deepEqual(
-        s.stufen.map((st) => st.schwelle),
-        SCHWELLEN,
-        `${s.marke}: Schwellen`,
-      );
+      const schwellen = s.stufen.map((st) => st.schwelle);
+      const traeger = KATALOG.filter((e) => e.marken.includes(s.marke)).length;
+      assert.ok(schwellen.length >= 1, `${s.marke}: keine Stufe`);
+      schwellen.forEach((x, i) => {
+        if (i > 0) assert.ok(x > schwellen[i - 1]!, `${s.marke}: Schwellen steigen nicht`);
+      });
+      assert.ok(schwellen.at(-1)! <= traeger, `${s.marke}: ${schwellen.at(-1)} Traeger noetig, ${traeger} gibt es`);
+      assert.ok(schwellen.at(-1)! <= FELD_HOECHSTENS, `${s.marke}: passt nicht aufs volle Brett`);
       assert.ok(s.name.length > 0, `${s.marke}: Name`);
     }
   });
@@ -131,10 +141,18 @@ describe('Zaehlung', () => {
     assert.equal(z.elementar, 0);
   });
 
-  it('zaehlt Kopien, nicht Verschiedene', () => {
+  // Bis zum 27.11.2026 hiess die Probe "zaehlt Kopien, nicht Verschiedene" —
+  // Robins Regel dreht das um: Jede Einheit zaehlt nur einmal.
+  it('zaehlt Verschiedene, nicht Kopien', () => {
     const z = zaehleMarken(brett(['dorfwache', 'dorfwache', 'schildknappe']));
-    assert.equal(z.krieger, 2);
-    assert.equal(z.waechter, 3);
+    assert.equal(z.krieger, 1);
+    assert.equal(z.waechter, 2);
+  });
+
+  it('zaehlt eine verschmolzene und eine einfache Kopie als eine', () => {
+    const b = brett(['dorfwache']);
+    b[5] = { id: 'dorfwache', stufe: 2 };
+    assert.equal(zaehleMarken(b).krieger, 1);
   });
 
   it('kennt jede Marke, auch mit null', () => {
@@ -158,9 +176,11 @@ describe('Bonus je Einheit', () => {
   });
 
   it('addiert die Boni beider Marken einer Einheit', () => {
-    // Zwei Dorfwachen: je zwei Krieger und zwei Waechter — beide Schwellen
-    // erreicht, beide Boni auf derselben Einheit.
-    const z = zaehleMarken(brett(['dorfwache', 'dorfwache']));
+    // Dorfwache + Steinschleuderer (Krieger) + Schildknappe (Waechter): je
+    // zwei VERSCHIEDENE Krieger und Waechter — beide Schwellen erreicht, beide
+    // Boni auf der Dorfwache. (Zwei Dorfwachen zaehlen seit dem 27.11.2026 nur
+    // einmal.)
+    const z = zaehleMarken(brett(['dorfwache', 'steinschleuderer', 'schildknappe']));
     const krieger = synergie('krieger').stufen[0]!.bonus;
     const waechter = synergie('waechter').stufen[0]!.bonus;
     assert.deepEqual(bonusFuerEinheit('dorfwache', z), {
@@ -287,8 +307,10 @@ describe('synergienVon', () => {
     const b = brett(['dorfwache', 'schildknappe', 'hainwaechterin', 'runenpriester', 'wurzelriese', 'lichtwahrerin']);
     const stand = synergienVon(b).find((s) => s.marke === 'waechter')!;
     assert.equal(stand.anzahl, 6);
-    assert.equal(stand.schwelle, 5);
+    // Waechter: Schwellen 2/4/6 seit dem 27.11.2026.
+    assert.equal(stand.schwelle, 6);
     assert.equal(stand.naechsteSchwelle, null);
     assert.deepEqual(stand.bonus, synergie('waechter').stufen[2]!.bonus);
+    assert.equal(stand.traeger.length, 6);
   });
 });

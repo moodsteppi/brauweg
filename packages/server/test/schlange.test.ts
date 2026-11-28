@@ -22,7 +22,7 @@ const FENSTER_MS = 30_000;
 /** Kein Spiel wird hier voll: Jede Runde geht erst mit dem Ablauf des Fensters los. */
 const NIE_VOLL = () => 8;
 
-const NIEMAND = { sucht: false, suchende: 0, restMs: 0, tischId: null };
+const NIEMAND = { sucht: false, suchende: 0, wartende: [], restMs: 0, tischId: null };
 
 function aufbau() {
   let uhr = 1_000_000;
@@ -55,6 +55,7 @@ test('Spiel A reift, danach Spiel B: Spiel A bleibt im Bau, bis vermittelt oder 
   assert.deepEqual(schlange.stand('filler', 'anna'), {
     sucht: true,
     suchende: 1,
+    wartende: ['anna'],
     restMs: 0,
     tischId: null,
   });
@@ -67,12 +68,13 @@ test('Spiel A reift, danach Spiel B: Spiel A bleibt im Bau, bis vermittelt oder 
   assert.deepEqual(zweite.map((runde) => runde.gameId), ['eiland']);
   assert.deepEqual(
     schlange.stand('filler', 'anna'),
-    { sucht: true, suchende: 1, restMs: 0, tischId: null },
+    { sucht: true, suchende: 1, wartende: ['anna'], restMs: 0, tischId: null },
     'Filler ist weiter im Bau — vorher ueberschrieb Eiland den Eintrag, und hier stand "sucht nicht"',
   );
   assert.deepEqual(schlange.stand('eiland', 'anna'), {
     sucht: true,
     suchende: 1,
+    wartende: ['anna'],
     restMs: 0,
     tischId: null,
   });
@@ -128,7 +130,7 @@ test('Eine neue Suche in Spiel B raeumt den Bau-Eintrag von Spiel A nicht weg', 
   assert.equal(schlange.stand('eiland', 'anna').sucht, true);
   assert.deepEqual(
     schlange.stand('filler', 'anna'),
-    { sucht: true, suchende: 1, restMs: 0, tischId: null },
+    { sucht: true, suchende: 1, wartende: ['anna'], restMs: 0, tischId: null },
     'Filler ist weiter im Bau — vorher loeschte betritt() den Eintrag ohne Blick auf das Spiel',
   );
 

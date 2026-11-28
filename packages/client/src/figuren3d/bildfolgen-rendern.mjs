@@ -75,7 +75,7 @@ const VERGLEICHSBILD = join(WURZEL, 'docs', 'bilder', 'tafelrunde-kamerawinkel.w
  * Ordner einer Wegwerf-Probe liegt, faellt beim naechsten Aufraeumen um; das
  * hier ist dieselbe Datei, nur an einem Platz, der ihr gehoert.
  */
-const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt');
+const LIZENZ_QUELLE = join(HIER, 'kaykit-adventurers-1.0-lizenz.txt'); // seit 28.11.2026 entfernt, siehe unten
 
 const QUELLE =
   'https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures';
@@ -444,8 +444,31 @@ function rasterVon(bewegungen) {
   return { je, spalten, zeilen: zeile };
 }
 
-/** Kantenlaenge eines Einzelbildes im fertigen Sheet. */
-const KANTE = 128;
+/** Wert eines Schalters `--name wert` aus der Befehlszeile, sonst undefined. */
+function argument(name) {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+/**
+ * Kantenlaenge eines Einzelbildes im fertigen Sheet.
+ *
+ * `--kante` gilt nur fuer die Stilprobe (siehe `probeModell`): Die neuen
+ * Figuren sollen 192 oder 256 Pixel bekommen, und das entscheidet sich am
+ * gerenderten Blatt. Die heutigen fuenf Blaetter bleiben bei 128, solange
+ * figuren3d.ts (FIGUREN3D_KANTE) nichts anderes sagt.
+ */
+const KANTE = Number(argument('--kante') ?? 128);
+
+/**
+ * Belichtung und Himmelslicht. Die Vorgaben (1,05 und 1,1) sind die der
+ * abgenommenen 3D-Probe fuer die KayKit-Figuren. Die KI-Figuren von Tafelrunde
+ * neu tragen ihre Farbe als eingebackene Textur und wirkten damit deutlich
+ * dunkler als im Konzeptbild (Vergleich mit dem Blender-Titelbild, 27.11.2026);
+ * fuer sie gibt es `--belichtung` und `--himmel`.
+ */
+const BELICHTUNG = Number(argument('--belichtung') ?? 1.05);
+const HIMMEL = Number(argument('--himmel') ?? 1.1);
 
 /**
  * Gerendert wird doppelt so gross und danach halbiert.
@@ -874,14 +897,14 @@ renderer.setClearColor(0x000000, 0);
 // Dieselben zwei Zeilen wie in der 3D-Probe — ohne sie sind die Figuren
 // merklich blasser als dort, und abgenommen wurde die Optik an ihr.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = ${BELICHTUNG};
 document.body.appendChild(renderer.domElement);
 
 const szene = new THREE.Scene();
 // Kein Hintergrund und kein Nebel: Das Bild soll freigestellt sein. Der Nebel
 // der Probe faerbt ausserdem alles Richtung #1a1410 ein, was auf einem
 // transparenten Bild wie Schmutz im Alphakanal aussaehe.
-szene.add(new THREE.HemisphereLight('#cfe0ff', '#4a3a28', 1.1));
+szene.add(new THREE.HemisphereLight('#cfe0ff', '#4a3a28', ${HIMMEL}));
 const sonne = new THREE.DirectionalLight('#fff3dc', 2.1);
 sonne.position.set(5.5, 9, 4.5);
 szene.add(sonne);
@@ -1258,6 +1281,46 @@ async function rendereBlatt(seite, sharp, rolle, kameraKonfig) {
 
 const nurVergleich = process.argv.includes('--vergleich');
 
+/**
+ * Betriebsart C, die Stilprobe "Tafelrunde neu" (docs/ASSETS-TAFELRUNDE-NEU.md):
+ *
+ *   node bildfolgen-rendern.mjs --modell figur.glb --name dorfwache \
+ *        --ausgabe <ordner> [--kante 256]
+ *
+ * Nimmt EIN fertig gerigtes Modell, dessen fuenf Clips schon so heissen wie
+ * die Bewegungen (stand, lauf, schlag, getroffen, tod) und das einen Knochen
+ * `hips` hat, und legt das Blatt in einen beliebigen Ordner — NICHT unter
+ * `public/`. Die Kamera, das Licht und der Ausschnitt sind dieselben wie fuer
+ * die Blaetter im Spiel; genau deshalb laeuft die Probe hier durch und nicht
+ * durch einen eigenen Renderer.
+ */
+const probeModell = argument('--modell');
+const probeName = argument('--name') ?? 'probe';
+/**
+ * `--modelle <ordner>`: ALLE `<name>.glb` darin in einem Durchgang, mit EINEM
+ * gemeinsamen Ausschnitt — wie die Spielblaetter in `baueBlaetter`. Nur so
+ * sind die Figuren im Spiel gleich gross und stehen auf einer Linie; mit
+ * `--modell` je Figur bekaeme jede ihren eigenen Ausschnitt und fuellte ihre
+ * Zelle, ein Salamander waere so gross wie eine Giraffe.
+ */
+const probeOrdner = argument('--modelle');
+const probeAusgabe = argument('--ausgabe');
+if ((probeModell || probeOrdner) && !probeAusgabe) throw new Error('--modell/--modelle braucht --ausgabe <ordner>');
+/*
+ * SEIT DEM 28.11.2026 GIBT ES DIE ALTEN BLAETTER NICHT MEHR. Das alte
+ * Tafelrunde ist entfernt, mit ihm die fuenf KayKit-Blaetter unter
+ * public/tafelrunde/figuren3d/ und ihre Lizenzdatei. Was dieses Skript ohne
+ * `--modell`/`--modelle` tut (KayKit holen, Rollenblaetter schreiben,
+ * Vergleichsbild), steht noch darunter, wuerde aber in einen Ordner
+ * schreiben, den der Client nicht mehr liest. Die neuen Figuren entstehen
+ * ueber `--modelle` (docs/ASSETS-TAFELRUNDE-NEU.md, serie-final.sh).
+ */
+if (!probeModell && !probeOrdner) {
+  throw new Error(
+    'Die KayKit-Blaetter des alten Tafelrunde gibt es nicht mehr. Aufruf: --modelle <ordner> --ausgabe <ordner> (siehe docs/ASSETS-TAFELRUNDE-NEU.md).',
+  );
+}
+
 // Fester Name statt `mkdtemp`: Die 17,6 MB Originale sollen beim zweiten Lauf
 // nicht noch einmal aus dem Netz kommen (`hole()` ueberspringt, was schon da
 // ist). Wer wirklich frisch laden will, loescht den Ordner.
@@ -1265,8 +1328,23 @@ const zwischen = join(tmpdir(), 'brauweg-figuren3d');
 await mkdir(zwischen, { recursive: true });
 console.log(`Zwischenstand: ${zwischen}`);
 
-const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
-await baueModelle(zwischen, gebraucht);
+/** Die Namen der Probemodelle, die im Zwischenordner liegen. */
+const probeNamen = [];
+if (probeModell) {
+  await writeFile(join(zwischen, `${probeName}.glb`), await readFile(resolve(probeModell)));
+  probeNamen.push(probeName);
+} else if (probeOrdner) {
+  const { readdir } = await import('node:fs/promises');
+  for (const datei of (await readdir(resolve(probeOrdner))).filter((d) => d.endsWith('.glb')).sort()) {
+    const name = datei.slice(0, -'.glb'.length);
+    await writeFile(join(zwischen, datei), await readFile(join(resolve(probeOrdner), datei)));
+    probeNamen.push(name);
+  }
+  if (probeNamen.length === 0) throw new Error(`Keine .glb in ${probeOrdner}`);
+} else {
+  const gebraucht = nurVergleich ? VERGLEICH_ROLLEN : null;
+  await baueModelle(zwischen, gebraucht);
+}
 
 const { server, port } = await starteServer(SEITE, zwischen);
 const { chromium } = await ladePaket('playwright');
@@ -1589,7 +1667,37 @@ async function baueVergleich() {
 // Los
 // ---------------------------------------------------------------------------
 
-if (nurVergleich) {
+/**
+ * Die Stilprobe: ein Blatt als WebP und als PNG (das PNG fuer die Vorschau,
+ * die daraus bewegte Bilder schneidet), dazu die Zahlen, die figuren3d.ts
+ * spaeter braucht, als JSON daneben.
+ */
+async function baueProbe() {
+  await mkdir(resolve(probeAusgabe), { recursive: true });
+  const ausschnitt = await messeAusschnitt(seite, probeNamen, {
+    grad: KAMERA_GRAD,
+    // `--drehung` nur fuer die Probe: Pinguine mit grossen Augen zeigen bei
+    // 17 Grad fast nur den Hinterkopf (Stilprobe 27.11.2026, Abnahme 1).
+    drehungGrad: Number(argument('--drehung') ?? DREHUNG_GRAD),
+  });
+  console.log(
+    `Ausschnitt fuer ${probeNamen.length} Modell(e): halbe Hoehe ${ausschnitt.halbeHoehe.toFixed(3)}  Mitte y ${ausschnitt.mitteY.toFixed(3)}`,
+  );
+  for (const name of probeNamen) {
+    const { png, raster, laengen, fusspunkt } = await rendereBlatt(seite, sharp, name, ausschnitt);
+    const basis = join(resolve(probeAusgabe), name);
+    await writeFile(`${basis}.png`, png);
+    await sharp(png).webp({ quality: 70, alphaQuality: 100, effort: 6 }).toFile(`${basis}.webp`);
+    const groesse = (await readFile(`${basis}.webp`)).byteLength;
+    const angaben = { kante: KANTE, raster, bewegungen: BEWEGUNGEN, laengen, fusspunkt, groesse, ausschnitt };
+    await writeFile(`${basis}.json`, JSON.stringify(angaben, null, 2));
+    console.log(`${name}: ${basis}.webp (${kb(groesse)}), Fusspunkt ${fusspunkt.x.toFixed(3)}/${fusspunkt.y.toFixed(3)}`);
+  }
+}
+
+if (probeModell || probeOrdner) {
+  await baueProbe();
+} else if (nurVergleich) {
   await baueVergleich();
 } else {
   await baueBlaetter();

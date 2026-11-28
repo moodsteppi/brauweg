@@ -704,8 +704,9 @@ export const BRETTWERT_BAENDER = 8;
  * eingerechnet.
  *
  * Ueber `gesamtkosten` und nicht ueber `einheit(id).kosten`: Eine Dorfwache
- * auf Stufe 3 hat neun Karten verschlungen und ist kein Ein-Gold-Platz mehr.
- * Wer das weglaesst, misst das aufgestiegene Brett als arm.
+ * auf Stufe 3 hat neun Karten verschlungen und ist kein Zwei-Gold-Platz mehr.
+ * Wer das weglaesst, misst das aufgestiegene Brett als arm. (`kosten` ist seit
+ * dem 27.11.2026 ohnehin nur noch die Kostenstufe; das Gold steht in `preis`.)
  */
 export function brettwert(brett: readonly (Kaempfer | null)[]): number {
   return brett.reduce((summe, k) => (k === null ? summe : summe + gesamtkosten(k.id, k.stufe)), 0);

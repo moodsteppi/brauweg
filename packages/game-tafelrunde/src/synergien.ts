@@ -64,14 +64,67 @@ import {
  * WER SIE WIEDER VERSCHIEBT, misst vorher die Levelverteilung: Solange ein
  * Brett drei bis fuenf Felder hat, ist jede Schwelle darueber Zierde.
  */
-export type Schwelle = 2 | 3 | 5;
+export type Schwelle = number;
 
+/**
+ * Die VORGABE der Schwellen. Seit dem 27.11.2026 hat jede Marke ihre eigenen
+ * (in `stufen` der Tabelle), weil eine Einheit nur noch EINMAL zaehlt (siehe
+ * `zaehleMarken`): Eine Marke mit vier verschiedenen Traegern kann die Fuenf
+ * nie erreichen. Robins Entscheidung: Schwellen je Marke so, wie ihre
+ * Traegerzahl sie hergibt.
+ */
 export const SCHWELLEN: readonly Schwelle[] = [2, 3, 5];
 
-/** Eine Stufe einer Synergie: ab wie vielen Traegern welcher Bonus gilt. */
+/** Die Schwellen einer Marke, aufsteigend. */
+export function schwellenVon(marke: Marke): readonly Schwelle[] {
+  return synergie(marke).stufen.map((s) => s.schwelle);
+}
+
+/**
+ * Der sichtbare Effekt einer Marke im Kampf (seit dem 27.11.2026, Robins
+ * Entscheidung: "je Marke ein Effekt" statt reiner Zahlen). Was er genau
+ * tut, rechnet kampf.ts; hier steht nur, WIE STARK er auf dieser Stufe ist.
+ *
+ * Zeiten in Spielsekunden, wie bei den Faehigkeiten (faehigkeiten.ts).
+ */
+export type Markeneffekt =
+  /** Unter halbem Leben schlagen die Traeger haerter zu. */
+  | { readonly art: 'kampfgeist'; readonly angriffProzent: number }
+  /** Zu Kampfbeginn ein Schild ueber einen Teil des Lebens. */
+  | { readonly art: 'schutzschild'; readonly lebenProzent: number }
+  /** Laufend etwas Leben zurueck, je Spielsekunde. */
+  | { readonly art: 'wachstum'; readonly lebenProzentJeSek: number }
+  /** Kampfbeginn mit so viel Prozent des vollen Manas. */
+  | { readonly art: 'aufgeladen'; readonly manaProzent: number }
+  /** Der erste fallende Traeger der Seite steht mit so viel Leben wieder auf. */
+  | { readonly art: 'wiederkehr'; readonly lebenProzent: number }
+  /** Treffer setzen Brand: je Spielsekunde ein Teil des Angriffs, so lange. */
+  | { readonly art: 'glut'; readonly angriffProzentJeSek: number; readonly sek: number }
+  /** Zu Kampfbeginn hinter die gegnerischen Linien springen. */
+  | { readonly art: 'hinterhalt' };
+
+/** Eine Stufe einer Synergie: ab wie vielen Traegern was gilt. */
 export interface Synergiestufe {
   readonly schwelle: Schwelle;
+  /**
+   * Der Zahlenanteil, der im Kampf WIRKLICH auf die Werte kommt. Seit dem
+   * 27.11.2026 klein: Die Hauptsache ist der Effekt.
+   */
   readonly bonus: Wertebonus;
+  readonly effekt: Markeneffekt;
+  /** Was diese Stufe tut, als ein Satz fuer das Pop-up der Marke. */
+  readonly text: string;
+  /**
+   * WIE VIEL DIE STUFE DEM BOT WERT IST, ausgedrueckt als Wertebonus.
+   *
+   * Das sind die Zahlen, die bis zum 27.11.2026 im Kampf wirkten, und sie
+   * bleiben mit Absicht: Der Bot (bot.ts) rechnet nur mit Werten und kennt
+   * keine Effekte. Diese Zahlen sind in ueber zehn Messreihen auf ihn
+   * abgestimmt (siehe die Kommentare an den Marken); ein Bot, der den neuen
+   * Effekt gar nicht saehe, kaufte die Marken nicht mehr, und die Probe
+   * test/ausgewogenheit.test.ts saehe nur noch Zufallsbretter.
+   */
+  readonly schaetzung: Wertebonus;
 }
 
 export interface Synergie {
@@ -141,18 +194,36 @@ export const SYNERGIEN: readonly Synergie[] = [
     marke: 'krieger',
     name: 'Krieger',
     wirkung:
-      'Jeder Krieger auf dem Brett bekommt Rüstung dazu und steckt damit jeden Treffer besser weg.',
+      'Krieger auf dem Brett tragen etwas mehr Rüstung und schlagen unter halbem Leben härter zu.',
     stufen: [
-      { schwelle: 2, bonus: bonus({ ruestung: 10 }) },
-      { schwelle: 3, bonus: bonus({ ruestung: 15 }) },
-      { schwelle: 5, bonus: bonus({ ruestung: 25 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ ruestung: 8 }),
+        effekt: { art: 'kampfgeist', angriffProzent: 25 },
+        text: '+8 Rüstung, unter halbem Leben +25 % Angriff.',
+        schaetzung: bonus({ ruestung: 10 }),
+      },
+      {
+        schwelle: 3,
+        bonus: bonus({ ruestung: 12 }),
+        effekt: { art: 'kampfgeist', angriffProzent: 35 },
+        text: '+12 Rüstung, unter halbem Leben +35 % Angriff.',
+        schaetzung: bonus({ ruestung: 15 }),
+      },
+      {
+        schwelle: 5,
+        bonus: bonus({ ruestung: 18 }),
+        effekt: { art: 'kampfgeist', angriffProzent: 55 },
+        text: '+18 Rüstung, unter halbem Leben +55 % Angriff.',
+        schaetzung: bonus({ ruestung: 25 }),
+      },
     ],
   },
   {
     marke: 'elementar',
     name: 'Elementar',
     wirkung:
-      'Jedes Elementarwesen auf dem Brett schlägt härter zu — der Bonus geht auf den Angriff.',
+      'Elementarwesen schlagen etwas härter zu und starten mit Mana, ihre Fähigkeit kommt früher.',
     /*
      * DIESE ZAHLEN WAREN NICHT SCHULD, als Elementar am 05.09.2026 bei x0,25
      * stand — wer das nachsehen will, misst es nach: Mit Bonus NULL blieb die
@@ -177,38 +248,92 @@ export const SYNERGIEN: readonly Synergie[] = [
      * Rechnung steht in docs/spiele/auto-battler-konzept.md.
      */
     stufen: [
-      { schwelle: 2, bonus: bonus({ angriffProzent: 15 }) },
-      { schwelle: 3, bonus: bonus({ angriffProzent: 25 }) },
-      { schwelle: 5, bonus: bonus({ angriffProzent: 40 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ angriffProzent: 5 }),
+        effekt: { art: 'aufgeladen', manaProzent: 30 },
+        text: '+5 % Angriff, Kampfbeginn mit 30 % Mana.',
+        schaetzung: bonus({ angriffProzent: 15 }),
+      },
+      {
+        schwelle: 3,
+        bonus: bonus({ angriffProzent: 10 }),
+        effekt: { art: 'aufgeladen', manaProzent: 50 },
+        text: '+10 % Angriff, Kampfbeginn mit 50 % Mana.',
+        schaetzung: bonus({ angriffProzent: 25 }),
+      },
+      {
+        schwelle: 5,
+        bonus: bonus({ angriffProzent: 15 }),
+        effekt: { art: 'aufgeladen', manaProzent: 80 },
+        text: '+15 % Angriff, Kampfbeginn mit 80 % Mana.',
+        schaetzung: bonus({ angriffProzent: 40 }),
+      },
     ],
   },
   {
     marke: 'meuchler',
     name: 'Meuchler',
     wirkung:
-      'Jeder Meuchler auf dem Brett schlägt öfter zu — der Bonus geht auf das Tempo.',
+      'Meuchler sind schneller, härter und zäher, und wer im Nahkampf kämpft, springt zu Kampfbeginn hinter die gegnerischen Linien.',
     stufen: [
-      { schwelle: 2, bonus: bonus({ tempoProzent: 15 }) },
-      { schwelle: 3, bonus: bonus({ tempoProzent: 25 }) },
-      { schwelle: 5, bonus: bonus({ tempoProzent: 40 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ tempoProzent: 15, angriffProzent: 10, lebenProzent: 15 }),
+        effekt: { art: 'hinterhalt' },
+        text: '+15 % Tempo, +10 % Angriff, +15 % Leben, Nahkämpfer springen nach hinten.',
+        schaetzung: bonus({ tempoProzent: 15 }),
+      },
+      {
+        schwelle: 3,
+        bonus: bonus({ tempoProzent: 25, angriffProzent: 15, lebenProzent: 20 }),
+        effekt: { art: 'hinterhalt' },
+        text: '+25 % Tempo, +15 % Angriff, +20 % Leben, Nahkämpfer springen nach hinten.',
+        schaetzung: bonus({ tempoProzent: 25 }),
+      },
+      {
+        schwelle: 4,
+        bonus: bonus({ tempoProzent: 40, angriffProzent: 25, lebenProzent: 30 }),
+        effekt: { art: 'hinterhalt' },
+        text: '+40 % Tempo, +25 % Angriff, +30 % Leben, Nahkämpfer springen nach hinten.',
+        schaetzung: bonus({ tempoProzent: 40 }),
+      },
     ],
   },
   {
     marke: 'waechter',
     name: 'Wächter',
     wirkung:
-      'Jeder Wächter auf dem Brett bekommt Leben und Rüstung dazu und wird zur Mauer davor.',
+      'Wächter bekommen etwas mehr Leben und zu Kampfbeginn einen Schutzschild.',
     stufen: [
-      { schwelle: 2, bonus: bonus({ lebenProzent: 10, ruestung: 5 }) },
-      { schwelle: 3, bonus: bonus({ lebenProzent: 15, ruestung: 8 }) },
-      { schwelle: 5, bonus: bonus({ lebenProzent: 25, ruestung: 15 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ lebenProzent: 5 }),
+        effekt: { art: 'schutzschild', lebenProzent: 8 },
+        text: '+5 % Leben, Schild über 8 % des Lebens.',
+        schaetzung: bonus({ lebenProzent: 10, ruestung: 5 }),
+      },
+      {
+        schwelle: 4,
+        bonus: bonus({ lebenProzent: 8 }),
+        effekt: { art: 'schutzschild', lebenProzent: 13 },
+        text: '+8 % Leben, Schild über 13 % des Lebens.',
+        schaetzung: bonus({ lebenProzent: 15, ruestung: 8 }),
+      },
+      {
+        schwelle: 6,
+        bonus: bonus({ lebenProzent: 12 }),
+        effekt: { art: 'schutzschild', lebenProzent: 20 },
+        text: '+12 % Leben, Schild über 20 % des Lebens.',
+        schaetzung: bonus({ lebenProzent: 25, ruestung: 15 }),
+      },
     ],
   },
   {
     marke: 'naturwesen',
     name: 'Naturwesen',
     wirkung:
-      'Jedes Naturwesen auf dem Brett bekommt Leben dazu und bleibt entsprechend länger stehen.',
+      'Naturwesen bekommen etwas mehr Leben und heilen sich im Kampf laufend selbst.',
     /*
      * AUCH DIESE ZAHLEN WAREN NICHT SCHULD, als Naturwesen am 18.09.2026 mit
      * x0,52 die unterste Zeile des Katalogs war — dieselbe Geschichte wie bei
@@ -228,27 +353,63 @@ export const SYNERGIEN: readonly Synergie[] = [
      * ihr Bonus geht, und uebernimmt nicht die Antwort dieser Zeile.
      */
     stufen: [
-      { schwelle: 2, bonus: bonus({ lebenProzent: 15 }) },
-      { schwelle: 3, bonus: bonus({ lebenProzent: 25 }) },
-      { schwelle: 5, bonus: bonus({ lebenProzent: 40 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ lebenProzent: 5 }),
+        effekt: { art: 'wachstum', lebenProzentJeSek: 0.6 },
+        text: '+5 % Leben, heilen 0,6 % je Sekunde.',
+        schaetzung: bonus({ lebenProzent: 15 }),
+      },
+      {
+        schwelle: 3,
+        bonus: bonus({ lebenProzent: 8 }),
+        effekt: { art: 'wachstum', lebenProzentJeSek: 0.9 },
+        text: '+8 % Leben, heilen 0,9 % je Sekunde.',
+        schaetzung: bonus({ lebenProzent: 25 }),
+      },
+      {
+        schwelle: 5,
+        bonus: bonus({ lebenProzent: 12 }),
+        effekt: { art: 'wachstum', lebenProzentJeSek: 1.4 },
+        text: '+12 % Leben, heilen 1,4 % je Sekunde.',
+        schaetzung: bonus({ lebenProzent: 40 }),
+      },
     ],
   },
   {
     marke: 'untot',
     name: 'Untot',
     wirkung:
-      'Jeder Untote auf dem Brett bekommt Angriff und Leben dazu, beides maßvoll.',
+      'Untote sind zäher und schlagen härter zu, und der erste, der fällt, steht wieder auf.',
     stufen: [
-      { schwelle: 2, bonus: bonus({ angriffProzent: 10, lebenProzent: 10 }) },
-      { schwelle: 3, bonus: bonus({ angriffProzent: 15, lebenProzent: 15 }) },
-      { schwelle: 5, bonus: bonus({ angriffProzent: 30, lebenProzent: 30 }) },
+      {
+        schwelle: 2,
+        bonus: bonus({ angriffProzent: 12, lebenProzent: 8 }),
+        effekt: { art: 'wiederkehr', lebenProzent: 70 },
+        text: '+12 % Angriff, +8 % Leben, der erste Gefallene kehrt mit 70 % Leben zurück.',
+        schaetzung: bonus({ angriffProzent: 10, lebenProzent: 10 }),
+      },
+      {
+        schwelle: 3,
+        bonus: bonus({ angriffProzent: 18, lebenProzent: 12 }),
+        effekt: { art: 'wiederkehr', lebenProzent: 85 },
+        text: '+18 % Angriff, +12 % Leben, der erste Gefallene kehrt mit 85 % Leben zurück.',
+        schaetzung: bonus({ angriffProzent: 15, lebenProzent: 15 }),
+      },
+      {
+        schwelle: 4,
+        bonus: bonus({ angriffProzent: 28, lebenProzent: 18 }),
+        effekt: { art: 'wiederkehr', lebenProzent: 100 },
+        text: '+28 % Angriff, +18 % Leben, der erste Gefallene kehrt mit vollem Leben zurück.',
+        schaetzung: bonus({ angriffProzent: 30, lebenProzent: 30 }),
+      },
     ],
   },
   {
     marke: 'drache',
     name: 'Drache',
     wirkung:
-      'Jeder Drache auf dem Brett schlägt härter und öfter zu — zwei Träger sind schon die erste Stufe.',
+      'Drachen schlagen etwas härter zu, und ihre Treffer setzen das Ziel in Brand.',
     /*
      * Am 05.09.2026 halbiert (vorher 25/10, 50/20 und 80/30) und mit der
      * Schwellenverschiebung noch einmal um den Traegeranteil gekuerzt.
@@ -280,9 +441,16 @@ export const SYNERGIEN: readonly Synergie[] = [
      * von x0,77 auf x1,17, ohne dass an diesen Zahlen etwas geaendert wurde.
      */
     stufen: [
-      { schwelle: 2, bonus: bonus({ angriffProzent: 10, tempoProzent: 5 }) },
-      { schwelle: 3, bonus: bonus({ angriffProzent: 20, tempoProzent: 8 }) },
-      { schwelle: 5, bonus: bonus({ angriffProzent: 35, tempoProzent: 15 }) },
+      // NUR EINE STUFE (27.11.2026): Drache hat genau zwei verschiedene Traeger
+      // (Funkensalamander, Drachenkind), und jede Einheit zaehlt nur einmal.
+      // Gemessen war sie mit den Werten der alten dritten Stufe zu stark (x1,30); sie liegt jetzt etwa bei der alten zweiten.
+      {
+        schwelle: 2,
+        bonus: bonus({ angriffProzent: 8 }),
+        effekt: { art: 'glut', angriffProzentJeSek: 14, sek: 3 },
+        text: '+8 % Angriff, Treffer brennen 3 Sekunden nach.',
+        schaetzung: bonus({ angriffProzent: 35, tempoProzent: 15 }),
+      },
     ],
   },
 ];
@@ -311,28 +479,45 @@ export function zaehleMarken(brett: Aufgestellte): Markenzaehlung {
   const zaehlung: Record<Marke, number> = Object.fromEntries(
     MARKEN.map((m) => [m, 0]),
   ) as Record<Marke, number>;
+  /*
+   * JEDE EINHEIT ZAEHLT NUR EINMAL (Robin, 27.11.2026): Zwei Pinguinwachen —
+   * gleich ob Stufe 1 und 1 oder Stufe 2 und 1 — sind EIN Krieger und EIN
+   * Waechter. Sonst baute man Marken aus lauter Kopien derselben Einheit.
+   */
+  const gezaehlt = new Set<EinheitId>();
   for (const platz of brett) {
-    if (!platz) continue;
+    if (!platz || gezaehlt.has(platz.id)) continue;
+    gezaehlt.add(platz.id);
     for (const marke of einheit(platz.id).marken) zaehlung[marke] += 1;
   }
   return zaehlung;
 }
 
+/** Die verschiedenen Einheiten einer Marke auf diesem Brett (fuer die Sicht). */
+export function traegerVon(brett: Aufgestellte, marke: Marke): readonly EinheitId[] {
+  const ids: EinheitId[] = [];
+  for (const platz of brett) {
+    if (!platz || ids.includes(platz.id)) continue;
+    if (einheit(platz.id).marken.includes(marke)) ids.push(platz.id);
+  }
+  return ids;
+}
+
 /** Die hoechste erreichte Schwelle, oder null unter der ersten. */
-export function aktiveSchwelle(anzahl: number): Schwelle | null {
+export function aktiveSchwelle(anzahl: number, schwellen: readonly Schwelle[] = SCHWELLEN): Schwelle | null {
   let aktiv: Schwelle | null = null;
-  for (const s of SCHWELLEN) if (anzahl >= s) aktiv = s;
+  for (const s of schwellen) if (anzahl >= s) aktiv = s;
   return aktiv;
 }
 
 /** Die naechste noch nicht erreichte Schwelle, oder null ab der hoechsten. */
-export function naechsteSchwelle(anzahl: number): Schwelle | null {
-  return SCHWELLEN.find((s) => anzahl < s) ?? null;
+export function naechsteSchwelle(anzahl: number, schwellen: readonly Schwelle[] = SCHWELLEN): Schwelle | null {
+  return schwellen.find((s) => anzahl < s) ?? null;
 }
 
 /** Der Bonus, den eine Marke bei so vielen Traegern gibt — null unter der ersten Schwelle. */
 export function bonusDerMarke(marke: Marke, anzahl: number): Wertebonus | null {
-  const schwelle = aktiveSchwelle(anzahl);
+  const schwelle = aktiveSchwelle(anzahl, schwellenVon(marke));
   if (schwelle === null) return null;
   const stufe = synergie(marke).stufen.find((s) => s.schwelle === schwelle);
   if (!stufe) throw new Error(`Synergie ${marke} hat keine Stufe fuer Schwelle ${schwelle}`);
@@ -375,6 +560,16 @@ export interface Synergiestand {
   readonly naechsteSchwelle: Schwelle | null;
   /** Der geltende Bonus, null unter der ersten Schwelle. */
   readonly bonus: Wertebonus | null;
+  /** Der geltende Effekt, null unter der ersten Schwelle. */
+  readonly effekt: Markeneffekt | null;
+  /** Was die geltende Stufe tut, als Satz; null unter der ersten Schwelle. */
+  readonly text: string | null;
+  /**
+   * Die VERSCHIEDENEN Einheiten, die hier zaehlen (seit dem 27.11.2026).
+   * Der Bildschirm sieht daran, ob ein Kauf die Marke voranbringt: Eine
+   * Einheit, die schon in der Liste steht, zaehlt nicht noch einmal.
+   */
+  readonly traeger: readonly EinheitId[];
 }
 
 /**
@@ -393,9 +588,48 @@ export function synergienVon(brett: Aufgestellte): readonly Synergiestand[] {
       marke,
       name: synergie(marke).name,
       anzahl,
-      schwelle: aktiveSchwelle(anzahl),
-      naechsteSchwelle: naechsteSchwelle(anzahl),
+      schwelle: aktiveSchwelle(anzahl, schwellenVon(marke)),
+      naechsteSchwelle: naechsteSchwelle(anzahl, schwellenVon(marke)),
       bonus: bonusDerMarke(marke, anzahl),
+      effekt: stufeDerMarke(marke, anzahl)?.effekt ?? null,
+      text: stufeDerMarke(marke, anzahl)?.text ?? null,
+      traeger: traegerVon(brett, marke),
     };
   });
+}
+
+/** Die Stufe einer Marke bei so vielen Traegern — null unter der ersten Schwelle. */
+export function stufeDerMarke(marke: Marke, anzahl: number): Synergiestufe | null {
+  const schwelle = aktiveSchwelle(anzahl, schwellenVon(marke));
+  if (schwelle === null) return null;
+  return synergie(marke).stufen.find((s) => s.schwelle === schwelle) ?? null;
+}
+
+/**
+ * Was der Bot einer Einheit an Markenwert zurechnet (siehe `schaetzung`).
+ * Gleiche Rechnung wie `bonusFuerEinheit`, nur mit der Schaetzspalte.
+ */
+export function schaetzungFuerEinheit(id: EinheitId, zaehlung: Markenzaehlung): Wertebonus {
+  let summe = KEIN_BONUS;
+  for (const marke of einheit(id).marken) {
+    const b = stufeDerMarke(marke, zaehlung[marke])?.schaetzung;
+    if (!b) continue;
+    summe = {
+      lebenProzent: summe.lebenProzent + b.lebenProzent,
+      angriffProzent: summe.angriffProzent + b.angriffProzent,
+      tempoProzent: summe.tempoProzent + b.tempoProzent,
+      ruestung: summe.ruestung + b.ruestung,
+    };
+  }
+  return summe;
+}
+
+/** Alle Markeneffekte, die fuer diese Einheit bei dieser Zaehlung gelten. */
+export function effekteFuerEinheit(id: EinheitId, zaehlung: Markenzaehlung): readonly Markeneffekt[] {
+  const effekte: Markeneffekt[] = [];
+  for (const marke of einheit(id).marken) {
+    const stufe = stufeDerMarke(marke, zaehlung[marke]);
+    if (stufe) effekte.push(stufe.effekt);
+  }
+  return effekte;
 }

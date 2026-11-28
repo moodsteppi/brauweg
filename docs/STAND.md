@@ -1,20 +1,177 @@
 # Stand der Arbeit
 
-Übergabe für eine neue Sitzung. Was hier steht, ist am 4. August 2026
-geprüft — Zahlen und Zustände stammen aus tatsächlichen Läufen, nicht aus
-der Erinnerung.
+Übergabe für eine neue Sitzung. **Der Kopf bis einschließlich „Stand am
+27. November 2026" ist an diesem Tag neu geschrieben** — aus der
+Spielregistrierung, der Zweighistorie und der Liste der Pull Requests, nicht
+aus der Erinnerung. Alles darunter trägt sein eigenes Datum und ist seither
+nicht nachgeprüft: Es beschreibt, wie etwas gebaut wurde und warum, nicht
+unbedingt, wie es heute aussieht.
 
 ---
 
 ## Wo das Projekt steht
 
-Brauweg läuft unter **www.brauweg-spielen.de**. **Elf Spiele sind spielbar:
-Doppelkopf, Zauberer, Skat, Cambio, Poker, Mememory, Filler, Eiland,
-Feldherr, Tafelrunde und Golf** (Stand 06.09.2026 — Golf ist das zweite
-Echtzeitspiel nach Feldherr, siehe `docs/GOLF-PLAN.md`), der Hub steht, Clans
-funktionieren.
+Das Projekt heißt seit dem 02.11.2026 nach außen **BroweGGames** (#346–#348);
+Repository, Pakete (`@brauweg/…`) und die Adresse
+**www.brauweg-spielen.de** heißen weiter Brauweg. Die Apple-Anmeldung kennt
+seit #356 eine Rückkehradresse je Domain, als Vorbereitung für
+`broweggames.de` — ob der Umzug vollzogen ist, steht nicht im Repository.
+
+**Sechzehn Spiele haben ein Modul** (`packages/server/src/games/registry.ts`):
+Doppelkopf, Zauberer, Cambio, Feldherr, Skat, Mememory, Poker, Filler (in der
+Oberfläche „Farbduell"), Eiland, Tafelrunde, Golf, Partykiste, BroCooked,
+BroChess, DreckBro und Würfelglanz. Auf der Webseite sind fünfzehn davon
+spielbar; **Würfelglanz gibt es nur in der iOS-App** (`nurIos` in der Meta).
+In der App ist die Auswahl enger: spielbar sind dort Doppelkopf, Skat,
+Farbduell, BroChess, DreckBro und Würfelglanz, alle anderen stehen auf
+„Bald". Maßgeblich ist die Tabelle `FREIGABE` in derselben Datei — ein Spiel
+wechselt mit einer Zeile dort die Plattform, ohne neuen App-Build.
+
+Dazu kommen **Spiele ohne Modul**, die an der Tischschicht vorbeilaufen und
+deshalb in keiner Zählung der Registrierung auftauchen: der Runner
+(Pro-Subway), die Kartenmanufaktur, Browort und Clanwort, Flying Bro, BroRemote
+mit Bro Building Battle und Artillerie sowie Bro Ice Clash. Was sie sind und
+wo ihre Unterlagen liegen, steht im nächsten Abschnitt.
+
 Der Deploy hängt an `main`: Was dorthin gemerged wird, ist nach etwa zwei
-Minuten live.
+Minuten live. `main` wird nur noch per Release-PR aus `staging` bedient
+(`ARBEITSREGELN.md`, Regel 1).
+
+### Stand am 27. November 2026
+
+**Zweige.** `main` steht seit dem **10.11.2026** auf dem Release #399.
+`staging` ist **57 Commits voraus** (die Pull Requests #401 bis #426), und
+`main` ist Vorfahre von `staging` — der Rückfluss ist also sauber, ein Release
+konfligiert nicht. Releases seit Ende September: #274 (26.09.), #311 (21.10.),
+#321 (23.10.), #344 (27.10.), #354 (03.11.), #399 (10.11.).
+
+**Nur auf `staging`, noch nicht auf `main`:**
+
+- **BroChess-Spezialmodi** — Knopf „Spezial-Modi" samt Secret Dame sichtbar
+  (#405), dazu Drei-Schach (#406), Chess960 (#407), King of the Hill (#408)
+  und Nebelschach (#409).
+- **Farbduell** — automatisches Ende, sobald kein Feld mehr umkämpft ist,
+  Regel im Server (#410) und Animation (#411); **EXTREME zu viert** als
+  1v1v1v1 mit Regeln (#413), Bildschirm und eigenem Tisch mit Bots (#414)
+  sowie Online-Suche mit Wahl zwischen 1v1 und 1v1v1v1 (#418).
+- **Hausrunden** (Tom, 24.11.) — der Server hält offene Doppelkopf-Tische mit
+  Hausspielern bereit, die nach einer Minute nachrücken (#415–#417,
+  Migration `0046`). Ein Hausspieler ist ein Konto mit Namen, am Tisch aber
+  immer ein Bot und bekommt nie Trophäen. Das Tarnen ist auf `staging` an und
+  in der Produktion aus; für die iOS-App gibt es einen eigenen Schalter. Die
+  Begründung steht im Kopf von `packages/server/src/hausrunden.ts`.
+- **Aktionscodes** für den Adventskalender — ein Code für alle, je Konto
+  einmal, Münzen und Skins (#412, Migration `0045`).
+- **Freund einladen per Push** und verdeckte Bot-Vertretung für Admins (#419).
+- **BroRemote Artillerie 3** — Arena, Handysteuerung und Spielauswahl (#401);
+  Entwurf und Regelkern (#396, #397) sind schon auf `main`.
+- **Bro Ice Clash** — Online-Eisarena für vier Plätze unter `/ice-clash`
+  (#420), seit dem Gesamtstand von heute mit gleichzeitigen Planungszügen,
+  Hochkant-Arena und Emotes (`docs/BRO-ICE-CLASH.md`).
+- **Würfelglanz** — das sechzehnte Modul, Solo und Mehrspieler, nur iOS
+  (#424, #425; `docs/WUERFELGLANZ.md`).
+- **Verpflichtende App-Store-Aktualisierung** in der iOS-Hülle (#421). Sie
+  wirkt erst, wenn sie einmal als gewöhnliches Update ausgeliefert ist —
+  ältere installierte Apps lassen sich damit nicht nachträglich sperren
+  (`docs/APP-PFLICHTUPDATE.md`).
+- **App-Gesamtstand vom 27.11.** (#424) — führt mehrere bis dahin nur lokal
+  liegende Arbeitsstände zusammen: Startanimation mit dem Logo
+  (`docs/STARTANIMATION.md`), neue Navigation und Sammlung nach Spiel und
+  Ausstattung, Trophäenpfad mit zwei Panoramen, Homescreen-Kacheln,
+  Social-Links, BroRemote-Menüs und eine Browort-Bibliothek mit 3000 Wörtern.
+  Danach noch grüne Bildicons im Hub (#426).
+- Die CSP-Korrektur für eingebettete Schriften (#404).
+
+**Was seit Ende September dazugekommen ist und hier bisher fehlte.** Bis zu
+diesem Tag kannte dieses Dokument elf Spiele und keinen der folgenden Punkte.
+Sie stehen hier nur als Wegweiser; die Einzelheiten liegen in den genannten
+Dateien.
+
+- **Neues Hub „Nachtblau & Gold"** (#276–#283, 26./27.09.), seit #278 der
+  Standard; das alte Hub ist seit #324 entfernt. Trophäenweg mit Belohnungen
+  am Server (#280). Regeln dazu in `docs/DESIGN.md`.
+- **Partykiste, BroCooked, BroChess, DreckBro** als Module (BroCooked seit dem
+  22.09., BroChess seit dem 25.09., DreckBro seit dem 04.11. mit #384).
+  BroChess hat seit dem 22.10. Schachuhr, Vorab-Zug und Zugliste.
+- **iOS-App V1** (14.10.) mit Spielauswahl, Beitritt mit Zusage und Push;
+  Anleitung in `docs/APP-RELEASE.md`, Unterlagen zum Store in
+  `docs/APPSTORE.md` und `docs/release/`. Im Projekt steht die Version 1.0;
+  der Pull Request für 1.1 (#349) ist offen. Android liegt unter
+  `apps/android` mit eigenem Workflow.
+- **Doppelkopf lernen** — Lernpfad und Lernserie, nur in der iOS-App
+  (17.10., `docs/LERNPFAD.md`).
+- **Browort und Clanwort** (23.10.) — Tageswort mit Serie und Clan-Auslosung.
+- **Kartenmanufaktur** (ab 23.10.) — ein Idle-Spiel, nur in der App, mit
+  eigenem Kern `packages/manufaktur-kern`
+  (`docs/SPEZIFIKATION-KARTENMANUFAKTUR.md`).
+- **Spielabstimmung je Konto, Wischen zwischen den Reitern**
+  (26.10., `docs/APP-ABSTIMMUNG-NAVIGATION.md`).
+- **Tracking Stufe 0** — serverseitige Tagesstatistik ohne Einwilligung
+  (#328), dazu die **Team-Schnittstelle** für das brotool-Dashboard und
+  **Münz-Codes** (#341, `docs/TEAM-SCHNITTSTELLE.md`).
+- **Zugangsschutz für `staging`** (#340, `docs/STAGING.md`) und
+  **Apple-Anmeldung** in der App (#330).
+- **Truhen** mit eigenen 3D-Modellen und Öffnungsanimationen (27.10.).
+- **Sprachen** (06.11., #366 und folgende): Deutsch und Englisch je als Datei
+  unter `packages/client/src/i18n/`, Erkennung, Schalter im Profil, eine Probe
+  auf fehlende Schlüssel. Übersetzt sind der Hub und die Spiele, die es an
+  dem Tag gab; Push und Mail gehen in der Sprache des Spielers hinaus (#374).
+  Für DreckBro und Würfelglanz liegt keine eigene Sprachdatei vor, und
+  `regeln-golf.ts` gibt es nur auf Deutsch — ob das Lücken sind oder die
+  Texte an anderer Stelle stehen, ist hier nicht geprüft.
+- **Flying Bro** (06./07.11.) — Physik-Wurfspiel für eine Person, Kern in
+  `packages/flyingbro-kern`, Server mit Fortschritt und Ingame-Shop
+  (`docs/SPEZIFIKATION-FLYINGBRO.md`). Braucht WebAssembly, deshalb erlaubt
+  die CSP seit #389 `wasm-unsafe-eval`.
+- **Farbduell Extreme** (#364, #367) mit Messreihen zu Fairness und
+  Anfängervorteil (#365, #375, #380, #393) und dem Ausgleich als Regel (#383).
+- **BroRemote** (ab 10.11.) — das Handy als Controller, Kern in
+  `packages/broremote-kern`, darunter **Bro Building Battle**
+  (`packages/building-kern`) und **Artillerie** (`docs/BROREMOTE.md`,
+  `docs/BRO-BUILDING-BATTLE.md`, `docs/BROREMOTE-ARTILLERIE.md`).
+- **Werbung** (19.–21.10.) — Konzepte, Drehbücher und Schnitte für drei
+  Anzeigen samt Testplan unter `docs/werbung/`.
+
+**Offene Pull Requests** (sechs, alle gegen `staging`). Nachgesehen ist, ob
+der Inhalt inzwischen auf anderem Weg angekommen ist; geschlossen wurde hier
+nichts.
+
+| PR | Thema | Befund |
+| --- | --- | --- |
+| #385 | Flying Bro: Spielbildschirm | überholt — #387 hat genau diesen Zweig übernommen |
+| #349 | iOS: Versionsnummer 1.1 | eine Datei, 127 Commits hinter `staging`; Toms Entscheidung |
+| #225 | Profil-Tab-Test färbt den nächsten rot | gegenüber der Basis keine geänderte Datei mehr |
+| #137 | CI-Wächter: `main` muss Vorfahre sein | überholt — der Job „Rückfluss" steht in `ci.yml` |
+| #125 | Suche: wer im Tischbau nachfragt, sucht noch | überholt — `imBau` ist seit dem 07.09. im Stand unten beschrieben |
+| #58 | Tafelrunde: Zeitraffer ×2, 14 Startleben | überholt — beides steht in `regeln.ts`; der Zweig liegt auf der alten Historie und darf so nicht gemerged werden |
+
+**Tafelrunde ist am 27./28.11.2026 neu gebaut** (PRs #429 bis #432 und das
+Entfernen des alten Bildschirms). Oberfläche nur noch
+`packages/client/src/screens/TafelrundeNeu.tsx` und
+`minispiele/tafelrunde/neu/`. Figuren je Einheit (Pinguin-Helden und Freunde,
+`docs/ASSETS-TAFELRUNDE-NEU.md`). Fähigkeiten mit Mana und Markeneffekte im
+Regelkern (`docs/TAFELRUNDE-FAEHIGKEITEN.md`). Kein Neuwürfeln und kein
+Aufstieg mehr: Die Feldplätze folgen der Runde (2 bis 7), Preise 2/3/4. Jede
+Einheit zählt für eine Marke nur einmal. Plan und Entscheidungen:
+`docs/TAFELRUNDE-NEU-UMSETZUNG.md`. In der App steht das Spiel weiter auf
+„Bald“. Der Absatz darunter beschreibt den Stand davor.
+
+**Tafelrunde ruhte vom 26.09. bis zum 27.11.2026.** Die letzte inhaltliche Änderung am
+Modul ist #271 (die Bot-Bewertung `staerke` sagt die Rangfolge im Kampf nicht
+vorher). Seitdem hat der Bildschirm nur Querschnittsarbeit gesehen: den neuen
+Look der Einstiege (#283), den Gast-Hinweis (#288), die iOS-Ersatzfarben und
+die englische Fassung (#373). In der App steht das Spiel auf „Bald". Die
+Messberichte `docs/TAFELRUNDE-*.md` sind zuletzt am 26.09. angefasst worden.
+
+**Was an diesem Dokument und an `CLAUDE.md` noch nicht stimmt:**
+
+- **Würfelglanz hat keinen Sichtvertrag.** Unter
+  `packages/client/src/vertrag/` liegen Verträge für fünfzehn Spiele; das
+  sechzehnte fehlt. Ein umbenanntes Feld fiele dort erst im Betrieb auf.
+- Für die Spiele ohne Modul gibt es keine Stelle, die sie gesammelt nennt —
+  bis heute stand keines davon in diesem Dokument.
+- Der Abschnitt „Was offen ist" weiter unten stammt aus dem August und ist
+  nicht gegen den heutigen Stand geprüft.
 
 **Prüfstand: steht in der Zusammenfassung jedes CI-Laufs** (Job „Bauen und
 prüfen"), aufgeschlüsselt nach Paketen und gemessen an genau dem Commit, zu

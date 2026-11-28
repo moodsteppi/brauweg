@@ -59,6 +59,7 @@ export {
   type Ereignis,
   type Kaempferstand,
   type Kampfbericht,
+  type Zustand,
   type Kampfregler,
   HEILUNG_FAKTOR,
   HOECHSTDAUER_MS,
@@ -80,6 +81,8 @@ export {
   type Levelstufe,
   type TafelrundeRegeln,
   DEFAULT_REGELN,
+  FELD_HOECHSTENS,
+  FELD_START,
   LEVEL_TABELLE,
   MAX_LEVEL,
   SEAT_COUNTS,
@@ -88,6 +91,7 @@ export {
   ZINS_SCHRITT,
   aufstiegKosten,
   feldplaetze,
+  levelFuerRunde,
   ladenChancen,
   levelstufe,
   mitFrist,
@@ -157,6 +161,7 @@ export {
 } from './sicht.js';
 export {
   type Aufgestellte,
+  type Markeneffekt,
   type Markenzaehlung,
   type Schwelle,
   type Synergie,
@@ -167,9 +172,24 @@ export {
   aktiveSchwelle,
   bonusDerMarke,
   bonusFuerEinheit,
+  effekteFuerEinheit,
   naechsteSchwelle,
+  schaetzungFuerEinheit,
+  schwellenVon,
+  traegerVon,
+  stufeDerMarke,
   synergie,
   synergienVon,
   zaehleMarken,
 } from './synergien.js';
 export { type Platzstrafe, BOT_PLATZSTRAFE, botZug, stelleHeerAuf } from './bot.js';
+export {
+  type Faehigkeit,
+  type FaehigkeitId,
+  FAEHIGKEITEN,
+  MANA_JE_ANGRIFF,
+  MANA_JE_TREFFER,
+  WIRKUNG,
+  FAEHIGKEIT_WERT,
+  faehigkeitVon,
+} from './faehigkeiten.js';

@@ -23,6 +23,8 @@ import {
   wendeKampfausgang,
   zins,
 } from '../src/index.js';
+import { erloes } from '../src/katalog.js';
+import { FELD_HOECHSTENS, levelFuerRunde } from '../src/regeln.js';
 
 const SAAT = '0123456789abcdef0123456789abcdef';
 
@@ -50,13 +52,16 @@ function beideBereit(partie: TafelrundePartie): TafelrundePartie {
 }
 
 describe('Aufbau', () => {
-  it('gibt jedem Sitz Leben, Gold, Level 1 und einen vollen Laden', () => {
+  it('gibt jedem Sitz Leben, Gold, den Level der ersten Runde und einen vollen Laden', () => {
     const p = neu();
     for (const sitz of [0, 1]) {
       const heer = p.heere[sitz]!;
       assert.equal(heer.leben, DEFAULT_REGELN.startLeben);
       assert.equal(heer.gold, DEFAULT_REGELN.startGold);
-      assert.equal(heer.level, 1);
+      // Seit dem 27.11.2026 folgt der Level der Runde (`levelFuerRunde`):
+      // Runde 1 beginnt mit zwei Feldplaetzen, nicht mehr mit einem.
+      assert.equal(heer.level, levelFuerRunde(1));
+      assert.equal(feldplaetze(heer.level), 2);
       assert.equal(heer.bank.length, DEFAULT_REGELN.bankPlaetze);
       assert.equal(heer.brett.length, BRETT_FELDER);
       assert.ok(heer.bank.every((k) => k === null));
@@ -98,44 +103,55 @@ describe('Brett und Bank', () => {
 
   it('laesst so viele Einheiten aufs Brett, wie der Level hergibt', () => {
     const p = mitEinheiten(neu());
-    assert.equal(feldplaetze(1), 1);
+    assert.equal(feldplaetze(p.heere[0]!.level), 2, 'Runde 1 hat zwei Feldplaetze');
 
-    const eine = fuehreAus(p, 0, {
+    let zwei = fuehreAus(p, 0, {
       typ: 'verschieben',
       von: { bereich: 'bank', platz: 0 },
       nach: { bereich: 'brett', platz: 4 },
     });
-    assert.equal(brettBelegung(eine.heere[0]!), 1);
-    assert.deepEqual(eine.heere[0]!.brett[4], { id: 'dorfwache', stufe: 1 });
-    assert.equal(eine.heere[0]!.bank[0], null);
+    assert.equal(brettBelegung(zwei.heere[0]!), 1);
+    assert.deepEqual(zwei.heere[0]!.brett[4], { id: 'dorfwache', stufe: 1 });
+    assert.equal(zwei.heere[0]!.bank[0], null);
+    zwei = fuehreAus(zwei, 0, {
+      typ: 'verschieben',
+      von: { bereich: 'bank', platz: 1 },
+      nach: { bereich: 'brett', platz: 5 },
+    });
+    assert.equal(brettBelegung(zwei.heere[0]!), 2);
 
-    // Die zweite passt auf Level 1 nicht mehr.
+    // Die dritte passt in Runde 1 nicht mehr.
     assert.throws(
       () =>
-        fuehreAus(eine, 0, {
+        fuehreAus(zwei, 0, {
           typ: 'verschieben',
-          von: { bereich: 'bank', platz: 1 },
-          nach: { bereich: 'brett', platz: 5 },
+          von: { bereich: 'bank', platz: 2 },
+          nach: { bereich: 'brett', platz: 6 },
         }),
       /Feldplatz/,
     );
   });
 
-  it('macht mit jedem Level genau einen Platz mehr frei', () => {
-    let p = mitHeer(mitEinheiten(neu()), 0, { gold: 20 });
-    p = fuehreAus(p, 0, {
-      typ: 'verschieben',
-      von: { bereich: 'bank', platz: 0 },
-      nach: { bereich: 'brett', platz: 0 },
-    });
-    p = fuehreAus(p, 0, { typ: 'levelAuf' });
-    assert.equal(p.heere[0]!.level, 2);
-    p = fuehreAus(p, 0, {
-      typ: 'verschieben',
-      von: { bereich: 'bank', platz: 1 },
-      nach: { bereich: 'brett', platz: 1 },
-    });
-    assert.equal(brettBelegung(p.heere[0]!), 2);
+  /*
+   * Ersetzt am 27.11.2026 "macht mit jedem Level genau einen Platz mehr
+   * frei": Den Level kauft niemand mehr, er folgt der Runde. Geprueft wird
+   * deshalb ueber echte Rundenwechsel und nicht ueber `levelFuerRunde` allein —
+   * vergaesse `naechsteRunde` das Setzen, stuende die Partie ewig auf zwei
+   * Plaetzen, und eine reine Funktionsprobe merkte davon nichts.
+   */
+  it('laesst die Feldplaetze mit jeder Runde um einen wachsen, hoechstens bis sieben', () => {
+    let p = neu();
+    const gesehen: number[] = [];
+    for (let runde = 1; runde <= 8; runde++) {
+      assert.equal(p.runde, runde);
+      for (const sitz of [0, 1]) {
+        assert.equal(p.heere[sitz]!.level, levelFuerRunde(runde), `Runde ${runde}, Sitz ${sitz}`);
+      }
+      gesehen.push(feldplaetze(p.heere[0]!.level));
+      p = ohneKampfWeiter(beideBereit(p));
+    }
+    assert.deepEqual(gesehen, [2, 3, 4, 5, 6, 7, 7, 7]);
+    assert.equal(FELD_HOECHSTENS, 7, 'Robin: "bis 7 reicht"');
   });
 
   it('tauscht zwei belegte Plaetze, ohne die Belegung zu aendern', () => {
@@ -146,7 +162,7 @@ describe('Brett und Bank', () => {
       nach: { bereich: 'brett', platz: 2 },
     });
     // Tausch Brett <-> Bank: Die Belegung bleibt 1, also greift die
-    // Feldplatzgrenze nicht — auch auf Level 1.
+    // Feldplatzgrenze nicht — auch dann nicht, wenn das Brett voll waere.
     const getauscht = fuehreAus(p, 0, {
       typ: 'verschieben',
       von: { bereich: 'brett', platz: 2 },
@@ -201,29 +217,56 @@ describe('Gold', () => {
     assert.equal(einkommen(p.heere[0]!, DEFAULT_REGELN), DEFAULT_REGELN.grundeinkommen);
   });
 
-  it('nimmt Gold fuer Level-Auf und gibt es beim Verkaufen zurueck', () => {
-    let p = mitHeer(neu(), 0, { gold: 10 });
-    p = fuehreAus(p, 0, { typ: 'levelAuf' });
-    assert.equal(p.heere[0]!.gold, 8, 'Level 1 -> 2 kostet 2 Gold');
-
+  /*
+   * Ersetzt am 27.11.2026 "nimmt Gold fuer Level-Auf und gibt es beim
+   * Verkaufen zurueck". Den Aufstieg gibt es nicht mehr; geblieben ist die
+   * Verkaufsregel, und die hat sich geaendert: Eine einfache Einheit bringt
+   * einen Gold WENIGER zurueck, als sie gekostet hat. Ohne den Abschlag waere
+   * Kaufen und Verkaufen ein Gratis-Wurf, denn ein Kauf zieht den ganzen Laden
+   * neu. Eine verschmolzene Einheit bringt dagegen den vollen Preis aller
+   * Kopien — Aufraeumen nach dem Verschmelzen soll nichts kosten.
+   */
+  it('gibt beim Verkauf auf Stufe 1 den Preis minus eins, auf Stufe 2 den vollen Preis aller Kopien', () => {
     const bank = leer(DEFAULT_REGELN.bankPlaetze);
     bank[0] = { id: 'sturmrufer', stufe: 2 };
+    bank[1] = { id: 'sturmrufer', stufe: 1 };
+    bank[2] = { id: 'dorfwache', stufe: 1 };
+    const p = mitHeer(neu(), 0, { gold: 10, bank });
     const vorher = p.vorrat['sturmrufer'];
-    const verkauft = fuehreAus(mitHeer(p, 0, { bank }), 0, {
-      typ: 'verkaufen',
-      ort: { bereich: 'bank', platz: 0 },
-    });
-    // Eine Stufe-2-Einheit steckt voller drei Karten: voller Preis zurueck,
-    // und die drei Karten gehen in den Vorrat.
-    assert.equal(verkauft.heere[0]!.gold, 8 + 9);
-    assert.equal(verkauft.vorrat['sturmrufer'], vorher + 3);
-    assert.equal(verkauft.heere[0]!.bank[0], null);
+
+    // Ausgeschrieben statt ueber `erloes` gerechnet: Sonst prueft die Probe
+    // die Formel gegen sich selbst. Sturmrufer ist Kostenstufe 3 = 4 Gold.
+    const zwei = fuehreAus(p, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } });
+    assert.equal(zwei.heere[0]!.gold, 10 + 3 * 4, 'drei Kopien zu je 4 Gold');
+    // Die drei Karten gehen in den Vorrat.
+    assert.equal(zwei.vorrat['sturmrufer'], vorher + 3);
+    assert.equal(zwei.heere[0]!.bank[0], null);
+
+    const eins = fuehreAus(zwei, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 1 } });
+    assert.equal(eins.heere[0]!.gold, 22 + 3, 'einfacher Sturmrufer: 4 - 1');
+    assert.equal(eins.vorrat['sturmrufer'], vorher + 4);
+
+    // Die billigste Einheit bringt noch einen Gold: Mit dem Mindestpreis 2
+    // bringt kein Verkauf null ein.
+    const billig = fuehreAus(eins, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 2 } });
+    assert.equal(billig.heere[0]!.gold, 25 + 1, 'einfache Dorfwache: 2 - 1');
+    assert.equal(erloes('dorfwache', 1), 1);
   });
 
-  it('steigt nicht ueber den hoechsten Level', () => {
-    const p = mitHeer(neu(), 0, { gold: 999, level: 9 });
-    assert.ok(!erlaubteZuege(p, 0).some((z) => z.typ === 'levelAuf'));
-    assert.throws(() => fuehreAus(p, 0, { typ: 'levelAuf' }), /Level/);
+  /*
+   * Ersetzt am 27.11.2026 "steigt nicht ueber den hoechsten Level": Neu
+   * wuerfeln und Rang steigern sind abgeschafft. Ein alter Client, der die
+   * Knoepfe noch zeigt, darf damit nichts ausloesen — auch nicht mit noch so
+   * viel Gold und auch nicht an einem Tisch, der noch einen Wuerfelpreis setzt.
+   */
+  it('kennt weder Neuwuerfeln noch Levelaufstieg und weist beide ab', () => {
+    const p = mitHeer(neu({ ...DEFAULT_REGELN, neuwuerfelnKosten: 2 }), 0, { gold: 999 });
+    const typen = erlaubteZuege(p, 0).map((z) => z.typ);
+    assert.ok(!typen.includes('neuwuerfeln'), 'neuwuerfeln steht in legalActions');
+    assert.ok(!typen.includes('levelAuf'), 'levelAuf steht in legalActions');
+    for (const typ of ['neuwuerfeln', 'levelAuf'] as const) {
+      assert.throws(() => fuehreAus(p, 0, { typ }), /gibt es nicht mehr/);
+    }
   });
 });
 
@@ -257,7 +300,10 @@ describe('Rundenwechsel', () => {
 
   it('laesst waehrend des Kampfes niemanden handeln', () => {
     const p = beideBereit(neu());
-    assert.throws(() => fuehreAus(p, 0, { typ: 'neuwuerfeln' }), /geruestet/);
+    // Ein Kauf statt des frueher hier benutzten Neuwuerfelns: Das gibt es seit
+    // dem 27.11.2026 nicht mehr, und die Probe soll an der Phase scheitern,
+    // nicht an einem abgeschafften Zug.
+    assert.throws(() => fuehreAus(p, 0, { typ: 'kaufen', platz: 0 }), /geruestet/);
   });
 });
 
@@ -311,8 +357,9 @@ describe('Kampfausgang', () => {
     const bank = leer(DEFAULT_REGELN.bankPlaetze);
     bank[0] = { id: 'grimmbart', stufe: 2 };
     const brett = leer(BRETT_FELDER);
-    // Bewusst eine Drei-Gold-Einheit: Auf Level 1 zeigt der Laden nur
-    // Ein-Gold-Einheiten, also kann keine Ladenkarte die Zaehlung verfaelschen.
+    // Bewusst eine Einheit der Kostenstufe 3: In Runde 1 (Level 2) zeigt der
+    // Laden nur Stufe-1-Einheiten, also kann keine Ladenkarte die Zaehlung
+    // verfaelschen.
     brett[0] = { id: 'sturmrufer', stufe: 1 };
     const vorbereitet = mitHeer(neu(), 1, { bank, brett });
 

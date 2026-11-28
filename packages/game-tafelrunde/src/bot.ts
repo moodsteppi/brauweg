@@ -68,7 +68,8 @@ import {
   werteFuer,
 } from './katalog.js';
 import { HEILUNG_FAKTOR } from './kampf.js';
-import { bonusFuerEinheit, zaehleMarken } from './synergien.js';
+import { schaetzungFuerEinheit, zaehleMarken } from './synergien.js';
+import { FAEHIGKEIT_WERT, faehigkeitVon } from './faehigkeiten.js';
 import { baueZufall } from './zufall.js';
 
 // ---------------------------------------------------------------------------
@@ -811,7 +812,10 @@ export function staerke(
  * Vereinfachung dort, wo er sein soll (docs/spiele/auto-battler-konzept.md).
  */
 function leistung(id: EinheitId, angriff: number): number {
-  return einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
+  const grund = einheit(id).rolle === 'beistand' ? angriff * HEILUNG_FAKTOR : angriff;
+  // Seit dem 27.11.2026: die Faehigkeit als Aufschlag (`FAEHIGKEIT_WERT`).
+  const f = faehigkeitVon(id);
+  return f ? grund * (1 + FAEHIGKEIT_WERT[f.id]) : grund;
 }
 
 /**
@@ -850,7 +854,7 @@ function heerStaerke(einheiten: readonly Kaempfer[]): number {
   const zaehlung = zaehleMarken(einheiten);
   const deckung = deckungIm(einheiten);
   let summe = 0;
-  for (const k of einheiten) summe += staerke(k, bonusFuerEinheit(k.id, zaehlung), deckung);
+  for (const k of einheiten) summe += staerke(k, schaetzungFuerEinheit(k.id, zaehlung), deckung);
   return summe;
 }
 
@@ -1449,7 +1453,7 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
   eigen.laden.forEach((id, platz) => {
     if (id === null) return;
     const art = einheit(id);
-    if (art.kosten > eigen.gold) return;
+    if (art.preis > eigen.gold) return;
 
     /*
      * Bei voller Bank ist nur der Kauf erlaubt, der sofort verschmilzt (siehe
@@ -1468,7 +1472,12 @@ function kandidaten(sicht: TafelrundeSicht, eigen: EigeneSicht, polster: number)
      * ihn wegen zweier Goldstuecke liegen zu lassen waere in jeder Lage
      * falsch.
      */
-    if (!verschmilzt && eigen.gold - art.kosten < polster) return;
+    // Seit die Feldplaetze mit der Runde wachsen (27.11.2026), gilt das
+    // Polster auch dann nicht, wenn ein Feldplatz leer steht: Ein leerer Platz
+    // im Kampf ist teurer als jedes Zinsgold (Probe in bot.test.ts, vorher 114
+    // von 804 Kaempfen mit bezahlbarer Luecke).
+    const luecke = eigen.belegt < eigen.feldplaetze;
+    if (!verschmilzt && !luecke && eigen.gold - art.preis < polster) return;
 
     let wert = staerke({ id, stufe: 1 });
     if (verschmilzt) wert *= VERSCHMELZ_FAKTOR;
@@ -1559,41 +1568,6 @@ function kaufZug(
 // 3. AUFSTIEG BEI VOLLEM BRETT
 // ---------------------------------------------------------------------------
 
-/**
- * Aufsteigen, wenn das Brett voll ist und danach noch Gold fuer das neue Feld
- * bleibt.
- *
- * Beide Haelften zaehlen. Ohne "Brett voll" kauft der Bot Feldplaetze, auf
- * denen nichts steht — genau das Bild, das den Anlass zu dieser Arbeit gab.
- * Ohne die Reserve steigt er auf, sobald er es gerade eben kann, und steht mit
- * einem groesseren Brett und leerem Beutel da.
- *
- * An "Brett voll" halten sich seit dem 06.09.2026 alle drei Gangarten; sie
- * weichen nur noch in der RESERVE voneinander ab. `hart` legt nichts obendrauf
- * und steigt auf, sobald das volle Brett und das blanke Aufstiegsgeld da sind;
- * `normal` will drei Gold uebrig sehen, `sanft` sechs.
- *
- * DIE ERSTE HAELFTE WEGZULASSEN WAR EIN FEHLER, und er hat zwei Tage
- * ueberlebt, weil er sich als Charakterzug las. `hart` liess bis zum
- * 06.09.2026 beide Haelften weg — "kein Zoegern beim Aufstieg" —, und weil
- * eine Messung vom Vortag das fuer folgenlos hielt, blieb es stehen. Auf dem
- * heutigen Stand ist es das nicht: Allein die Bedingung "Brett voll"
- * zurueckzuholen bringt `hart` von 133 auf 190 Siege je 400 Partien. Ein
- * Feldplatz, den niemand besetzt, ist in einer Partie ueber neun Runden
- * bezahlter Leerstand.
- *
- * DASS DAS TEMPO SICH LOHNT, HAENGT AM LADEN und ist nicht fuer alle Zeiten
- * gemessen: Solange ein Kauf nur seinen Ladenplatz leerte, blieben die frueh
- * gekauften Feldplaetze in einer kurzen Partie leer, und `hart` verlor daran
- * gegen `normal` (77 : 107,7). Die Zahlen und der Nachweis stehen bei
- * GANGARTEN.
- */
-function aufstiegsZug(eigen: EigeneSicht, gangart: Gangart): TafelrundeAktion | null {
-  if (eigen.aufstiegKosten === null) return null;
-  if (gangart.nurBeiVollemBrett && eigen.belegt < eigen.feldplaetze) return null;
-  if (eigen.gold < eigen.aufstiegKosten + gangart.aufstiegsReserve) return null;
-  return { typ: 'levelAuf' };
-}
 
 // ---------------------------------------------------------------------------
 // 4. NEU-WUERFELN NUR BEI FREMDEM LADEN
@@ -1617,64 +1591,6 @@ const KAUF_RUECKLAGE = 3;
  */
 const WUERFE_JE_RUNDE = 4;
 
-/**
- * Neu wuerfeln, wenn das Brett voll ist und KEIN Ladenplatz zum eigenen Heer
- * passt.
- *
- * "Passt" heisst: verschmilzt, macht ein Paar oder verstaerkt eine schon
- * vertretene Marke. Steht dort nur Fremdes, ist ein neuer Laden mehr wert als
- * die Einheit, die man sonst dafuer bekaeme.
- *
- * DAS VOLLE BRETT IST BEDINGUNG, und zwar aus einem Fehler heraus, den die
- * erste Fassung dieser Regel hatte: Ohne sie wuerfelte der Bot in Runde 2 sein
- * ganzes Gold weg. Zu einem leeren Heer passt naemlich NICHTS — es gibt weder
- * eine Kopie noch eine vertretene Marke —, und die Regel haette genau dann
- * gegriffen, wenn er dringend seine erste Einheit braucht. Solange ein
- * Feldplatz frei ist, ist die schlechteste Einheit besser als der schoenste
- * Laden.
- *
- * Deshalb steht diese Regel auch VOR dem Kauf: Sie greift nur in der Lage, in
- * der ein Kauf ohnehin nur die Bank fuellte, und danach kaeme sie nie zum Zug.
- *
- * DASS ER SICH NICHT FESTWUERFELT, GARANTIERT SEIT DEM 05.09.2026 DER DECKEL
- * und nicht mehr das Gold. Vorher kostete jeder Wurf, und in der Vorbereitung
- * kam keines nach — das war die Bremse. Seit die Vorgabe 0 Gold lautet, gibt
- * es sie nicht mehr: Passt im Laden nichts, wuerfelte der Bot ohne
- * WUERFE_JE_RUNDE endlos weiter, denn die Plattform ruft ihn so lange, bis er
- * "bereit" meldet. Die Goldregel bleibt trotzdem stehen, weil ein Tisch den
- * Preis wieder setzen darf.
- */
-function wuerfelZug(
-  sicht: TafelrundeSicht,
-  eigen: EigeneSicht,
-  gangart: Gangart,
-): TafelrundeAktion | null {
-  if (!gangart.wuerfeltNeu) return null;
-  if (eigen.belegt < eigen.feldplaetze) return null;
-  if (!eigen.bank.includes(null)) return null;
-  if (eigen.wuerfeRunde >= WUERFE_JE_RUNDE) return null;
-
-  /*
-   * Die Ruecklage nur, wenn das Wuerfeln ueberhaupt etwas kostet. Ein
-   * kostenloser Wurf ist auch dann richtig, wenn danach kein Gold mehr da
-   * ist: Er nimmt nichts weg.
-   */
-  if (eigen.neuwuerfelnKosten > 0) {
-    const polster = sicht.runde >= POLSTER_AB_RUNDE ? gangart.polster : 0;
-    if (eigen.gold - eigen.neuwuerfelnKosten < polster + KAUF_RUECKLAGE) return null;
-  }
-
-  const eigene = eigeneEinheiten(eigen);
-  const marken = markenZaehlung(eigene);
-  const passt = eigen.laden.some((id) => {
-    if (id === null) return false;
-    if (kopienVon(eigene, id) > 0) return true;
-    return einheit(id).marken.some((marke) => (marken.get(marke) ?? 0) > 0);
-  });
-  if (passt) return null;
-
-  return { typ: 'neuwuerfeln' };
-}
 
 // ---------------------------------------------------------------------------
 // Der Zug
@@ -1718,8 +1634,8 @@ export function botZug(
   const gangart = typeof wahl === 'string' ? GANGARTEN[wahl] : wahl;
   return (
     stellungsZug(sicht, eigen) ??
-    aufstiegsZug(eigen, gangart) ??
-    wuerfelZug(sicht, eigen, gangart) ??
+    // Aufstieg und Neuwuerfeln gibt es seit dem 27.11.2026 nicht mehr
+    // (regeln.ts, `levelFuerRunde`); die beiden Zuege des Bots sind entfernt.
     kaufZug(sicht, eigen, gangart) ?? { typ: 'bereit' }
   );
 }

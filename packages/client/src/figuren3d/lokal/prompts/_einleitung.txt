@@ -1,0 +1,1 @@
+Use your image generation tool to create exactly ONE image. Do not run shell commands and do not read files, just generate. The FIRST attached image is the style reference; the SECOND attached image is an already approved character of the same game — match its body shape, proportions, head size, eye style, materials and rendering exactly, only the outfit and props change.

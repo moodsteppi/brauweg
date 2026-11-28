@@ -1,67 +1,29 @@
 /**
- * Welches Bild einer 3D-Bildfolge gerade dran ist — die Rechnung hinter den
- * Figuren der Kampfanzeige.
+ * Welches Bild einer Figurenfolge gerade dran ist — die Rechnung hinter den
+ * Figuren im Kampf von TafelrundeNeu (`neu/Kampf.tsx`).
  *
- * Was unter `public/tafelrunde/figuren3d/` liegt und wie es aufgebaut ist,
- * steht ausschliesslich in `src/figuren3d/figuren3d.ts` (Zeilen, Bildzahl,
- * Bildrate, Schleife, Blickrichtung). Diese Datei rechnet damit und schreibt
- * nichts davon ab.
+ * Wie die Blaetter aufgebaut sind (Zeilen, Bildzahl, Bildrate, Schleife),
+ * steht ausschliesslich in `src/figuren3d/figuren3d.ts`; diese Datei rechnet
+ * damit und schreibt nichts davon ab. Die Blaetter selbst nennt
+ * `figuren3d/grafik-neu.ts` (je Einheit eins, 256 px, dasselbe Raster).
  *
- * DIE AUFTEILUNG: Hier steht, WELCHES Bild — in `KampfAnzeige.tsx` steht, wann
- * es an den Bildschirm kommt. Beides zu trennen ist kein Selbstzweck: Die
- * Auswahl ist eine reine Funktion von Zeitstempeln und damit pruefbar, ohne
- * eine Uhr laufen zu lassen.
+ * DIE AUFTEILUNG: Hier steht, WELCHES Bild — in `neu/Kampf.tsx` steht, wann
+ * es an den Bildschirm kommt. Die Auswahl ist eine reine Funktion von
+ * Zeitstempeln und damit pruefbar, ohne eine Uhr laufen zu lassen.
  *
- * DIE ZUORDNUNG IST DIE ROLLE, NICHT DIE EINHEIT. Es gibt fuenf Blaetter fuer
- * 22 Einheiten; jede Einheit spielt das Blatt ihrer Rolle. Seit dem 6.9.2026
- * gilt das ueberall: Brett, Bank und Ladenkarte zeigen dieselbe Figur wie die
- * Arena, nur stehend (`Figur3D.tsx`). Die 22 Pixelfiguren aus `figuren.ts`
- * sind seitdem der RUECKFALL — sie treten an, wenn ein Blatt fehlt oder nicht
- * laedt, und der Name der Einheit steht ohnehin daneben.
+ * Bis zum 28.11.2026 standen hier ausserdem die Rollenblaetter der alten
+ * KayKit-Figuren (`blattPfad`) und die gemessenen Kaesten fuer Brett, Bank
+ * und Ladenkarte des alten Tafelrunde. Beides ist mit ihm gegangen.
  */
 
 import {
   type Bewegung3D,
-  type Rolle3D,
-  FIGUREN3D_FUSSPUNKT,
   FIGUREN3D_KANTE,
   FIGUREN3D_SPALTEN,
   FIGUREN3D_ZEILEN,
-  FIGUREN3D_ZELLHOEHE_METER,
-  blattVon,
   folgeVon,
   zelleVon,
 } from '../../figuren3d/figuren3d';
-
-// ---------------------------------------------------------------------------
-// Das Blatt einer Rolle
-// ---------------------------------------------------------------------------
-
-const ROLLEN_3D: readonly string[] = ['wache', 'meuchler', 'schuetze', 'magier', 'beistand'];
-
-/**
- * Ob eine Rolle aus der Sicht eine ist, fuer die es ein Blatt gibt.
- *
- * Die Sicht liefert die Rolle als gewoehnliche Zeichenkette (protocol.ts).
- * Ohne diese Pruefung stuende in `blattVon` eine Rolle, die es nicht gibt, und
- * das Ergebnis waere `undefined` im `src` — genau der weisse Kasten, vor dem
- * CLAUDE.md warnt. Kommt je eine sechste Rolle in den Katalog, faellt sie hier
- * auf die Pixelfigur zurueck und nicht auf ein Loch.
- */
-export function istRolle3D(rolle: string): rolle is Rolle3D {
-  return ROLLEN_3D.includes(rolle);
-}
-
-/** Der Pfad zum Blatt einer Rolle, oder null, wenn es dafuer keines gibt. */
-export function blattPfad(rolle: string): string | null {
-  if (!istRolle3D(rolle)) return null;
-  return blattVon(rolle)?.datei ?? null;
-}
-
-/** Alle fuenf Blaetter — fuer das Vorladen (vorladen.ts). */
-export const BLATT_PFADE: readonly string[] = ROLLEN_3D.map((r) => blattPfad(r)).filter(
-  (p): p is string => p !== null,
-);
 
 // ---------------------------------------------------------------------------
 // Der Takt des Kampfes
@@ -72,7 +34,7 @@ export const BLATT_PFADE: readonly string[] = ROLLEN_3D.map((r) => blattPfad(r))
  *
  * Beide Zahlen kommen vom Modul (`zeitraffer` und `schrittMs` in
  * `packages/game-tafelrunde/src/sicht.ts`); die Anzeige reicht sie herein
- * (KampfAnzeige.tsx). Bis zum 18.09.2026 stand der Zeitraffer hier als
+ * (neu/Kampf.tsx). Bis zum 18.09.2026 stand der Zeitraffer hier als
  * `KAMPF_TEMPO = 2` und war eine Abschrift von `STANDARD_REGLER.zeitraffer`:
  * Wer ihn im Modul drehte, bekam weder einen Uebersetzungsfehler noch einen
  * roten Test, sondern Figuren, die zu langsam oder zu hektisch ausholen,
@@ -130,7 +92,7 @@ const GLEIT_PUFFER_MS = 20;
 /**
  * Wie lange die Figur von Feld zu Feld gleitet, in Millisekunden.
  *
- * Der Weg selbst ist ein CSS-Uebergang (`.figur` in KampfAnzeige.module.css);
+ * Der Weg selbst ist ein CSS-Uebergang (`.kampfFigur` in neu/neu.module.css);
  * die Lauffolge muss genau so lange laufen wie er, sonst rudert die Figur
  * noch, wenn sie laengst steht. Damit es dafuer nicht zwei Zahlen gibt, setzt
  * die Komponente den Uebergang aus DIESEM Wert (`--gleiten`).
@@ -174,7 +136,7 @@ export function sackenMs(takt: Kampftakt): number {
  * Was einer Figur zuletzt widerfahren ist — Zeitstempel AUS DEM PROTOKOLL.
  *
  * Alle vier Werte sind woertlich das `zeitMs` des jeweiligen Ereignisses
- * (`wendeAn` in KampfAnzeige.tsx schreibt sie ab). Hier wird daraus nichts
+ * (`wendeAn` in kampfbericht.ts schreibt sie ab). Hier wird daraus nichts
  * abgeleitet, was das Spiel entscheidet — nur, welches Bild zu sehen ist.
  */
 export interface Bewegungsspur {
@@ -351,284 +313,9 @@ export function zellWeite(stand: Bildstand): number {
   return zelleVon(stand.bewegung, stand.bild).breite / FIGUREN3D_KANTE;
 }
 
-// ---------------------------------------------------------------------------
-// Wie gross der Ausschnitt auf der Karte ist
-//
-// WORAUF SICH ALLE PROZENTE HIER BEZIEHEN: auf den KOERPER, nicht auf die
-// Wabenkarte. Der Koerper ist der Stellplatz der Figur und misst 74 x 62 % der
-// Karte (`.stellplatz` in KampfAnzeige.module.css); die Werte von hier stehen
-// als CSS-Variablen an einer Regel, die in ihm liegt. Der Kuerze halber stand
-// bis zum 06.09.2026 in jeder zweiten Zeile „Kartenhoehe" — wer das woertlich
-// nimmt, rechnet jede Figur um 61 % zu gross (1 / 0,62).
-// ---------------------------------------------------------------------------
+/** Auf drei Stellen gerundet — ungerundet stuenden im DOM Zeichenketten wie `-16.666666666666664
 
-/**
- * Wie viele Weltmeter die HOEHE eines Figurenkoerpers abbildet — der Massstab
- * der Arena.
- *
- * DAS IST DIE ENTSCHEIDUNG, alles andere hier ist Rechnung. Sie ist Robins vom
- * 06.09.2026, gemessen auf /probe/kampf bei 390 px: Eine Wache soll 72 auf 52
- * Pixel gross sein und nicht 50 auf 36 — bei der kleineren Groesse blieb von
- * der vorgerenderten 3D-Figur eine farbige Silhouette ohne Ruestung, Gesicht
- * oder Waffe. Im Stylesheet stand sie als „260 %"; das war dieselbe Aussage,
- * aber nur solange eine Zelle 4,29 Meter Welt trug.
- *
- * IN METERN UND NICHT IN PROZENT, weil sie sonst den naechsten Satz Blaetter
- * nicht ueberlebt: Wie viel Figur in einer Zelle steckt, entscheidet der
- * gemessene Ausschnitt. Seit die Todeszeile ihre eigene, breitere Zelle hat,
- * sind es 3,76 Meter — dieselben 260 % waeren 82 statt 72 Pixel gewesen, also
- * 14 % mehr, als abgenommen wurde. 4,29 / 2,60 = 1,65 sagt dasselbe, ohne den
- * Ausschnitt zu kennen.
- *
- * Wer die Figuren groesser oder kleiner will, aendert DIESE Zahl: kleiner
- * heisst groessere Figuren.
- */
-const MASSSTAB_METER = 1.65;
-
-/**
- * Wo die Figur aufsetzt, als Anteil der Koerperhoehe von OBEN.
- *
- * 83,6 % heisst: Der Fuss steht 16,4 % ueber der Unterkante des Koerpers, knapp
- * ueber den Sternen und auf der Hoehe des Lebensbalkens. Tiefer, und die Figur
- * steht auf ihrer eigenen Stufenanzeige; hoeher, und sie schwebt ueber dem
- * Feld.
- */
-const STANDLINIE = 0.836;
-
-/**
- * Hoehe und Bodenversatz des Figurenausschnitts, in Prozent der Koerperhoehe.
- *
- * GERECHNET UND NICHT PROBIERT, und zwar aus dem Massstab: Eine Zelle traegt
- * `FIGUREN3D_ZELLHOEHE_METER` Meter Welt, ein Koerper soll `MASSSTAB_METER`
- * zeigen — daraus folgt die Hoehe. Der Fusspunkt sagt, wo in der Zelle die
- * Figur aufsetzt; daraus folgt, wie weit die Zelle unter den Koerper reichen
- * muss, damit sie auf der Standlinie steht.
- *
- * WARUM NICHT ZWEI FESTE PROZENTZAHLEN, wie bis zum 06.09.2026: Die haengen am
- * gemessenen Ausschnitt, ohne ihn zu nennen. Als die Todeszeile ihre eigene
- * Zelle bekam, wurde der Ausschnitt von 4,29 auf 3,76 Meter enger — dieselben
- * 260 % haetten jede Figur der Arena um 14 % wachsen lassen, ohne dass jemand
- * an der Groesse etwas geaendert haette. Und zwar genau die 260 %, die am
- * selben Tag an einem Bild abgenommen worden waren.
- */
-export const FIGURENKASTEN = zellkasten(MASSSTAB_METER, STANDLINIE);
-
-/**
- * Hoehe und Bodenversatz eines Zellenausschnitts — DIE Rechnung hinter der
- * Figurengroesse, geteilt von Arena, Wabe und Bank.
- *
- * Zwei Eingaben je Ort, und beide sind Entscheidungen: `zeigtMeter` sagt, wie
- * viele Weltmeter die Bezugshoehe abbildet (daraus folgt, wie gross die Figur
- * wird), `standlinie` sagt, wo in der Bezugshoehe die Figur aufsetzt, als
- * Anteil von OBEN. Alles andere ist Messung — die Zellhoehe in Metern und der
- * Fusspunkt kommen aus figuren3d.ts.
- *
- * `bezug` ist die Hoehe, auf die sich beide Rueckgaben beziehen: 100 fuer ein
- * Prozentmass. Der VIERTE Ort, die Ladenkarte, rechnet in Pixeln und geht
- * deshalb einen eigenen Weg (siehe `KARTENKASTEN`) — er hat keine Bezugshoehe,
- * die diese Funktion kennen koennte, ohne die Hoehe des Kartenkopfs aus dem
- * Stylesheet abzuschreiben. Dieselben zwei Entscheidungen trifft er trotzdem.
- *
- * WARUM DAS EINE FUNKTION IST UND NICHT DREIMAL DIESELBEN ZWEI ZEILEN: Die
- * Rechnung ist die Stelle, an der `FIGUREN3D_ZELLHOEHE_METER` eingeht. Steht
- * sie nur an einem der vier Orte, haengen die drei anderen weiter stumm am
- * gemessenen Ausschnitt — genau der Zustand, aus dem am 06.09.2026 drei
- * Handumrechnungen wurden.
- */
-function zellkasten(
-  zeigtMeter: number,
-  standlinie: number,
-  bezug = 100,
-): { readonly hoehe: number; readonly boden: number } {
-  const hoehe = (FIGUREN3D_ZELLHOEHE_METER / zeigtMeter) * bezug;
-  return {
-    /** Hoehe des Ausschnitts, im Mass von `bezug`. */
-    hoehe: runde(hoehe),
-    /** Unterkante gegen die der Bezugshoehe — negativ heisst tiefer. */
-    boden: runde((1 - standlinie) * bezug - hoehe * (1 - FIGUREN3D_FUSSPUNKT.y)),
-  } as const;
-}
-
-/**
- * Wie viele Weltmeter die HOEHE einer 32er-Pixelkachel zeigt — der Massstab
- * des RUECKFALLS.
- *
- * Wozu eine Pixelkachel einen Massstab braucht: Faellt ein 3D-Blatt aus, tritt
- * die Pixelfigur der Einheit an seine Stelle (`figuren.ts`, eingehaengt als
- * `ersatz` von `Figur3D`). Sie muss dann ungefaehr so gross dastehen wie die
- * Figuren daneben, sonst sieht der Rueckfall nach Fehler aus statt nach
- * Ersatz. Bis zum 06.09.2026 stand ihre Groesse als „72 % der Koerperhoehe" im
- * Stylesheet und hatte mit den 3D-Figuren nichts zu tun: Als die auf den
- * Massstab von 1,65 Metern kamen, wuchsen sie auf 72 Pixel — die Pixelfigur
- * blieb bei 34, also halb so gross wie ihre Nachbarn.
- *
- * IN METERN UND NICHT IN PROZENT, aus demselben Grund wie bei
- * `MASSSTAB_METER`: So haengt der Rueckfall an der ENTSCHEIDUNG ueber die
- * Figurengroesse und nicht am gemessenen Ausschnitt der Blaetter. Wer die
- * Figuren groesser will, aendert `MASSSTAB_METER` — und die Pixelfigur waechst
- * mit. Wer die Blaetter neu rendert und damit `FIGUREN3D_ZELLHOEHE_METER`
- * verschiebt, aendert an ihr nichts, und das ist richtig so: Die 3D-Figur wird
- * dabei ja auch nicht groesser.
- *
- * WOHER DIE 2,845 KOMMEN — einmal gemessen, damit der Rueckfall dort anfaengt,
- * wo die 3D-Figuren heute stehen. Am Alphakanal der fuenf Blaetter (Zelle 0/0,
- * das ruhende erste Bild) belegt eine stehende Figur 65,6 % (Wache), 59,4 %
- * (Meuchler), 73,4 % (Schuetze), 73,4 % (Magier) und 87,5 % (Beistand) der
- * Zellhoehe; der Median 73,4 % von 3,756 Metern sind 2,757 Meter Figur. Der
- * Median und nicht die Wache, an der die Groesse abgenommen wurde: Der
- * Rueckfall vertritt jede der fuenf Rollen, also nimmt er die mittlere.
- * Gemessen wurden ausserdem die 22 Pixelfiguren — sie fuellen ihre Kachel
- * fast ganz aus (Median 96,9 % der Hoehe, Fuesse bei 100 %). 2,757 / 0,969
- * ergibt die 2,845 Meter, die eine ganze Kachel damit zeigt.
- */
-const PIXELKACHEL_METER = 2.845;
-
-/**
- * Hoehe und Bodenversatz der PIXELFIGUR auf einer Arenakarte, in Prozent der
- * Koerperhoehe — dieselben zwei Angaben wie `FIGURENKASTEN`, fuer denselben
- * Ort, nur eben fuer den Rueckfall.
- *
- * ZWEI KAESTEN UND NICHT EINER, weil die beiden Bilder verschieden gebaut
- * sind: Beim 3D-Blatt ist der sichtbare Kasten eine ZELLE mit viel
- * durchsichtigem Rand fuer den ausgeholten Schlag, und die Figur setzt darin
- * bei 80 % auf (`FIGUREN3D_FUSSPUNKT`). Die Pixelkachel dagegen IST die Figur:
- * Sie fuellt ihre Kachel aus und steht mit den Fuessen auf deren Unterkante.
- * Deshalb ist der Bodenversatz hier kein negativer Wert, sondern genau die
- * Standlinie — die Kachelunterkante ist der Fuss.
- *
- * Die Standlinie ist dieselbe wie beim Blatt (16,4 % ueber der Unterkante des
- * Koerpers, knapp ueber den Sternen): Waeren es zwei, staende der Rueckfall
- * auf einer anderen Hoehe als seine Nachbarn und fiele genau dadurch auf.
- */
-export const RUECKFALLKASTEN = {
-  /** Hoehe der Kachel, in Prozent der Koerperhoehe. */
-  hoehe: runde((PIXELKACHEL_METER / MASSSTAB_METER) * 100),
-  /** Unterkante gegen die des Koerpers, in Prozent — hier die Standlinie. */
-  boden: runde((1 - STANDLINIE) * 100),
-} as const;
-
-// ---------------------------------------------------------------------------
-// Wie gross der Ausschnitt in der RUESTKAMMER ist
-//
-// Drei weitere Orte zeigen dieselbe Figur stehend: die Wabe auf dem Brett, das
-// Fach auf der Bank und der Kopf der Ladenkarte (`EinheitenFigur` in
-// Zeichen.tsx). Bis zum 22.09.2026 standen ihre vier Prozent- und zwei
-// Pixelzahlen fest im Stylesheet — sie hingen genauso am gemessenen Ausschnitt
-// wie die der Arena, sagten es aber nicht. Als die Todeszeile am 06.09.2026
-// ihre eigene, breitere Zelle bekam und der gemeinsame Ausschnitt von 4,29 auf
-// 3,76 Meter enger wurde, musste jemand sie von Hand umrechnen (82 % → 71,8 %,
-// 106 % → 92,8 %, 58 px → 51 px). Wer das vergisst, laesst die ganze
-// Ruestkammer um 14 % wachsen, ohne dass irgendwo eine Groesse geaendert wurde
-// und ohne dass ein Test rot wird.
-//
-// JE ORT ZWEI ENTSCHEIDUNGEN — ein Massstab und eine Standlinie —, und je Ort
-// eine andere BEZUGSHOEHE, weil die drei Plaetze nichts miteinander teilen:
-// die Wabe ihre eigene Hoehe, das Bankfach seine, der Kartenkopf seine festen
-// Pixel. Genau deshalb konnte in der Arena `FIGURENKASTEN` alles allein
-// erledigen und hier nicht.
-// ---------------------------------------------------------------------------
-
-/**
- * Wie viele Weltmeter die HOEHE EINER WABE abbildet.
- *
- * Gross gegen die 1,65 Meter der Arena, und das ist kein Widerspruch: Dort
- * bezieht sich der Massstab auf den Koerper (74 x 62 % der Karte), hier auf die
- * ganze Wabe — und unter der Figur muessen noch Name und Sterne Platz haben.
- *
- * Abgenommen ist die Groesse vom 06.09.2026 (71,8 % Wabenhoehe); 3,756 / 0,718
- * sind die 5,23 Meter, die dieselbe Aussage machen, ohne den Ausschnitt zu
- * kennen. Wer die Figuren auf dem Brett groesser will, aendert DIESE Zahl:
- * kleiner heisst groessere Figuren.
- */
-const WABE_METER = 5.23;
-
-/**
- * Wo die Figur auf der Wabe aufsetzt, als Anteil der Wabenhoehe von OBEN.
- *
- * 62,5 % heisst: Der Fuss steht auf 37,5 % der Wabe, und die Figur reicht von
- * dort bis knapp unter deren Oberkante — ueberall dort ist das Sechseck noch
- * breit genug. Darunter bleibt Platz fuer Namen und Sterne.
- *
- * SIE MUSS IN DIE WABE PASSEN, anders als in der Arena: Dort ist die Figur ein
- * Geschwister der Wabe und darf ueber sie hinausragen, hier ist sie ihr KIND,
- * und `clip-path` beschneidet auch den Inhalt. Was ueber das Sechseck
- * hinausreicht, waere kein Ueberstand, sondern ein abgeschnittener Kopf.
- */
-const WABE_STANDLINIE = 0.625;
-
-/**
- * Wie viele Weltmeter die HOEHE EINES BANKFACHS abbildet.
- *
- * Weniger als bei der Wabe, die Figur steht also groesser da: Auf der Bank ist
- * der Platz ein Rechteck und kein Sechseck, und weil kein Name darunter steht,
- * darf sie die volle Hoehe nehmen. `overflow: hidden` am Fach schneidet nur
- * die leeren Raender der Zelle ab.
- *
- * NACHGEMESSEN am 06.09.2026 ueber alle fuenf Blaetter (Alphakanal, Zelle
- * 0/0): Der hoechste Punkt liegt 3,1 % unter der Zellenoberkante, und das ist
- * das Geweih des Druiden. Bei diesem Massstab bleibt es im Fach.
- */
-const BANK_METER = 4.05;
-
-/**
- * Wo die Figur im Bankfach aufsetzt, als Anteil der Fachhoehe von OBEN.
- *
- * Tiefer als auf der Wabe (Fuss auf 21,35 % statt auf 37,5 %), weil kein Name
- * und keine Sterne darunter stehen — der Platz gehoert ganz der Figur.
- */
-const BANK_STANDLINIE = 0.7865;
-
-export const WABENKASTEN = zellkasten(WABE_METER, WABE_STANDLINIE);
-export const BANKKASTEN = zellkasten(BANK_METER, BANK_STANDLINIE);
-
-/**
- * Wie viele Pixel ein Weltmeter auf der LADENKARTE misst.
- *
- * DIE KARTE RECHNET IN PIXELN und nicht in Prozent: Sie ist eine Spalte von
- * fuenf und auf einem 360er-Handy keine 70 px breit; ein Prozentmass waere dort
- * ein Punkt und am Desktop ein Plakat.
- *
- * Deshalb steht hier auch kein Massstab in Metern je Bezugshoehe wie bei Wabe
- * und Bank, sondern sein Kehrwert in Pixeln je Meter — die Karte hat keine
- * Bezugshoehe, die diese Datei kennt. Die Hoehe des Kartenkopfs (`.tr-karte-kopf`)
- * steht im Stylesheet, und sie hier abzuschreiben waere wieder eine zweite
- * Wahrheit; mit Pixeln je Meter braucht es sie gar nicht.
- *
- * 13,56 px/m ergeben rund 51 px Zelle und darin rund 34 px Figur — etwas mehr
- * als die 32 px des Pixelbilds, das hier bis zum 06.09.2026 stand.
- */
-const KARTE_PIXEL_JE_METER = 13.56;
-
-/**
- * Wo die Figur im Kartenkopf aufsetzt, in Pixeln UEBER dessen Unterkante.
- *
- * In Pixeln und nicht als Anteil, aus demselben Grund wie der Massstab: Der
- * Kartenkopf hat eine feste Hoehe, die nicht in dieser Datei steht.
- *
- * 1,2 px heisst praktisch: auf der Unterkante. Dass die grossen Huete (Magier)
- * oben ein, zwei Pixel in die Polsterung ragen, ist Absicht — die Karte
- * schneidet nicht ab.
- */
-const KARTE_STANDLINIE_PX = 1.2;
-
-/**
- * Hoehe und Bodenversatz der Figur auf der Ladenkarte, in PIXELN.
- *
- * Eigene Ableitung statt `zellkasten`, weil in der Rechnung keine Bezugshoehe
- * vorkommt: Die Zellhoehe folgt unmittelbar aus Weltmetern mal Pixeln je Meter,
- * und der Boden aus der Standlinie minus dem Stueck Zelle, das unter dem
- * Fusspunkt liegt. Dieselben zwei Aussagen wie ueberall, nur ohne Prozent.
- */
-export const KARTENKASTEN = {
-  /** Hoehe des Ausschnitts, in Pixeln. */
-  hoehe: runde(FIGUREN3D_ZELLHOEHE_METER * KARTE_PIXEL_JE_METER),
-  /** Unterkante gegen die des Kartenkopfs, in Pixeln — negativ heisst tiefer. */
-  boden: runde(
-    KARTE_STANDLINIE_PX -
-      FIGUREN3D_ZELLHOEHE_METER * KARTE_PIXEL_JE_METER * (1 - FIGUREN3D_FUSSPUNKT.y),
-  ),
-} as const;
-
+/** Auf drei Stellen gerundet — ungerundet stuenden im DOM Zeichenketten wie -16.666666666666664 %. */
 function runde(wert: number): number {
   return Math.round(wert * 1000) / 1000;
 }

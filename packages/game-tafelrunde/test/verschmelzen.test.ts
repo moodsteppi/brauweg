@@ -154,7 +154,7 @@ describe('Kaufen und Verschmelzen', () => {
       alle(heer.bank).find((e) => e.id === 'dorfwache'),
       k('dorfwache', 2),
     );
-    assert.equal(heer.gold, 9, 'Eine Dorfwache kostet 1 Gold');
+    assert.equal(heer.gold, 8, 'Eine Dorfwache kostet 2 Gold (Preis seit dem 27.11.2026)');
   });
 
   it('verbietet bei voller Bank den Kauf, der nichts verschmilzt', () => {
@@ -182,9 +182,12 @@ describe('Kaufen und Verschmelzen', () => {
 
   it('verbietet den Kauf ohne genug Gold', () => {
     const roh = erstellePartie(DEFAULT_REGELN, [0, 1], SAAT);
+    // Drei Gold: genau die Kostenstufe des Sturmrufers, aber einer unter
+    // seinem Preis (4). So faellt auch auf, wenn der Kauf wieder `kosten`
+    // statt `preis` abzieht (27.11.2026).
     const partie = mitHeer(roh, 0, {
       laden: ['sturmrufer', null, null, null, null],
-      gold: 2,
+      gold: 3,
     });
     assert.ok(!erlaubteZuege(partie, 0).some((z) => z.typ === 'kaufen'));
     assert.throws(() => fuehreAus(partie, 0, { typ: 'kaufen', platz: 0 }), /Gold/);

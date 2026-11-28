@@ -2,8 +2,8 @@
  * Eine Figur als Ausschnitt aus dem Blatt ihrer Rolle.
  *
  * DAS BAUTEIL FUER ALLE ORTE. Bis zum 6.9.2026 gab es die 3D-Figuren nur in
- * der Arena (KampfAnzeige.tsx), und auf Brett, Bank und Ladenkarte standen
- * weiter die 32er-Pixelbilder aus `figuren.ts`. Wer spielt, ist die meiste
+ * der Arena, und auf Brett, Bank und Ladenkarte standen weiter
+ * 32er-Pixelbilder (beides im alten Tafelrunde, am 28.11.2026 entfernt). Wer spielt, ist die meiste
  * Zeit in der Vorbereitung — der Bruch fiel also genau dort auf, wo man am
  * laengsten hinsieht. Seitdem zeichnen alle vier Orte dieselbe Figur, und
  * damit sie es auch morgen noch tun, steht sie hier und nicht zweimal.
@@ -12,7 +12,7 @@
  * viele Zellen breit und hoch, wie figuren3d.ts sagt. Ohne Versatz steht die
  * Zelle links oben, und das ist Bild 0 der Ruhefolge — eine STEHENDE Figur
  * bekommt deshalb gar keine Angabe. Nur die Arena schiebt das Blatt weiter, und zwar
- * unmittelbar am Element (`bildSchieben` in KampfAnzeige.tsx); dafuer ist
+ * unmittelbar am Element (`bildSchieben` in neu/Kampf.tsx); dafuer ist
  * `gib` da. Am `<img>` steht deshalb kein `transform`: Es waere die Angabe,
  * die der Takt gleich darauf ueberschreibt, und beim naechsten Zeichnen
  * setzte React sie zurueck.
@@ -62,7 +62,7 @@ export function Figur3D({
   /**
    * Masse, die die Klasse nicht hinschreiben kann, weil sie gerechnet sind —
    * in der Praxis die CSS-Variablen aus `bildfolge.ts` (`EinheitenFigur` in
-   * Zeichen.tsx setzt sie). Sie stehen am AUSSCHNITT und nicht weiter oben,
+   * das alte Zeichen.tsx setzte sie). Sie stehen am AUSSCHNITT und nicht weiter oben,
    * damit jeder Ort sie mitbringt, an dem eine Figur steht — auch die Probe
    * unter `proben/ruestkammer/`, die keinen Tafelrunde-Bildschirm um sich hat.
    *

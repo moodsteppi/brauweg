@@ -123,13 +123,18 @@ describe('Der Beistand ist keine Rolle ohne Wirkung mehr', () => {
    * die andere darunter etwas bedeutet — eine Probe, die nur sagt "es sind
    * mehr als null", koennte auch bei einem kaputten Zaehler gruen sein.
    */
-  it('gewaenne ohne die Heilung null Kaempfe', () => {
-    const bilanz = rollenbilanz(OHNE_HEILUNG, 'beistand');
-    assert.ok(bilanz.kaempfe > 30, `nur ${bilanz.kaempfe} Kaempfe gezaehlt`);
-    assert.equal(bilanz.siege, 0, 'ohne Wirkung darf ein Beistand nichts gewinnen');
-    for (const zeile of zeilenMitRolle(OHNE_HEILUNG, 'beistand')) {
-      assert.equal(zeile.siege, 0, zeile.name);
-    }
+  /*
+   * BIS ZUM 27.11.2026 hiess diese Probe "gewaenne ohne die Heilung null
+   * Kaempfe" — und das stimmte, solange die Heilung das Einzige war, was ein
+   * Beistand konnte. Seit den Faehigkeiten wirkt der Runenschild auch ohne
+   * Heilfaktor. Die Zusage, um die es ging, bleibt: Die Heilung TRAEGT die
+   * Rolle, ohne sie gewinnt ein Beistand deutlich weniger.
+   */
+  it('gewinnt ohne die Heilung deutlich weniger', () => {
+    const ohne = rollenbilanz(OHNE_HEILUNG, 'beistand');
+    const mit = rollenbilanz(BEFUND, 'beistand');
+    assert.ok(ohne.kaempfe > 30, `nur ${ohne.kaempfe} Kaempfe gezaehlt`);
+    assert.ok(ohne.siege < mit.siege, `ohne Heilung ${ohne.siege}, mit ${mit.siege}`);
   });
 
   it('gewinnt mit der Heilung in jeder Kostenstufe', () => {

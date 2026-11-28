@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { FAEHIGKEITEN } from '../src/faehigkeiten.js';
 import { describe, it } from 'node:test';
 
 import {
@@ -306,7 +307,9 @@ describe('Kampf — das Ablaufprotokoll', () => {
     const bericht = simuliereKampf(DREI_GEGEN_DREI, 'takt');
     const zuletzt = new Map<number, number>();
     for (const e of bericht.ereignisse) {
-      if (e.art !== 'treffer') continue;
+      // Nur gewoehnliche Hiebe: Faehigkeiten treffen mehrfach im selben Takt
+      // (Klingentanz), und ein Brand kommt nicht vom Brennenden selbst.
+      if (e.art !== 'treffer' || e.quelle) continue;
       const stand = bericht.start.find((k) => k.id === e.wer)!;
       const takt = angriffstakt(werteFuer(stand.einheitId, stand.stufe).tempo);
       const vorher = zuletzt.get(e.wer);
@@ -652,7 +655,7 @@ describe('Kampf — der Ausgang', () => {
       stufe,
       platz: 0,
       leben: 1,
-      hoechstesLeben: 1,
+      hoechstesLeben: 1, mana: 0, schild: 0,
     });
     // Gerechnet wird die Stufensumme geteilt durch SCHADEN_STUFEN_TEILER und
     // aufgerundet: 0 Ueberlebende kosten nur den Grundwert, ein Stufe-1-Gegner
@@ -874,9 +877,12 @@ describe('Kampf — der Beistand heilt', () => {
         ['dorfwache', 1, 2, 0],
         ['moosheiler', 1, 2, 1],
       ]),
+      // Seit dem 27.11.2026 Dorfwache + Schildknappe statt zwei Dorfwachen:
+      // Zwei gleiche Einheiten zaehlen fuer eine Marke nur noch einmal, und
+      // ohne den Waechter-Schild waere die Gegenseite nicht mehr ueberlegen.
       stelleAuf([
         ['dorfwache', 1, 1, 0],
-        ['dorfwache', 1, 3, 0],
+        ['schildknappe', 1, 3, 0],
       ]),
     ];
     const ohne = { ...STANDARD_REGLER, heilungFaktor: 0 };
@@ -894,18 +900,28 @@ describe('Kampf — der Beistand heilt', () => {
     }
   });
 
-  it('heilt nur, wer die Rolle traegt', () => {
+  /*
+   * SEIT DEM 27.11.2026 heilen auch Faehigkeiten (Kraeuterwolke, Lichtsegen,
+   * Seelenraub) und der Markeneffekt Wachstum. Die Zusage bleibt trotzdem
+   * scharf: Jede Heilung nennt ihre Quelle, und jede Quelle hat genau ihre
+   * Traeger.
+   */
+  it('heilt nur, wer die Rolle, die Faehigkeit oder das Wachstum dafuer hat', () => {
+    const heilFaehigkeiten = new Set(['kraeuterwolke', 'lichtsegen', 'seelenraub']);
     for (let i = 0; i < 30; i++) {
       const bericht = simuliereKampf(zufaelligesPaar(`r${i}`), `r${i}`);
       for (const e of bericht.ereignisse) {
         if (e.art !== 'heilung') continue;
         const wer = bericht.start.find((k) => k.id === e.wer);
         assert.ok(wer);
-        assert.equal(
-          einheit(wer.einheitId).rolle,
-          'beistand',
-          `${wer.einheitId} ist kein Beistand und heilt trotzdem`,
-        );
+        if (e.quelle === 'faehigkeit') {
+          assert.ok(heilFaehigkeiten.has(FAEHIGKEITEN[wer.einheitId]?.id ?? ''), `${wer.einheitId} heilt per Faehigkeit`);
+        } else if (e.quelle === 'wachstum') {
+          assert.equal(e.ziel, e.wer, 'Wachstum heilt nur sich selbst');
+          assert.ok(einheit(wer.einheitId).marken.includes('naturwesen'), `${wer.einheitId} waechst`);
+        } else {
+          assert.equal(einheit(wer.einheitId).rolle, 'beistand', `${wer.einheitId} ist kein Beistand und heilt trotzdem`);
+        }
       }
     }
   });
@@ -1113,6 +1129,25 @@ function spieleNach(bericht: Kampfbericht): Map<number, Nachgespielt> {
         belegt.delete(wer.platz);
         break;
       }
+      // Seit dem 27.11.2026 (Faehigkeiten, Markeneffekte): Spruenge setzen
+      // wie ein Schritt um, nur weiter; eine Wiederkehr setzt das Leben neu.
+      case 'sprung': {
+        const wer = stand.get(e.wer)!;
+        assert.equal(wer.platz, e.von, `Kennung ${e.wer} springt von einem fremden Platz`);
+        assert.ok(!belegt.has(e.nach), `Kennung ${e.wer} springt auf einen besetzten Platz`);
+        belegt.delete(e.von);
+        belegt.set(e.nach, e.wer);
+        wer.platz = e.nach;
+        break;
+      }
+      case 'wiederkehr': {
+        const wer = stand.get(e.wer)!;
+        assert.equal(wer.leben, 0, `Kennung ${e.wer} kehrt wieder, ohne gefallen zu sein`);
+        wer.leben = e.lebenDanach;
+        break;
+      }
+      case 'faehigkeit':
+      case 'zustand':
       case 'ende':
         break;
     }

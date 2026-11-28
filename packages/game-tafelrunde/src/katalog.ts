@@ -136,7 +136,13 @@ export interface Einheit extends Grundwerte {
    * balanciert, will Name und Werte am selben Ort lesen.
    */
   readonly name: string;
+  /**
+   * Die KOSTENSTUFE (1 bis 3): Rahmenfarbe, Chancen im Laden, Vorrat. Was eine
+   * Einheit in Gold kostet, steht seit dem 27.11.2026 in `preis`.
+   */
   readonly kosten: Kosten;
+  /** Was ein Kauf in Gold kostet (`PREIS_JE_KOSTEN`). */
+  readonly preis: number;
   readonly rolle: Rolle;
   /** Ein bis zwei Marken, wie im Konzept vorgegeben. */
   readonly marken: readonly Marke[];
@@ -180,7 +186,16 @@ export type EinheitId =
  * Der Katalog. 22 Einheiten ueber drei Kostenstufen (8 / 8 / 6) — genau die
  * Verteilung aus der Balancing-Tabelle des Konzepts.
  */
-export const KATALOG: readonly Einheit[] = [
+/**
+ * PREISE (Robin, 27.11.2026: "Mindestpreis fuer Units ist 2"): jede Stufe
+ * einen Gold teurer als ihre Nummer. Zusammen mit dem Abschlag beim Verkaufen
+ * (`erloes`) verhindert das, dass man sich ohne Wuerfeln durch Kaufen und
+ * Verkaufen genau die Einheit holt, die man braucht — ein Kauf zieht ja den
+ * ganzen Laden neu.
+ */
+export const PREIS_JE_KOSTEN: Readonly<Record<Kosten, number>> = { 1: 2, 2: 3, 3: 4 };
+
+const KATALOG_OHNE_PREIS: readonly Omit<Einheit, 'preis'>[] = [
   // --- 1 Gold: Grundwerte rund 550 Leben / 40 Angriff ---------------------
   /**
    * LEBEN AM 25.09.2026 GESENKT (vorher 650). In der Tauschprobe stand sie
@@ -205,7 +220,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'dorfwache',
-    name: 'Dorfwache',
+    name: 'Pinguinwache',
     kosten: 1,
     rolle: 'wache',
     marken: ['krieger', 'waechter'],
@@ -293,7 +308,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'schildknappe',
-    name: 'Schildknappe',
+    name: 'Geisterschildkröte',
     kosten: 1,
     rolle: 'wache',
     marken: ['waechter', 'untot'],
@@ -305,7 +320,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'astschuetze',
-    name: 'Astschütze',
+    name: 'Eichhornschütze',
     kosten: 1,
     rolle: 'schuetze',
     marken: ['naturwesen'],
@@ -317,7 +332,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'steinschleuderer',
-    name: 'Steinschleuderer',
+    name: 'Pinguinschleuder',
     kosten: 1,
     rolle: 'schuetze',
     marken: ['krieger'],
@@ -361,7 +376,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'funkenlehrling',
-    name: 'Funkenlehrling',
+    name: 'Funkensalamander',
     kosten: 1,
     rolle: 'magier',
     marken: ['elementar', 'drache'],
@@ -444,7 +459,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'irrlicht',
-    name: 'Irrlicht',
+    name: 'Laternengeist',
     kosten: 1,
     rolle: 'wache',
     marken: ['elementar', 'untot'],
@@ -485,7 +500,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'gassendieb',
-    name: 'Gassendieb',
+    name: 'Pinguindieb',
     kosten: 1,
     rolle: 'meuchler',
     marken: ['meuchler'],
@@ -497,7 +512,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'moosheiler',
-    name: 'Moosheiler',
+    name: 'Igelheiler',
     kosten: 1,
     rolle: 'beistand',
     marken: ['naturwesen'],
@@ -511,7 +526,7 @@ export const KATALOG: readonly Einheit[] = [
   // --- 2 Gold: Grundwerte rund 700 Leben / 55 Angriff ---------------------
   {
     id: 'hainwaechterin',
-    name: 'Hainwächterin',
+    name: 'Hirschwächterin',
     kosten: 2,
     rolle: 'wache',
     marken: ['waechter', 'naturwesen'],
@@ -523,7 +538,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'grimmbart',
-    name: 'Grimmbart',
+    name: 'Kaiserkrieger',
     kosten: 2,
     rolle: 'wache',
     marken: ['krieger'],
@@ -581,7 +596,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'bogenmeisterin',
-    name: 'Bogenmeisterin',
+    name: 'Fuchsschützin',
     kosten: 2,
     rolle: 'schuetze',
     marken: ['krieger', 'naturwesen'],
@@ -593,7 +608,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'nachtpfeil',
-    name: 'Nachtpfeil',
+    name: 'Eulenschütze',
     kosten: 2,
     rolle: 'schuetze',
     marken: ['meuchler'],
@@ -618,7 +633,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'frostweberin',
-    name: 'Frostweberin',
+    name: 'Frostpinguin',
     kosten: 2,
     rolle: 'magier',
     marken: ['elementar'],
@@ -631,7 +646,7 @@ export const KATALOG: readonly Einheit[] = [
   /** Leben am 25.09.2026 angehoben (vorher 660) — warum: siehe Gassendieb. */
   {
     id: 'schattenklinge',
-    name: 'Schattenklinge',
+    name: 'Waschbärklinge',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['meuchler'],
@@ -649,7 +664,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'knochenspaeher',
-    name: 'Knochenspäher',
+    name: 'Geisterkater',
     kosten: 2,
     rolle: 'meuchler',
     marken: ['untot'],
@@ -661,7 +676,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'runenpriester',
-    name: 'Runenpriester',
+    name: 'Runenpinguin',
     kosten: 2,
     rolle: 'beistand',
     marken: ['waechter'],
@@ -675,7 +690,7 @@ export const KATALOG: readonly Einheit[] = [
   // --- 3 Gold: Grundwerte rund 900 Leben / 70 Angriff ---------------------
   {
     id: 'wurzelriese',
-    name: 'Wurzelriese',
+    name: 'Giraffenriese',
     kosten: 3,
     rolle: 'wache',
     marken: ['naturwesen', 'waechter'],
@@ -717,7 +732,7 @@ export const KATALOG: readonly Einheit[] = [
    */
   {
     id: 'sturmrufer',
-    name: 'Sturmrufer',
+    name: 'Sturmalbatros',
     kosten: 3,
     rolle: 'magier',
     marken: ['elementar'],
@@ -729,7 +744,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'grabfuerstin',
-    name: 'Grabfürstin',
+    name: 'Geisterkönigin',
     kosten: 3,
     rolle: 'magier',
     marken: ['untot'],
@@ -741,7 +756,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'klingentaenzerin',
-    name: 'Klingentänzerin',
+    name: 'Wieseltänzerin',
     kosten: 3,
     rolle: 'meuchler',
     marken: ['krieger', 'meuchler'],
@@ -753,7 +768,7 @@ export const KATALOG: readonly Einheit[] = [
   },
   {
     id: 'lichtwahrerin',
-    name: 'Lichtwahrerin',
+    name: 'Lichtpinguin',
     kosten: 3,
     rolle: 'beistand',
     marken: ['waechter'],
@@ -764,6 +779,12 @@ export const KATALOG: readonly Einheit[] = [
     ruestung: 30,
   },
 ];
+
+/** Der Katalog, je Einheit mit ihrem Preis. */
+export const KATALOG: readonly Einheit[] = KATALOG_OHNE_PREIS.map((e) => ({
+  ...e,
+  preis: PREIS_JE_KOSTEN[e.kosten],
+}));
 
 const NACH_ID = new Map<EinheitId, Einheit>(KATALOG.map((e) => [e.id, e]));
 
@@ -854,7 +875,18 @@ export function werteFuer(id: EinheitId, stufe: Stufe, bonus: Wertebonus = KEIN_
  * wieder hergeben.
  */
 export function gesamtkosten(id: EinheitId, stufe: Stufe): number {
-  return einheit(id).kosten * VERSCHMELZ_ZAHL ** (stufe - 1);
+  return einheit(id).preis * VERSCHMELZ_ZAHL ** (stufe - 1);
+}
+
+/**
+ * Was ein Verkauf einbringt (Robin, 27.11.2026): Eine einfache Einheit bringt
+ * einen Gold weniger zurueck, als sie gekostet hat; eine verschmolzene den
+ * vollen Preis aller darin steckenden Kopien. Der Abschlag macht Kaufen und
+ * Verkaufen zum Auswuerfeln unrentabel, das Aufraeumen nach dem Verschmelzen
+ * kostet dagegen nichts.
+ */
+export function erloes(id: EinheitId, stufe: Stufe): number {
+  return stufe === 1 ? einheit(id).preis - 1 : gesamtkosten(id, stufe);
 }
 
 /**

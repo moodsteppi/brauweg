@@ -1,10 +1,16 @@
 # Brauweg — für Agenten
 
-Kartenspiel-Plattform, **fünfzehn Spiele laufen**: Doppelkopf, Zauberer, Skat,
-Cambio, Poker (easypoker), Mememory, Filler, Eiland, Feldherr, Tafelrunde,
-Golf, Partykiste, BroCooked, BroChess (Schach zu zweit, seit dem
-25.09.2026 — hält sich an jede Annahme der Schnittstelle) und DreckBro
-(Pinguine einsauen, 2–5 Spieler, seit dem 04.11.2026 — ebenso).
+Kartenspiel-Plattform, **sechzehn Spiele haben ein Modul**: Doppelkopf,
+Zauberer, Skat, Cambio, Poker (easypoker), Mememory, Filler (in der Oberfläche
+„Farbduell"), Eiland, Feldherr, Tafelrunde, Golf, Partykiste, BroCooked,
+BroChess (Schach zu zweit, seit dem 25.09.2026 — hält sich an jede Annahme
+der Schnittstelle), DreckBro (Pinguine einsauen, 2–5 Spieler, seit dem
+04.11.2026 — ebenso) und Würfelglanz (Würfelspiel für 1–6, seit dem
+27.11.2026, **nur in der iOS-App**: `nurIos` in der Meta). Daneben laufen
+Spiele ohne Modul an der Tischschicht vorbei — Runner, Kartenmanufaktur,
+Browort, Flying Bro, BroRemote, Bro Ice Clash; sie stehen gesammelt im Kopf
+von `docs/STAND.md`. Nach außen heißt das Projekt seit dem 02.11.2026
+BroweGGames, Repository und Pakete heißen weiter Brauweg.
 Diese Datei ist die Kurzfassung; sie steht hier, weil die ausführlichen Regeln
 in `docs/STAND.md` erst ab Zeile 55 kommen und sonst niemand sie findet.
 
@@ -39,7 +45,11 @@ alle rüsten gleichzeitig, `currentActor` nennt trotzdem einen Sitz — hat aber
 noch einen eigenen Dreh: `legalActions` ist dort weder leer noch vollständig.
 Kaufen, Würfeln, Aufsteigen und Verkaufen stehen drin, das Verschieben nicht
 (es wäre ein Paar aus 19 Plätzen). Weil man das einer Liste nicht ansieht,
-sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`.
+sagt die Meta des Moduls es ausdrücklich: `legalActionsUnvollstaendig: true`. Seit dem 27.11.2026 hat
+Tafelrunde Fähigkeiten mit Mana und Markeneffekte (`faehigkeiten.ts`,
+`synergien.ts`), jede Einheit zählt für eine Marke nur einmal, und es gibt
+weder Neuwürfeln noch Aufstieg (Feldplätze folgen der Runde). Die Oberfläche
+ist seit dem 28.11.2026 nur noch `screens/TafelrundeNeu.tsx`.
 
 **Ausführlich:** `docs/STAND.md` (Übergabezettel, offene Punkte, was schon
 schiefging) · `docs/DESIGN.md` (Gestaltung, Bilder) · `docs/KLANG.md` (Töne und
@@ -250,7 +260,8 @@ nicht erst im Betrieb als leere Anzeige auffällt, hält `src/vertrag/` je
 Spiel die Client-Typen gegen die echte Modulsicht: beim Übersetzen (die
 Modulsicht muss auf den Client-Typ passen, und kein Feld darf nur noch im
 Client stehen) und beim Prüfen (eine mit Bots gespielte Partie muss jedes
-Feld auch wirklich liefern). Gedeckt sind alle fünfzehn Spiele. Ein neues Spiel
+Feld auch wirklich liefern). Gedeckt sind fünfzehn der sechzehn Spiele — für
+Würfelglanz fehlt der Vertrag noch (Stand 27.11.2026). Ein neues Spiel
 bekommt eine Datei nach demselben Muster — und beschreibt seine Sicht **nicht
 im Bildschirm**, sondern in `src/minispiele/<spiel>/sicht.ts`: Ein Vertrag,
 der aus einer `.tsx` importiert, zieht React in den Test.

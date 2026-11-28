@@ -1,19 +1,18 @@
 /**
  * Die Sicht des Tafelrunde-Moduls, wie der Client sie liest.
  *
- * Sie stand bis zum 06.09.2026 in screens/Tafelrunde.tsx. Hier steht sie,
- * weil der Vertrag unter src/vertrag/ sie gegen die echte Modulsicht haelt
- * (packages/game-tafelrunde/src/sicht.ts) — und ein Import aus dem Bildschirm
- * zoege React samt aller Bauteile in einen Test, der nur Typen vergleichen
- * will.
+ * Hier und nicht im Bildschirm, weil der Vertrag unter src/vertrag/ sie gegen
+ * die echte Modulsicht haelt (packages/game-tafelrunde/src/sicht.ts) — und
+ * ein Import aus dem Bildschirm zoege React samt aller Bauteile in einen Test,
+ * der nur Typen vergleichen will.
  *
  * Zweitbeschreibung mit Absicht: Der Client soll genau die Felder kennen, die
  * er benutzt, und nicht mit einer neueren Serverfassung mitwandern. Was das
  * kostet und wer es auffaengt, steht in src/vertrag/README.md.
  */
 
-import type { Kampfpaarung, Paarungsergebnis } from './KampfAnzeige';
-import type { Synergie, Synergiestand } from './Synergien';
+import type { Kampfpaarung, Paarungsergebnis } from './kampfbericht';
+import type { Synergie, Synergiestand } from './marken';
 import type { Platz } from './platzierung';
 import type { Kaempfer } from './zuege';
 
@@ -23,7 +22,14 @@ export type Rolle = 'wache' | 'schuetze' | 'magier' | 'meuchler' | 'beistand';
 export interface Einheit {
   id: string;
   name: string;
+  /** Kostenstufe 1–3: Rahmenfarbe und Chancen im Laden — NICHT der Preis. */
   kosten: number;
+  /**
+   * Was der Kauf kostet (seit dem 27.11.2026 abends, katalog.ts). Wahlfrei,
+   * weil die aufgezeichneten Szenen der Proben und Tische aus der Zeit davor
+   * es nicht haben; dort war die Stufe der Preis (`preisVon` in neu/grafik.tsx).
+   */
+  preis?: number;
   rolle: Rolle;
   marken: string[];
   leben: number;
@@ -78,10 +84,19 @@ export interface EigeneSicht {
   bereit: boolean;
   ausRunde: number | null;
   feldplaetze: number;
+  /**
+   * Wie viele Feldplaetze es in der naechsten Runde gibt (seit dem 27.11.2026
+   * abends: Die Plaetze wachsen mit der Runde statt mit gekauften Raengen).
+   * Aus der Sicht und nicht aus der Runde gerechnet — wie viele dazukommen und
+   * wo Schluss ist, weiss das Modul. Wahlfrei fuer Tische aus der Zeit davor.
+   */
+  feldplaetzeNaechsteRunde?: number;
   belegt: number;
   einkommen: number;
-  neuwuerfelnKosten: number;
-  aufstiegKosten: number | null;
+  /*
+   * `neuwuerfelnKosten` und `aufstiegKosten` standen hier bis zum 27.11.2026:
+   * Neu wuerfeln und Rang steigern gibt es seitdem nicht mehr (Robin).
+   */
   darfHandeln: boolean;
   /**
    * Die Marken auf dem eigenen BRETT mit Anzahl, erreichter und naechster
@@ -188,4 +203,35 @@ export interface TafelrundeSicht {
    * Werte einer angetippten Einheit nennen koennte.
    */
   stufenwerte?: Record<string, Stufenwerte[]>;
+  /**
+   * Je Einheit ihre Faehigkeit oder null (seit dem 27.11.2026, faehigkeiten.ts
+   * im Modul). Wie der Katalog nur in der ERSTEN Sicht (`seit === 0`) und aus
+   * demselben Grund: Sie aendert sich nie. Wer sie nicht festhaelt, hat ab dem
+   * zweiten Rundruf keinen Manabalken mehr — volles Mana steht nur hier, und
+   * der Bildschirm soll keine zweite Zahl dafuer kennen.
+   *
+   * Wahlfrei, weil ein Tisch aus der Zeit davor das Feld nicht schickt. Das
+   * alte Tafelrunde liest es nicht; es steht hier, weil der Vertrag jedes Feld
+   * der Modulsicht kennen will, das der Client liest (TafelrundeNeu).
+   */
+  faehigkeiten?: Record<string, Faehigkeit | null>;
+}
+
+/**
+ * Eine Faehigkeit, wie die Sicht sie liefert (faehigkeiten.ts im Modul).
+ *
+ * `id` ist eine Zeichenkette und kein Vereinigungstyp, aus demselben Grund wie
+ * die Marke in marken.tsx: Eine neue Faehigkeit im Modul soll am Bildschirm
+ * mit dem deutschen Namen aus der Sicht erscheinen und nicht den Bau brechen.
+ */
+export interface Faehigkeit {
+  id: string;
+  /** Deutscher Name — Inhalt des Spiels, uebersetzt wird ueber `id` (text.ts). */
+  name: string;
+  /** Ein Satz fuer das Einheitenblatt. */
+  text: string;
+  /** Passiv wirkt immer und braucht kein Mana; dann gibt es keinen Balken. */
+  art: 'aktiv' | 'passiv';
+  /** Volles Mana. Bei passiven 0. */
+  mana: number;
 }

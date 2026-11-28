@@ -8,15 +8,19 @@ import {
   KATALOG,
   baueZufall,
   einheit,
+  einheitenMitKosten,
+  erlaubteZuege,
   erstellePartie,
   fuehreAus,
   kartenZahl,
   ladenSaat,
+  ohneKampfWeiter,
   vollerVorrat,
   vorratSumme,
   zieheKarte,
   zieheLaden,
 } from '../src/index.js';
+import { FELD_HOECHSTENS } from '../src/regeln.js';
 
 const SAAT = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 
@@ -79,8 +83,9 @@ describe('Laden', () => {
     assert.equal(vorratGesamt(partie.vorrat), KARTEN_INSGESAMT - 10);
   });
 
-  it('zeigt auf Level 1 und 2 nur Ein-Gold-Einheiten', () => {
-    // Damit man in den ersten Runden nichts falsch kaufen KANN.
+  it('zeigt auf Level 1 und 2 nur Einheiten der Kostenstufe 1', () => {
+    // Damit man in den ersten Runden nichts falsch kaufen KANN. Seit dem
+    // 27.11.2026 ist Level 2 genau die erste Runde (`levelFuerRunde`).
     for (let s = 0; s < 30; s++) {
       const { laden } = zieheLaden(vollerVorrat(), 1, 5, baueZufall(`l1-${s}`));
       for (const id of laden) {
@@ -91,13 +96,15 @@ describe('Laden', () => {
 
   it('zeigt auf hohen Leveln auch teure Einheiten', () => {
     // Gegenprobe: Ohne sie wuerde ein kaputter Chancen-Eintrag ("alles auf
-    // Stufe 1") von der Probe oben nicht bemerkt.
+    // Stufe 1") von der Probe oben nicht bemerkt. Geprueft wird der hoechste
+    // Level, den eine Partie seit dem 27.11.2026 ueberhaupt erreicht
+    // (FELD_HOECHSTENS = 7); Level 8 und 9 stehen nur noch in der Tabelle.
     let teure = 0;
     for (let s = 0; s < 30; s++) {
-      const { laden } = zieheLaden(vollerVorrat(), 9, 5, baueZufall(`l9-${s}`));
-      teure += laden.filter((id) => id !== null && einheit(id).kosten === 3).length;
+      const zug = zieheLaden(vollerVorrat(), FELD_HOECHSTENS, 5, baueZufall(`l7-${s}`));
+      teure += zug.laden.filter((id) => id !== null && einheit(id).kosten === 3).length;
     }
-    assert.ok(teure > 0, 'Auf Level 9 kam keine einzige Drei-Gold-Einheit');
+    assert.ok(teure > 0, `Auf Level ${FELD_HOECHSTENS} kam keine einzige Einheit der Kostenstufe 3`);
   });
 
   it('greift auf andere Kostenstufen zurueck, wenn die eigene leer ist', () => {
@@ -139,7 +146,10 @@ describe('Bestimmtheit', () => {
     const lauf = (): TafelrundePartie => {
       let p = neu();
       p = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
-      p = fuehreAus(p, 1, { typ: 'neuwuerfeln' });
+      // Bis zum 27.11.2026 stand hier ein Neuwuerfeln. Ein Verkauf zieht
+      // ebenso am Vorrat und ist der Zug, der davon geblieben ist.
+      p = fuehreAus(p, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } });
+      p = fuehreAus(p, 1, { typ: 'kaufen', platz: 1 });
       p = fuehreAus(p, 0, { typ: 'bereit' });
       return p;
     };
@@ -176,51 +186,83 @@ describe('Bestimmtheit', () => {
   });
 });
 
-describe('Neu-Wuerfeln', () => {
-  it('legt die alten Karten in den Vorrat zurueck', () => {
+/*
+ * Bis zum 27.11.2026 hiess diese Gruppe "Neu-Wuerfeln". Den Zug gibt es nicht
+ * mehr (Robin: "Neu wuerfeln und Rang steigern gibt es nicht"); einen neuen
+ * Laden bringen nur noch der Rundenwechsel und ein Kauf. Was die alten Proben
+ * zusagten — keine Karte geht verloren, ein neuer Laden ist nicht umsonst zu
+ * haben —, gilt weiter und wird hier an den verbliebenen Wegen geprueft.
+ */
+describe('Neuer Laden ohne Neuwuerfeln', () => {
+  it('legt beim Rundenwechsel die alten Karten in den Vorrat zurueck', () => {
     const p = neu();
-    const vorher = vorratGesamt(p.vorrat);
-    const nachher = fuehreAus(p, 0, { typ: 'neuwuerfeln' });
-    // Fuenf raus, fuenf rein: Die Summe bleibt. Ohne das Zurueckgeben waere
+    let bereit = fuehreAus(p, 0, { typ: 'bereit' });
+    bereit = fuehreAus(bereit, 1, { typ: 'bereit' });
+    const nachher = ohneKampfWeiter(bereit);
+    // Zehn raus, zehn rein: Die Summe bleibt. Ohne das Zurueckgeben waere
     // der Vorrat nach zwanzig Runden leer und der Laden bliebe leer.
-    assert.equal(vorratGesamt(nachher.vorrat), vorher);
+    assert.notDeepEqual(nachher.heere[0]!.laden, p.heere[0]!.laden);
+    assert.equal(vorratGesamt(nachher.vorrat), vorratGesamt(p.vorrat));
     assert.equal(vorratGesamt(nachher.vorrat) + imUmlauf(nachher), KARTEN_INSGESAMT);
   });
 
-  it('kostet in der Vorgabe nichts und zieht trotzdem einen neuen Laden', () => {
-    // Robins Vorgabe vom 05.09.2026: Gold gibt man fuer Einheiten aus, nicht
-    // fuers Rollen. Das Feld bleibt trotzdem im Regelsatz.
-    assert.equal(DEFAULT_REGELN.neuwuerfelnKosten, 0);
+  it('bietet keinen Wurf mehr an, auch nicht ohne Gold', () => {
+    // Frueher war der Wurf der Ausweg fuer ein Heer ohne Gold. Jetzt wartet
+    // es auf die naechste Runde: kein Kauf, kein Wurf, nur noch "bereit".
     const p = neu();
-    const nachher = fuehreAus(p, 0, { typ: 'neuwuerfeln' });
-    assert.equal(nachher.heere[0]!.gold, p.heere[0]!.gold);
-    assert.equal(nachher.heere[0]!.wuerfe, p.heere[0]!.wuerfe + 1);
-    // Der Laden des anderen Sitzes bleibt unberuehrt.
-    assert.deepEqual(nachher.heere[1]!.laden, p.heere[1]!.laden);
+    const arm = { ...p, heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 0 } } };
+    const typen = new Set(erlaubteZuege(arm, 0).map((z) => z.typ));
+    assert.deepEqual([...typen], ['bereit']);
+    assert.throws(() => fuehreAus(arm, 0, { typ: 'neuwuerfeln' }), /gibt es nicht mehr/);
   });
 
-  it('geht auch ohne einen Goldstueck', () => {
+  it('macht Kaufen und gleich wieder Verkaufen zu keinem Gratis-Wurf', () => {
+    /*
+     * Ein Kauf zieht den ganzen Laden neu. Braechte der Verkauf den vollen
+     * Preis zurueck, waere Kaufen + Verkaufen das abgeschaffte Neuwuerfeln zum
+     * Nulltarif — genau dafuer gibt es den Abschlag (`erloes`). Ein Gold je
+     * Versuch, und keine Karte geht dabei verloren.
+     */
     const p = neu();
-    const arm = {
-      ...p,
-      heere: { ...p.heere, 0: { ...p.heere[0]!, gold: 0 } },
-    };
-    const nachher = fuehreAus(arm, 0, { typ: 'neuwuerfeln' });
-    assert.equal(nachher.heere[0]!.gold, 0);
-    assert.notDeepEqual(nachher.heere[0]!.laden, arm.heere[0]!.laden);
+    const vorher = p.heere[0]!;
+    const gekauft = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
+    const zurueck = fuehreAus(gekauft, 0, {
+      typ: 'verkaufen',
+      ort: { bereich: 'bank', platz: 0 },
+    });
+    assert.equal(zurueck.heere[0]!.gold, vorher.gold - 1);
+    assert.notDeepEqual(zurueck.heere[0]!.laden, vorher.laden);
+    assert.equal(vorratGesamt(zurueck.vorrat) + imUmlauf(zurueck), KARTEN_INSGESAMT);
   });
 
-  it('kostet Gold, wenn ein Tisch einen Preis setzt', () => {
-    // Das Feld ist nicht entfernt worden, damit genau das moeglich bleibt.
-    const teuer = erstellePartie(
-      { ...DEFAULT_REGELN, neuwuerfelnKosten: 2, startGold: 3 },
-      [0, 1],
-      SAAT,
-    );
-    const nachher = fuehreAus(teuer, 0, { typ: 'neuwuerfeln' });
-    assert.equal(nachher.heere[0]!.gold, 1);
-    const arm = { ...teuer, heere: { ...teuer.heere, 0: { ...teuer.heere[0]!, gold: 1 } } };
-    assert.throws(() => fuehreAus(arm, 0, { typ: 'neuwuerfeln' }), /Gold/);
+  it('nimmt fuer einen Kauf den Preis: 2, 3 oder 4 Gold', () => {
+    /*
+     * Robin, 27.11.2026: "Mindestpreis fuer Units ist 2". Je Kostenstufe ein
+     * Laden mit genau dieser Einheit und genau ihrem Preis im Beutel: Der Kauf
+     * geht auf null auf; mit einem Gold weniger steht er nicht in den Zuegen
+     * und wird abgewiesen. Wer im Kauf wieder `kosten` statt `preis` abzoege,
+     * faellt hier an beiden Haelften auf.
+     */
+    const p = neu();
+    for (const stufe of [1, 2, 3] as const) {
+      const id = einheitenMitKosten(stufe)[0]!.id;
+      const preis = stufe + 1;
+      const mit = (gold: number): TafelrundePartie => ({
+        ...p,
+        heere: { ...p.heere, 0: { ...p.heere[0]!, gold, laden: [id, null, null, null, null] } },
+      });
+
+      const gekauft = fuehreAus(mit(preis), 0, { typ: 'kaufen', platz: 0 });
+      assert.equal(gekauft.heere[0]!.gold, 0, `${id} kostet ${preis}`);
+      assert.deepEqual(gekauft.heere[0]!.bank[0], { id, stufe: 1 });
+
+      const knapp = mit(preis - 1);
+      assert.ok(
+        !erlaubteZuege(knapp, 0).some((z) => z.typ === 'kaufen'),
+        `${id} mit ${preis - 1} Gold kaufbar`,
+      );
+      assert.throws(() => fuehreAus(knapp, 0, { typ: 'kaufen', platz: 0 }), /Gold/);
+    }
   });
 });
 
@@ -270,8 +312,8 @@ describe('Kauf zieht den ganzen Laden neu', () => {
   });
 
   it('laesst den Laden kleiner, wenn der Vorrat nichts mehr hergibt', () => {
-    // DIE einzige Bremse, seit das Wuerfeln nichts mehr kostet: Wer den
-    // Vorrat leerkauft, bekommt keine Einheit, die es nicht mehr gibt.
+    // Die harte Grenze hinter Preis und Verkaufsabschlag: Wer den Vorrat
+    // leerkauft, bekommt keine Einheit, die es nicht mehr gibt.
     // Hier liegt nur noch die eine Karte aus, die gekauft wird.
     const p = reich();
     const leer = {} as Record<EinheitId, number>;
@@ -307,7 +349,9 @@ describe('Kauf zieht den ganzen Laden neu', () => {
       let p = reich('nachzug-bestimmt');
       p = fuehreAus(p, 0, { typ: 'kaufen', platz: 0 });
       p = fuehreAus(p, 0, { typ: 'kaufen', platz: 2 });
-      p = fuehreAus(p, 0, { typ: 'neuwuerfeln' });
+      // Statt des abgeschafften Neuwuerfelns (27.11.2026) ein Verkauf: Auch
+      // er legt Karten in den Vorrat, aus dem der naechste Kauf zieht.
+      p = fuehreAus(p, 0, { typ: 'verkaufen', ort: { bereich: 'bank', platz: 0 } });
       p = fuehreAus(p, 0, { typ: 'kaufen', platz: 1 });
       return p;
     };

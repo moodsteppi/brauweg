@@ -47,7 +47,7 @@ vi.mock('./screens/Startbildschirm', async () => {
   };
 });
 vi.mock('./screens/Lobby', () => ({ Lobby: () => <p>Lobby-Attrappe</p> }));
-vi.mock('./screens/Tafelrunde', () => ({ Tafelrunde: () => <p>Tafelrunde-Attrappe</p> }));
+vi.mock('./screens/TafelrundeNeu', () => ({ TafelrundeNeu: () => <p>Tafelrunde-Attrappe</p> }));
 vi.mock('./screens/Partykiste', () => ({ Partykiste: () => <p>Partykiste-Attrappe</p> }));
 
 import { ApiError } from './api';

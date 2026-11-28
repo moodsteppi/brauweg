@@ -1,0 +1,2877 @@
+/*
+ * TafelrundeNeu — das Aussehen aller Bausteine unter minispiele/tafelrunde/neu/.
+ *
+ * GESTALTUNG nach docs/DESIGN.md, „Nachtblau & Gold": Nachtblau als Grund,
+ * Gold fuer den einen Hauptknopf und alles, was wert ist (Gold, Preise), und
+ * GRUEN als Farbe des Spiels (Bereit, eigene Seite, Akzente). Titel in Lilita
+ * One, Text in Nunito; Tippflaechen mindestens 44 px; Safe Areas nur ueber
+ * `env()` — die iOS-Huelle hat oben die Kerbe und unten den Wischbalken.
+ *
+ * HOCHKANT ZUERST: Alles ist fuer 375 bis 430 px Breite gebaut und im breiten
+ * Browser auf Handybreite begrenzt (`max-width: 30rem`, DESIGN.md).
+ *
+ * Die Farben stehen als Variablen an den Wurzeln (`.seite`, `.tisch`, die
+ * Blaetter) und nicht in styles.css: Sie gelten nur hier, und ein Blatt liegt
+ * mit `position: fixed` ausserhalb des Tisches im Baum.
+ */
+
+:where(.seite, .tisch, .blattGrund, .abschlussGrund) {
+  --tn-grund: #0e1a3d;
+  --tn-grund-tief: #07132f;
+  --tn-karte: #182b5c;
+  --tn-karte-hoch: #22397a;
+  --tn-kontur: #35518c;
+  --tn-tinte: #f3f5ff;
+  --tn-leise: #a3b3dd;
+  --tn-gold: #f5c02e;
+  --tn-gold-hell: #ffd75a;
+  --tn-gold-tief: #e9a91a;
+  --tn-gruen: #48b86a;
+  --tn-gruen-hell: #6fdc8e;
+  --tn-rot: #d94b55;
+  --tn-mana: #5ea0f0;
+  --tn-bronze: #c98a4b;
+  --tn-silber: #c9d3e0;
+  --tn-goldrahmen: #f5c02e;
+  --tn-anz: 'Lilita One', system-ui, sans-serif;
+  --tn-txt: 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+  color: var(--tn-tinte);
+  font-family: var(--tn-txt);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Knoepfe                                                                   */
+/* ------------------------------------------------------------------------ */
+
+.hauptknopf,
+.zweitknopf,
+.verkaufknopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 16px;
+  font: inherit;
+  font-family: var(--tn-anz);
+  font-size: 19px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.hauptknopf {
+  border: 0;
+  color: #2a1c02;
+  background: linear-gradient(180deg, var(--tn-gold-hell), var(--tn-gold-tief));
+  box-shadow: 0 4px 0 #a5740c, 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.hauptknopf:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #a5740c;
+}
+
+.zweitknopf {
+  min-height: 44px;
+  font-size: 16px;
+  border: 1px solid var(--tn-kontur);
+  color: var(--tn-tinte);
+  background: var(--tn-karte);
+}
+
+.verkaufknopf {
+  min-height: 44px;
+  font-size: 16px;
+  border: 1px solid rgba(217, 75, 85, 0.6);
+  color: #ffd9dc;
+  background: rgba(217, 75, 85, 0.18);
+}
+
+.hauptknopf em,
+.verkaufknopf em {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-style: normal;
+  font-family: var(--tn-txt);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.hauptknopf:disabled,
+.zweitknopf:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tn-kontur);
+  background: var(--tn-karte);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chip[data-an] {
+  border-color: var(--tn-gruen);
+  background: color-mix(in srgb, var(--tn-gruen) 28%, var(--tn-karte));
+  box-shadow: inset 0 0 0 1px var(--tn-gruen);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Seiten vor dem Tisch                                                      */
+/* ------------------------------------------------------------------------ */
+
+.seite {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Kein eigener Grund und keine Begrenzung: Hinter der Seite liegt
+     vollflaechig das Titelbild bzw. ein Schauplatz (Seite.tsx). Begrenzt
+     wird nur der Inhalt, unten bei den drei Baendern. */
+  background: var(--tn-grund-tief);
+  overflow: hidden;
+  /* Gegen `main { padding: 1rem; max-width: 60rem }` aus styles.css — sonst
+     steht der Grund in einem dunklen Rahmen (siehe `.tisch`). */
+  margin: 0;
+  padding: 0;
+  max-width: none
+}
+
+/* Kopf, Inhalt und Fuss liegen UEBER dem Grund — auf Handybreite begrenzt,
+   der Grund dahinter nie. */
+.seitenKopf,
+.seitenInhalt,
+.seitenFuss {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
+}
+
+.seitenKopf {
+  position: relative;
+  flex: 0 0 auto;
+  padding: max(12px, env(safe-area-inset-top)) 16px 8px;
+}
+
+.zurueck {
+  position: absolute;
+  z-index: 3;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(5, 11, 29, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--tn-tinte);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer
+}
+
+.seitenTitel {
+  text-align: center;
+  padding: 6px 48px 0;
+}
+
+.seitenTitel h1 {
+  margin: 0;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 0, 0, 0.5)
+}
+
+.seitenTitel p {
+  margin: 2px 0 0;
+  color: var(--tn-tinte);
+  opacity: 0.85;
+  font-size: 13px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
+}
+
+.seitenInhalt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.seitenFuss {
+  flex: 0 0 auto;
+  padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Ein Auslauf ins Dunkle unter dem Hauptknopf, keine Kante. */
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.7) 40%);
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7)
+}
+
+.klein {
+  margin: 0;
+  font-size: 13px;
+  /* Hell mit Schatten statt Graublau: Der Satz steht jetzt auf dem Bild
+     und nicht mehr auf einer dunklen Flaeche. */
+  color: var(--tn-tinte);
+  opacity: 0.9;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-align: center;
+}
+
+.leer {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--tn-kontur);
+  color: var(--tn-leise);
+  font-size: 14px;
+  text-align: center;
+}
+
+.fehler {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(217, 75, 85, 0.18);
+  border: 1px solid rgba(217, 75, 85, 0.5);
+  color: #ffd9dc;
+  font-size: 14px;
+}
+
+.abschnitt h2 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tn-tinte);
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
+}
+
+.wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knopfgitter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kachel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 84px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--tn-tinte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer
+}
+
+.kachel strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 17px;
+}
+
+.kachel span {
+  font-size: 12px;
+  color: var(--tn-leise);
+}
+
+.kachel:disabled {
+  opacity: 0.5;
+}
+
+.codefeld {
+  width: 100%;
+  min-height: 52px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid var(--tn-kontur);
+  background: var(--tn-grund-tief);
+  color: var(--tn-tinte);
+  font-family: var(--tn-anz);
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 19, 47, 0.62);
+  color: var(--tn-tinte);
+  font: inherit;
+  cursor: pointer
+}
+
+/* Das Titelbild bzw. sein Ersatz aus den eigenen Figuren. */
+
+
+
+.titelReihe {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: calc(max(8px, env(safe-area-inset-top)) + 8px);
+  height: clamp(170px, 30dvh, 280px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.titelPlatz {
+  position: relative;
+  width: 19%;
+  aspect-ratio: 0.8;
+  /* Die Mitte steht vorn und groesser — eine Gruppe, keine Reihe. */
+  scale: calc(1 - (max(var(--i) - 2, 2 - var(--i))) * 0.08);
+  z-index: calc(10 - max(var(--i) - 2, 2 - var(--i)));
+  margin: 0 -2%;
+}
+
+.titelFigur {
+  height: 150%;
+  top: -52%;
+}
+
+/* Suche */
+.restzeit {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 3px solid var(--tn-gruen);
+  background: radial-gradient(circle, rgba(72, 184, 106, 0.25), rgba(7, 19, 47, 0.6));
+  box-shadow: 0 0 0 8px rgba(72, 184, 106, 0.12);
+}
+
+.restzeit strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.restzeit span {
+  font-size: 12px;
+  color: var(--tn-leise);
+}
+
+.wartende {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 8px;
+}
+
+.wartender {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  animation: einlaufen 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.wartender > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes einlaufen {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.gesicht {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--tn-gruen);
+  background: var(--tn-karte-hoch);
+  box-sizing: border-box;
+}
+
+.gesicht[data-ersatz] {
+  font-family: var(--tn-anz);
+  font-size: 24px;
+  color: var(--tn-tinte);
+  background: linear-gradient(160deg, #2f7d53, #1d4b8a);
+}
+
+/* Wartesaal */
+.codekarte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px)
+}
+
+.code {
+  min-height: 52px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--tn-grund-tief);
+  color: var(--tn-gold);
+  font-family: var(--tn-anz);
+  font-size: 34px;
+  letter-spacing: 0.25em;
+  cursor: pointer;
+}
+
+.knopfreihe {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.plaetze {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.platz {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(7, 19, 47, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 700
+}
+
+.platz .gesicht {
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+}
+
+.platzName {
+  flex: 1 1 auto;
+}
+
+.platz em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tn-gold);
+}
+
+.platz[data-frei] {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Bilder und Zeichen                                                        */
+/* ------------------------------------------------------------------------ */
+
+.figur {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+}
+
+.figurErsatz {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  color: var(--tn-tinte);
+}
+
+.figurErsatz :global(.tr-rolle) {
+  width: 46%;
+  height: 46%;
+  padding: 18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(72, 184, 106, 0.55), rgba(24, 43, 92, 0.9));
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+.zeichen {
+  display: inline-grid;
+  place-items: center;
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+}
+
+.zeichen :global(.tr-rolle) {
+  width: 100%;
+  height: 100%;
+}
+
+.markeHuelle {
+  display: inline-flex;
+}
+
+.glyphe {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.herz {
+  color: #ff6b7a;
+}
+
+.herz .glyphe {
+  fill: currentColor;
+  stroke: none;
+}
+
+.sterne {
+  display: inline-flex;
+  gap: 0;
+  color: var(--tn-gold);
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 1px 0 #5a3d00, 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.sterne[data-stufe='2'] {
+  color: #e8eef7;
+}
+
+.sterne[data-stufe='3'] {
+  color: var(--tn-gold-hell);
+  filter: drop-shadow(0 0 3px rgba(255, 215, 90, 0.8));
+}
+
+.stern {
+  width: auto;
+}
+
+.muenze {
+  width: 1em;
+  height: 1em;
+}
+
+.muenzeErsatz {
+  display: block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe89a, var(--tn-gold) 50%, #b8810e);
+  box-shadow: inset 0 0 0 1.5px #a5740c;
+}
+
+.rahmenBild {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Blaetter                                                                  */
+/* ------------------------------------------------------------------------ */
+
+.blattGrund {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(3, 8, 22, 0.55);
+  animation: einblenden 0.18s ease both;
+}
+
+.blattGrund[data-ebene='2'] {
+  z-index: 45;
+  background: rgba(3, 8, 22, 0.35);
+}
+
+/*
+ * Das Markenpopup liegt UNTEN ueber Bank und Laden — genau so hoch wie die
+ * beiden, nicht hoeher. Das Feld darueber bleibt frei, und dort sollen die
+ * Farbringe der Traeger zu sehen sein: Ring und Pop-up sind EINE Antwort auf
+ * den Tipp. Laden und Bank braucht man waehrend des Nachlesens nicht.
+ */
+.blattGrund[data-kompakt] {
+  background: rgba(3, 8, 22, 0.1);
+}
+
+.blattGrund[data-kompakt] .blatt {
+  max-height: min(38dvh, 340px);
+  padding-top: 6px;
+}
+
+.blattGrund[data-kompakt] .blattGriff {
+  display: none;
+}
+
+@keyframes einblenden {
+  from {
+    opacity: 0;
+  }
+}
+
+.blatt {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 86dvh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px 22px 0 0;
+  border: 1px solid var(--tn-kontur);
+  border-bottom: 0;
+  background: linear-gradient(180deg, var(--tn-karte-hoch), var(--tn-grund) 120px);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+  padding: 8px 16px max(14px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  animation: hochfahren 0.24s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes hochfahren {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+
+.blattGriff {
+  align-self: center;
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.blattZu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--tn-tinte);
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.blattTitel {
+  margin: 8px 48px 6px 0;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 22px;
+}
+
+.blattInhalt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.blattFuss {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.blattFigur {
+  position: relative;
+  align-self: center;
+  width: 150px;
+  height: 150px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 70%, rgba(72, 184, 106, 0.45), rgba(24, 43, 92, 0.2) 65%, transparent 70%);
+}
+
+.blattFigur[data-rahmen='bronze'] {
+  box-shadow: inset 0 0 0 3px var(--tn-bronze);
+}
+
+.blattFigur[data-rahmen='silber'] {
+  box-shadow: inset 0 0 0 3px var(--tn-silber);
+}
+
+.blattFigur[data-rahmen='gold'] {
+  box-shadow: inset 0 0 0 3px var(--tn-goldrahmen), 0 0 16px rgba(245, 192, 46, 0.4);
+}
+
+.grossFigur {
+  height: 190%;
+  top: -66%;
+}
+
+.blattSterne {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  translate: -50% 0;
+  font-size: 18px;
+}
+
+.blattZeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--tn-leise);
+  font-size: 14px;
+}
+
+.blattZeile .zeichen {
+  width: 18px;
+  height: 18px;
+  color: var(--tn-tinte);
+}
+
+.werte {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 0;
+}
+
+.werte div {
+  padding: 8px 2px;
+  border-radius: 12px;
+  background: var(--tn-grund-tief);
+  text-align: center;
+}
+
+.werte dt {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tn-leise);
+}
+
+.werte dd {
+  margin: 2px 0 0;
+  font-family: var(--tn-anz);
+  font-size: 19px;
+}
+
+.faehigkeit {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(94, 160, 240, 0.45);
+  background: linear-gradient(180deg, rgba(94, 160, 240, 0.16), rgba(94, 160, 240, 0.04));
+}
+
+.faehigkeit[data-art='passiv'] {
+  border-color: rgba(72, 184, 106, 0.5);
+  background: linear-gradient(180deg, rgba(72, 184, 106, 0.16), rgba(72, 184, 106, 0.04));
+}
+
+.faehigkeit[data-art='keine'] {
+  border-color: var(--tn-kontur);
+  background: transparent;
+}
+
+.faehigkeit h3,
+.blattMarken h3,
+.unterTitel {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tn-leise);
+}
+
+.faehigkeitKopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 6px;
+}
+
+.faehigkeitKopf strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 18px;
+}
+
+.faehigkeitKopf span {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--tn-mana);
+}
+
+.faehigkeit[data-art='passiv'] .faehigkeitKopf span {
+  color: var(--tn-gruen-hell);
+}
+
+.manaLeiste {
+  display: block;
+  height: 6px;
+  margin-bottom: 8px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--tn-mana) 0%, #9fd0ff 100%);
+  box-shadow: 0 0 8px rgba(94, 160, 240, 0.6);
+}
+
+.blattMarken > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Regelblatt                                                                */
+/* ------------------------------------------------------------------------ */
+
+.reiter {
+  display: flex;
+  gap: 6px;
+}
+
+.regelliste {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.regelEinheiten,
+.regelMarken {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.regelEinheiten > li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--tn-karte);
+}
+
+.regelEinheiten > li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13px;
+}
+
+.regelEinheiten em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--tn-mana);
+  font-size: 12px;
+}
+
+.regelEinheiten small {
+  color: var(--tn-leise);
+}
+
+.regelBild {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--tn-grund-tief);
+}
+
+.regelMarken > li {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--tn-karte);
+}
+
+.regelMarken h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 17px;
+}
+
+.regelMarken h3 .zeichen {
+  width: 22px;
+  height: 22px;
+}
+
+.regelMarken p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--tn-leise);
+}
+
+.regelMarken ol,
+.stufen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.regelMarken ol li,
+.stufen li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.regelMarken b,
+.stufen b {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--tn-grund-tief);
+  font-size: 12px;
+}
+
+.stufen li {
+  padding: 6px 8px;
+  border-radius: 10px;
+  opacity: 0.65;
+}
+
+.stufen li[data-erreicht] {
+  opacity: 1;
+}
+
+.stufen li[data-gilt] {
+  background: color-mix(in srgb, var(--marke, var(--tn-gruen)) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marke, var(--tn-gruen)) 60%, transparent);
+}
+
+.stufen li[data-erreicht] b {
+  background: var(--tn-gruen);
+  color: #07210f;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Der Tisch                                                                 */
+/* ------------------------------------------------------------------------ */
+
+.tisch {
+  /* Der ganze Bildschirm, von Rand zu Rand: Der Schauplatz liegt darunter
+     (`.tisch > .schauplatz`), alles andere als Ebene darueber. Nur die
+     Ebenen sind auf Handybreite begrenzt, nie der Grund. */
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* styles.css gibt jedem <main> 1rem Innenabstand und 60rem Hoechstbreite.
+     Genau das war der dunkle Rand rund um Feld und Arena, den Robin am
+     iPhone als Kasten sah — hier gilt Rand zu Rand. */
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  background: var(--tn-grund-tief);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none
+}
+
+/* Die Ebenen ueber dem Schauplatz — auf Handybreite begrenzt. Ausdruecklich
+   aufgezaehlt und nicht `.tisch > *`: Die Blaetter, die Meldung und der
+   Zugschatten liegen ebenfalls direkt im Tisch und muessen `fixed` bleiben.
+   `:where` haelt die Spezifitaet bei null, damit jede Ebene ihre eigene
+   Stapelung (Kopfband oben) behaelt. */
+:where(.kopfband, .markenleiste, .markenleer, .feld, .bank, .laden, .auswahlband, .hinweis) {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
+}
+
+/* Der Schauplatz selbst ist die eine Ausnahme: voll, ohne Begrenzung. */
+.tisch > .schauplatz {
+  position: absolute;
+  z-index: 0;
+  max-width: none;
+}
+
+.kopfband {
+  flex: 0 0 auto;
+  padding: max(6px, env(safe-area-inset-top)) 8px 14px;
+  /* Ein Verlauf statt eines Blocks: oben dunkel genug fuer die Schrift,
+     unten laeuft er ins Feld aus. */
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.8) 0%, rgba(5, 11, 29, 0.55) 65%, transparent 100%);
+  z-index: 5
+}
+
+.kopfZeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kopfKnopf {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(5, 11, 29, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer
+}
+
+.phase {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.phase strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 18px;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6)
+}
+
+.phase span {
+  font-size: 12px;
+  color: var(--tn-tinte);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.uhr {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background: rgba(72, 184, 106, 0.35);
+  box-shadow: inset 0 0 0 1.5px var(--tn-gruen);
+  font-family: var(--tn-anz);
+  font-size: 20px
+}
+
+.uhr[data-knapp] {
+  background: rgba(217, 75, 85, 0.25);
+  border-color: var(--tn-rot);
+  animation: puls 1s ease-in-out infinite;
+}
+
+@keyframes puls {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.mitspieler {
+  list-style: none;
+  margin: 6px -8px 0;
+  padding: 0 8px 2px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mitspieler::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bis vier Sitze passen nebeneinander, darueber rollt die Leiste: Jede
+   Kachel ist gleich breit, aber nie schmaler als Bild, Kuerzel und Leben. */
+.mitspieler > li {
+  /* Bis vier Sitze teilen sich die Breite, darueber rollt die Leiste. Der
+     NAME bleibt immer stehen (Robin: „da sollen Namen stehen und nicht nur
+     ein Buchstabe") — gekuerzt, nie weggelassen. */
+  flex: 1 1 0;
+  min-width: 84px
+}
+
+
+.spielerKachel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 40px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(5, 11, 29, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--tn-tinte);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.spielerKachel[data-ich] {
+  background: color-mix(in srgb, var(--tn-gruen) 35%, rgba(5, 11, 29, 0.5));
+  box-shadow: inset 0 0 0 1.5px var(--tn-gruen)
+}
+
+.spielerKachel[data-gegner] {
+  box-shadow: inset 0 0 0 1.5px var(--tn-rot)
+}
+
+.spielerKachel[data-gezeigt] {
+  box-shadow: inset 0 0 0 2px var(--tn-gold)
+}
+
+.spielerKachel[data-aus] {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.spielerKachel[data-bereit]::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tn-gruen-hell);
+  box-shadow: 0 0 0 2px var(--tn-grund);
+}
+
+.kachelGesicht {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  border-width: 1.5px
+}
+
+.kachelName {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800
+}
+
+.kachelLeben {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--tn-anz);
+  font-size: 14px
+}
+
+.kachelLeben .zeichen {
+  width: 13px;
+  height: 13px;
+}
+
+/* Markenleiste */
+.markenleiste {
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 2px 8px 4px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none
+}
+
+.markenleiste::-webkit-scrollbar {
+  display: none;
+}
+
+.markenleer {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 4px 12px 8px;
+  font-size: 12px;
+  color: var(--tn-tinte);
+  opacity: 0.8;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8)
+}
+
+.markenchip {
+  --marke: var(--tn-leise);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 10px 0 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--marke) 55%, transparent);
+  background: rgba(5, 11, 29, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.markenchip .zeichen {
+  width: 18px;
+  height: 18px;
+}
+
+.markenchip small {
+  color: var(--tn-leise);
+  font-weight: 700;
+}
+
+.markenchip[data-aktiv] {
+  border-color: var(--marke);
+  background: color-mix(in srgb, var(--marke) 30%, var(--tn-karte));
+}
+
+.markenchip[data-gewaehlt] {
+  box-shadow: 0 0 0 2px var(--marke), 0 0 12px var(--marke);
+}
+
+/* Das Feld */
+.feld {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+  container-type: size
+}
+
+.schauplatz {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center
+}
+
+/* Die Ersatzflaechen der vier Schauplaetze, bis die gemalten kommen. */
+.schauplatz[data-schauplatz='burghof'] {
+  background-color: #2b4b6e;
+  background-image:
+    radial-gradient(80% 40% at 50% 100%, rgba(233, 244, 255, 0.55), transparent 70%),
+    radial-gradient(60% 30% at 50% 0%, rgba(150, 180, 220, 0.35), transparent 70%),
+    linear-gradient(180deg, #34507a 0%, #4f7099 55%, #8fb0cf 100%);
+}
+
+.schauplatz[data-schauplatz='dorfplatz'] {
+  background-color: #4f8a3c;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(240, 220, 140, 0.45), transparent 70%),
+    radial-gradient(50% 30% at 20% 10%, rgba(255, 255, 200, 0.25), transparent 70%),
+    linear-gradient(180deg, #3f7a3a 0%, #5e9a45 55%, #8fbf5a 100%);
+}
+
+.schauplatz[data-schauplatz='herbstwald'] {
+  background-color: #7a4a26;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(255, 170, 70, 0.4), transparent 70%),
+    radial-gradient(50% 30% at 80% 10%, rgba(255, 210, 120, 0.25), transparent 70%),
+    linear-gradient(180deg, #5a3a26 0%, #8a5226 55%, #b8742e 100%);
+}
+
+.schauplatz[data-schauplatz='vulkan'] {
+  background-color: #3a1f1f;
+  background-image:
+    radial-gradient(70% 35% at 50% 100%, rgba(255, 110, 40, 0.5), transparent 70%),
+    radial-gradient(40% 25% at 50% 0%, rgba(255, 80, 20, 0.3), transparent 70%),
+    linear-gradient(180deg, #2a1a1e 0%, #4a2522 55%, #6e3424 100%);
+}
+
+/* Ein leichter Schleier, damit Raster und Figuren auf jedem Bild lesbar bleiben. */
+.schauplatz::after {
+  /* Oben und unten ins Dunkle, wo Kopfband und Laden liegen; in der Mitte
+     frei, damit der Schauplatz der Schauplatz bleibt. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.5) 0%, rgba(5, 11, 29, 0.05) 22%, rgba(5, 11, 29, 0.05) 55%, rgba(5, 11, 29, 0.45) 78%, rgba(5, 11, 29, 0.8) 100%)
+}
+
+.feldInnen {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 6px;
+  box-sizing: border-box
+}
+
+.feldGegner,
+.feldEigen {
+  position: relative;
+  /* Beide Bretter teilen sich die Hoehe; die Breite folgt dem Seitenverhaeltnis
+     aus `rastermass` (am Element). Container-Einheiten statt einer festen Zahl,
+     damit 375 px und 430 px dieselbe Komposition bekommen. */
+  width: min(100%, 50cqh * var(--verhaeltnis, 1.47));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.feldGegner {
+  opacity: 0.88;
+  width: min(88%, 40cqh * var(--verhaeltnis, 1.47));
+}
+
+.feldEigen::before {
+  /* Die Linie zwischen den Heeren — ohne sie lesen sich beide Raster als eins. */
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: -1.5cqh;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+}
+
+.feldName {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.leerSatz {
+  position: absolute;
+  z-index: 40;
+  left: 8%;
+  right: 8%;
+  top: 40%;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(7, 19, 47, 0.85);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.hexbrett {
+  position: relative;
+  width: 100%;
+}
+
+.raster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.raster polygon {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(255, 255, 255, 0.38);
+  stroke-width: 1.2;
+}
+
+.hexbrett:not([data-eigen]) .raster polygon {
+  fill: rgba(217, 75, 85, 0.07);
+  stroke: rgba(255, 210, 210, 0.3);
+}
+
+.wabe {
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  touch-action: none;
+}
+
+.wabe[role='button'] {
+  cursor: pointer;
+}
+
+.wabe[data-zielbar] {
+  background: rgba(111, 220, 142, 0.3);
+  animation: zielpuls 1.1s ease-in-out infinite;
+}
+
+.wabe[data-unter] {
+  background: rgba(245, 192, 46, 0.5);
+}
+
+@keyframes zielpuls {
+  50% {
+    background: rgba(111, 220, 142, 0.12);
+  }
+}
+
+.figurLage {
+  position: absolute;
+  pointer-events: none;
+}
+
+.einheit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.einheit[data-versteckt] {
+  opacity: 0.3;
+}
+
+.einheit[data-gewaehlt] .feldFigur {
+  filter: drop-shadow(0 0 4px var(--tn-gold)) drop-shadow(0 0 2px var(--tn-gold));
+}
+
+.feldFigur {
+  height: 170%;
+  top: -66%;
+}
+
+/* Der Farbring der angetippten Marke — als Ellipse am Boden. */
+.ring {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 8%;
+  height: 42%;
+  border-radius: 50%;
+  border: 4px solid var(--ring);
+  background: color-mix(in srgb, var(--ring) 30%, transparent);
+  box-shadow: 0 0 14px 2px var(--ring), inset 0 0 10px var(--ring);
+  animation: ringpuls 1.2s ease-in-out infinite;
+}
+
+@keyframes ringpuls {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.einheitSterne {
+  position: absolute;
+  left: 50%;
+  top: -54%;
+  translate: -50% 0;
+  font-size: 10px;
+}
+
+.sockel {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  translate: -50% 0;
+  width: 15px;
+  height: 15px;
+  padding: 2px;
+  border-radius: 50%;
+  background: rgba(7, 19, 47, 0.85);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  color: var(--tn-tinte);
+  z-index: 2;
+}
+
+/* Bank */
+.bank {
+  /* Keine Kaestchen mehr (Robin, 27.11.2026: „sieht komisch aus"): Die
+     Figuren stehen frei auf einer Holzleiste, die neun Stellplaetze sind nur
+     helle Flecken darauf. Ziehen und Antippen gehen wie vorher — die
+     Trefferflaeche ist der Platz, nicht der Fleck. */
+  position: relative;
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 14px 10px 6px;
+  display: grid;
+  grid-template-columns: repeat(var(--bankplaetze, 9), 1fr);
+  gap: 2px;
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.55))
+}
+
+.bankplatz {
+  position: relative;
+  aspect-ratio: 0.82;
+  touch-action: none
+}
+
+.bankplatz[role='button'] {
+  cursor: pointer;
+}
+
+.bankplatz[data-zielbar] {
+  /* Der Fleck leuchtet, wenn die gewaehlte Einheit hierhin darf. */
+  background: none
+}
+
+.bankplatz[data-zielbar]::after {
+  background: radial-gradient(closest-side, rgba(111, 220, 142, 0.85), rgba(111, 220, 142, 0.2));
+}
+
+.bankplatz[data-unter]::after {
+  background: radial-gradient(closest-side, rgba(245, 192, 46, 0.95), rgba(245, 192, 46, 0.25));
+}
+
+.bankplatz[data-unter] {
+  background: none
+}
+
+.bankEinheit .feldFigur {
+  /* Etwas groesser als auf dem Feld: Die Bank ist schmal (neun Plaetze auf
+     Handybreite), und frei stehend ohne Kasten soll man die Figur erkennen. */
+  height: 175%;
+  top: -58%
+}
+
+.bankEinheit .einheitSterne {
+  top: -46%;
+  font-size: 8px
+}
+
+.bankEinheit .sockel {
+  width: 12px;
+  height: 12px;
+  bottom: 0
+}
+
+.bankEinheit .ring {
+  bottom: 2%;
+  height: 22%
+}
+
+/* Laden */
+.laden {
+  flex: 0 0 auto;
+  padding: 4px 8px max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.6), rgba(5, 11, 29, 0.92) 40%)
+}
+
+.ladenKopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2px 6px;
+}
+
+.goldstand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 22px;
+}
+
+.goldstand strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  color: var(--tn-gold-hell);
+}
+
+.goldstand em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--tn-leise);
+}
+
+
+
+.karten {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--ladenplaetze, 5), 1fr);
+  gap: 5px;
+}
+
+.karte {
+  position: relative;
+  aspect-ratio: 0.7;
+  container-type: inline-size;
+  --rahmen: var(--tn-kontur);
+}
+
+.karte[data-leer] {
+  border-radius: 12px;
+  border: 1px dashed var(--tn-kontur);
+}
+
+.karte[data-rahmen='bronze'] {
+  --rahmen: var(--tn-bronze);
+}
+
+.karte[data-rahmen='silber'] {
+  --rahmen: var(--tn-silber);
+}
+
+.karte[data-rahmen='gold'] {
+  --rahmen: var(--tn-goldrahmen);
+}
+
+.karteKnopf {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  /* EIN Rahmen (Robin: der doppelte verschwendete Platz): Das Rahmenbild
+     liegt obenauf (`Kartenrahmen`), darunter randlos das Bild auf einem
+     Verlauf in der Kostenfarbe. Ein eigener Rand am Knopf kommt nur, wenn es
+     kein Rahmenbild gibt (`:not([data-rahmenbild])` unten). */
+  background: none;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  color: var(--tn-tinte);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation
+}
+
+.karte[data-rahmen='gold'] .karteKnopf {
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(245, 192, 46, 0.35)
+}
+
+.karteKnopf:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.karte[data-gesperrt] .karteKnopf {
+  cursor: default;
+}
+
+.karte[data-gesperrt] .portraet {
+  position: absolute;
+  /* Innerhalb des Rahmens: Er ist an den Seiten schmal, oben traegt er den
+     Stein, unten die Platte fuer den Preis (rahmen-*.webp, 352 x 512). */
+  inset: 4% 6% 11% 6%;
+  overflow: hidden;
+  border-radius: 8px 8px 4px 4px;
+  background: radial-gradient(90% 70% at 50% 40%, color-mix(in srgb, var(--rahmen) 30%, #22397a), #0e1a3d);
+}
+
+.portraet {
+  /* Bis an den Rahmen: Das Rahmenbild deckt die Kante, das Bild darunter
+     reicht bis knapp unter seinen Aussenrand. Splash-Art und Rahmen haben
+     dasselbe Format (352 x 512). */
+  position: absolute;
+  inset: 1.5% 2%;
+  overflow: hidden;
+  border-radius: 10px;
+  background:
+    radial-gradient(90% 60% at 50% 30%, color-mix(in srgb, var(--rahmen) 70%, #ffffff 20%), transparent 75%),
+    linear-gradient(180deg, color-mix(in srgb, var(--rahmen) 55%, #22397a), color-mix(in srgb, var(--rahmen) 25%, #0e1a3d))
+}
+
+/* Brustbild: die Zelle so gross und so weit oben, dass Kopf und Oberkoerper
+   den Ausschnitt fuellen. Gemessen an den Rollenblaettern (Fusspunkt 0,8). */
+.portraetFigur {
+  height: 215%;
+  top: -36%;
+}
+
+.karteRolle {
+  position: absolute;
+  top: 7%;
+  left: 9%;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: rgba(7, 19, 47, 0.85);
+  z-index: 3;
+}
+
+.karteRolle .zeichen {
+  width: 100%;
+  height: 100%;
+}
+
+.karteMarken {
+  position: absolute;
+  left: 9%;
+  top: 22%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 3;
+}
+
+.karteMarken > span {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  padding: 2px;
+  border-radius: 50%;
+  background: rgba(7, 19, 47, 0.9);
+  box-sizing: border-box;
+}
+
+.karteMarken .zeichen {
+  width: 100%;
+  height: 100%;
+}
+
+.karteMarken > span[data-trifft] {
+  box-shadow: 0 0 0 1.5px var(--tn-gold), 0 0 8px var(--tn-gold);
+}
+
+/* Lange Namen eine Stufe kleiner (`data-lang` ab 13 Zeichen). */
+.karteName[data-lang] {
+  font-size: clamp(7.5px, 12.5cqw, 10px);
+}
+
+.karteName {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 11%;
+  padding: 10px 1px 2px;
+  /* Mit der Karte kleiner (Container-Einheit, `.karte` misst sich selbst),
+     zweizeilig mit Silbentrennung — lange Einzelwoerter wurden sonst mitten
+     im Buchstaben abgeschnitten. Siehe `Kurzname` in grafik.tsx. */
+  font-size: clamp(8px, 14.5cqw, 11px);
+  font-weight: 800;
+  line-height: 1.08;
+  text-align: center;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: anywhere;
+  background: linear-gradient(180deg, transparent, rgba(7, 19, 47, 0.92) 55%);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  z-index: 3
+}
+
+.kartePreis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1.5%;
+  height: 9%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--tn-anz);
+  font-size: 14px;
+  color: #fff6d6;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+  z-index: 3;
+}
+
+.kartePreis .zeichen {
+  width: 12px;
+  height: 12px;
+}
+
+.karteBand {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 44%;
+  padding: 2px 0;
+  background: rgba(72, 184, 106, 0.92);
+  color: #062010;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  z-index: 4;
+}
+
+.karteBand[data-grund] {
+  background: rgba(7, 19, 47, 0.88);
+  color: #ffc9cd;
+}
+
+.karteInfo {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 5;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--tn-kontur);
+  background: var(--tn-karte-hoch);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-weight: 900;
+  font-size: 13px;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/* Die Trefferflaeche groesser als der Punkt (44 px, DESIGN.md). */
+.karteInfo::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+
+.bereitknopf {
+  /* Der eine Knopf unten, ueber die ganze Breite: Wuerfeln und Rang gibt es
+     seit dem 27.11.2026 nicht mehr. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 16px;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 20px;
+  color: #052512;
+  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
+  box-shadow: 0 3px 0 #2a7a44;
+  cursor: pointer;
+  touch-action: manipulation
+}
+
+
+
+.bereitknopf {
+  border: 0;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 18px;
+  color: #052512;
+  background: linear-gradient(180deg, var(--tn-gruen-hell), var(--tn-gruen));
+  box-shadow: 0 3px 0 #2a7a44;
+}
+
+.bereitknopf[data-bereit] {
+  background: var(--tn-karte);
+  color: var(--tn-leise);
+  box-shadow: none;
+}
+
+.bereitknopf:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auswahlband {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.6), rgba(5, 11, 29, 0.92));
+  font-weight: 800;
+  font-size: 14px
+}
+
+.auswahlband span {
+  flex: 1 1 auto;
+}
+
+.auswahlband .zweitknopf {
+  width: auto;
+}
+
+.hinweis {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 14px;
+  color: var(--tn-tinte);
+  background: linear-gradient(180deg, transparent, rgba(5, 11, 29, 0.85))
+}
+
+.meldung {
+  position: fixed;
+  z-index: 35;
+  left: 50%;
+  top: calc(max(6px, env(safe-area-inset-top)) + 96px);
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(7, 19, 47, 0.92);
+  border: 1px solid var(--tn-gold);
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  animation: hochfahren 0.25s ease both;
+}
+
+.zugschatten {
+  position: fixed;
+  z-index: 50;
+  width: 64px;
+  height: 56px;
+  translate: -50% -70%;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.5));
+}
+
+/* Markenpopup */
+.popupZeichen {
+  position: absolute;
+  top: 10px;
+  left: 16px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--marke) 25%, var(--tn-grund-tief));
+  box-shadow: 0 0 0 2px var(--marke), 0 0 18px color-mix(in srgb, var(--marke) 60%, transparent);
+}
+
+.popupZeichen .zeichen {
+  width: 22px;
+  height: 22px;
+}
+
+.blattGrund[data-kompakt] .blattTitel {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin: 4px 48px 6px 46px;
+}
+
+.traeger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.traeger > li > button {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--tn-kontur);
+  background: var(--tn-grund-tief);
+  color: var(--tn-tinte);
+  font: inherit;
+  opacity: 0.55;
+}
+
+.traeger > li[data-brett] > button {
+  opacity: 1;
+  border-color: var(--tn-gruen-hell);
+  background: color-mix(in srgb, var(--tn-gruen) 22%, var(--tn-grund-tief));
+  box-shadow: 0 0 10px rgba(111, 220, 142, 0.35);
+}
+
+.traeger > li[data-bank] > button {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.traeger em {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--tn-gruen-hell);
+}
+
+.traegerBild {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.traegerName[data-lang] {
+  font-size: 9px;
+}
+
+.traegerName {
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.08;
+  text-align: center;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: anywhere
+}
+
+/* ------------------------------------------------------------------------ */
+/* Kampf                                                                     */
+/* ------------------------------------------------------------------------ */
+
+.kampfFlaeche {
+  /* Ueber die GANZE Hoehe, auch unter dem Kopfband: Die Arena wird so gross,
+     wie der Bildschirm es zulaesst, und das Kopfband liegt als Ebene
+     darueber. Oben bleibt nur so viel frei, dass die Gegnerreihe nicht unter
+     den Mitspielern verschwindet. */
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  max-width: 30rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: calc(max(6px, env(safe-area-inset-top)) + 92px) 0 max(8px, env(safe-area-inset-bottom))
+}
+
+.kampfFlaeche > .zweitknopf {
+  width: auto;
+  margin: 0 12px;
+}
+
+.kampf {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.4s ease
+}
+
+.kampf[data-verblasst] {
+  opacity: 0;
+}
+
+.kampfSeite {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 2px 12px;
+  font-size: 13px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9)
+}
+
+.kampfSeite strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.kampfSeite[data-lage='unten'] strong {
+  color: var(--tn-gruen-hell);
+}
+
+.kampfSeite[data-lage='oben'] strong {
+  color: #ffb3b9;
+}
+
+.arenaRahmen {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+.arena {
+  position: relative;
+  /* Die Arena so gross, wie Breite UND Hoehe es zulassen — das
+     Seitenverhaeltnis steht am Element (aus `rastermass`). */
+  width: min(100cqw, 100cqh * var(--verhaeltnis, 0.61));
+  aspect-ratio: var(--verhaeltnis, 0.61);
+}
+
+.arenaRaster {
+  opacity: 0.45;
+}
+
+.kampfFigur {
+  position: absolute;
+  transition:
+    left var(--gleiten, 280ms) linear,
+    top var(--gleiten, 280ms) linear;
+}
+
+.kampfFigur::before {
+  /* Bodenschatten, getoent nach Seite. */
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 12%;
+  height: 26%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), transparent);
+}
+
+.kampfFigur[data-seite='unten']::before {
+  background: radial-gradient(closest-side, rgba(72, 184, 106, 0.5), transparent);
+}
+
+.kampfFigur[data-seite='oben']::before {
+  background: radial-gradient(closest-side, rgba(217, 75, 85, 0.45), transparent);
+}
+
+.kampfFigur[data-tot] {
+  animation: verblassen 0.6s ease 0.4s forwards;
+}
+
+@keyframes verblassen {
+  to {
+    opacity: 0;
+  }
+}
+
+.arenaFigur {
+  height: 170%;
+  top: -66%;
+}
+
+.kampfFigur[data-betaeubt] .arenaFigur {
+  filter: grayscale(0.6) brightness(0.8);
+}
+
+.kampfFigur[data-langsam] .arenaFigur {
+  filter: hue-rotate(160deg) saturate(0.6) brightness(1.1);
+}
+
+.kampfFigur[data-brand] .arenaFigur {
+  filter: drop-shadow(0 0 4px #ff7a2a) sepia(0.3);
+}
+
+.kampfFigur[data-kampfgeist] .arenaFigur {
+  filter: drop-shadow(0 0 5px #ff4d3a) drop-shadow(0 0 2px #ffb03a);
+}
+
+.kampfFigur[data-panzer] .arenaFigur {
+  filter: drop-shadow(0 0 4px #9fd0ff) drop-shadow(0 0 1px #ffffff);
+}
+
+.kampfFigur[data-wirkt] .arenaFigur {
+  animation: wirken 0.5s ease;
+}
+
+@keyframes wirken {
+  40% {
+    scale: 1.18;
+    filter: brightness(1.6) drop-shadow(0 0 8px #9fd0ff);
+  }
+}
+
+.kampfKopf {
+  position: absolute;
+  z-index: 3;
+  left: 6%;
+  right: 6%;
+  top: -60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.kampfSterne {
+  font-size: 9px;
+}
+
+.lebensbalken {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.leben {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--tn-gruen-hell);
+  transition: width 0.2s ease;
+}
+
+.lebensbalken[data-seite='oben'] .leben {
+  background: #ff6b75;
+}
+
+.schildanteil {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(90deg, #ffffff 0 3px, #d9e7ff 3px 5px);
+  transition: width 0.2s ease;
+}
+
+.manabalken {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.manabalken > i {
+  display: block;
+  height: 100%;
+  background: var(--tn-mana);
+  transition: width 0.15s linear;
+}
+
+.manabalken[data-voll] > i {
+  background: #bfe2ff;
+  box-shadow: 0 0 6px #9fd0ff;
+}
+
+.zahl {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: -10%;
+  translate: -50% 0;
+  font-family: var(--tn-anz);
+  font-size: 15px;
+  pointer-events: none;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  animation: aufsteigen 0.8s ease-out forwards;
+}
+
+.zahl[data-art='schaden'] {
+  color: #ffd2d6;
+}
+
+.zahl[data-art='heilung'] {
+  color: var(--tn-gruen-hell);
+}
+
+@keyframes aufsteigen {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1.2);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-120%) scale(0.9);
+  }
+}
+
+/* Effekte: gemaltes Einzelbild oder Lichtschein, im Code animiert. */
+.effekt {
+  --farbe: #ffe28a;
+  position: absolute;
+  z-index: 5;
+  left: -20%;
+  right: -20%;
+  top: -40%;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: effekt 0.7s ease-out forwards;
+}
+
+.effekt[data-wirker] {
+  left: -45%;
+  right: -45%;
+  top: -60%;
+  bottom: -20%;
+}
+
+.effekt img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.effektErsatz {
+  display: block;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--farbe) 85%, white) 0%, var(--farbe) 35%, transparent 70%);
+  mix-blend-mode: screen;
+}
+
+.effekt[data-effekt='schild'] {
+  --farbe: #9fd0ff;
+}
+
+.effekt[data-effekt='schild'] .effektErsatz {
+  background: radial-gradient(circle, transparent 45%, rgba(159, 208, 255, 0.9) 58%, transparent 70%);
+}
+
+.effekt[data-effekt='heilung'] {
+  --farbe: #6fdc8e;
+}
+
+.effekt[data-effekt='blaetter'] {
+  --farbe: #9be36a;
+}
+
+.effekt[data-effekt='funken'] {
+  --farbe: #ffd25a;
+}
+
+.effekt[data-effekt='feuer'] {
+  --farbe: #ff6a2a;
+}
+
+.effekt[data-effekt='blitz'] {
+  --farbe: #b9d8ff;
+}
+
+.effekt[data-effekt='frost'] {
+  --farbe: #7fe0ff;
+}
+
+.effekt[data-effekt='rauch'] {
+  --farbe: #8a8fa8;
+}
+
+.effekt[data-effekt='rauch'] .effektErsatz {
+  mix-blend-mode: normal;
+  background: radial-gradient(circle, rgba(60, 64, 84, 0.85) 0%, rgba(60, 64, 84, 0.5) 45%, transparent 70%);
+}
+
+.effekt[data-effekt='geist'] {
+  --farbe: #c9b3ff;
+}
+
+.effekt[data-effekt='betaeubt'] {
+  --farbe: #ffe85a;
+}
+
+.effekt[data-effekt='betaeubt'] .effektErsatz {
+  background: conic-gradient(from 0deg, transparent 0 20%, #ffe85a 20% 25%, transparent 25% 45%, #ffe85a 45% 50%, transparent 50% 70%, #ffe85a 70% 75%, transparent 75%);
+  -webkit-mask: radial-gradient(circle, transparent 40%, black 42%, black 60%, transparent 62%);
+  mask: radial-gradient(circle, transparent 40%, black 42%, black 60%, transparent 62%);
+}
+
+@keyframes effekt {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.05) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.3) rotate(15deg);
+  }
+}
+
+/* Rundenende ueber der Arena */
+.rundenende {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 50%;
+  translate: 0 -50%;
+  padding: 28px 16px;
+  background: linear-gradient(180deg, transparent 0%, rgba(5, 11, 29, 0.88) 18%, rgba(5, 11, 29, 0.88) 82%, transparent 100%);
+  text-align: center;
+  animation: hochfahren 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both
+}
+
+.rundenende h2 {
+  margin: 0;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 32px;
+}
+
+.rundenende[data-ausgang='sieg'] h2 {
+  color: var(--tn-gold-hell);
+  text-shadow: 0 0 18px rgba(245, 192, 46, 0.6);
+}
+
+.rundenende[data-ausgang='niederlage'] h2 {
+  color: #ff8a93;
+}
+
+.rundenende > p {
+  margin: 4px 0 10px;
+  color: var(--tn-leise);
+  font-size: 14px;
+}
+
+.zwischenstand {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 24rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  text-align: left;
+  font-size: 13px
+}
+
+.zwischenstand li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.zwischenstand li span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 800;
+}
+
+.zwischenstand li[data-ich] {
+  background: rgba(72, 184, 106, 0.22);
+}
+
+.zwischenstand li[data-aus] {
+  opacity: 0.5;
+}
+
+/* Abschluss */
+.abschlussGrund {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 80% at 50% 45%, rgba(5, 11, 29, 0.55), rgba(5, 11, 29, 0.92))
+}
+
+.abschluss {
+  width: 100%;
+  max-width: 24rem;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: hochfahren 0.3s ease both
+}
+
+.abschluss[data-sieg] {
+  /* Kein Kasten, sondern Licht: ein goldener Schein hinter der Zahl. */
+  background: radial-gradient(closest-side, rgba(245, 192, 46, 0.28), transparent)
+}
+
+.abschlussOben {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tn-leise);
+}
+
+.platzZahl {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.platzZahl strong {
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 72px;
+  line-height: 1;
+  color: var(--tn-gold-hell);
+  text-shadow: 0 4px 0 #a5740c;
+}
+
+.platzZahl span {
+  font-size: 15px;
+  color: var(--tn-leise);
+}
+
+.abschluss h2 {
+  margin: 0 0 8px;
+  font-family: var(--tn-anz);
+  font-weight: 400;
+  font-size: 26px;
+}
+
+.trophaeen {
+  margin: 0 0 12px;
+  font-family: var(--tn-anz);
+  font-size: 20px;
+  color: #ff8a93;
+}
+
+.trophaeen[data-plus] {
+  color: var(--tn-gold-hell);
+}
+
+.abschlussKnoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wartender,
+  .blatt,
+  .blattGrund,
+  .effekt,
+  .zahl,
+  .ring,
+  .uhr[data-knapp],
+  .wabe[data-zielbar],
+  .kampfFigur[data-wirkt] .arenaFigur,
+  .rundenende,
+  .abschluss,
+  .meldung {
+    animation: none;
+  }
+
+  .kampfFigur {
+    transition: none;
+  }
+}
+
+.titelGrund {
+  position: absolute;
+  inset: 0;
+  z-index: 0
+}
+
+.titelGrund > img {
+  /* Volle Breite, und so weit nach oben geschoben, dass die Figurengruppe
+     (im Bild bei gut der Haelfte der Hoehe) in der Luecke ueber dem Titel
+     steht — Text und Knoepfe liegen darunter auf dem dunklen Auslauf. Das
+     Bild ist 3:4, die Gruppe sitzt bei rund 52 % seiner Hoehe (133vw). */
+  position: absolute;
+  left: 0;
+  top: calc(24dvh - 69vw);
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4
+}
+
+.titelGrund::after {
+  /* Unten ins Dunkle, wo Text und Knoepfe stehen; oben frei fuer die Gruppe. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 11, 29, 0.3) 0%, transparent 12%, transparent 30%, rgba(5, 11, 29, 0.78) 44%, rgba(7, 19, 47, 0.97) 56%, rgb(7, 19, 47) 100%)
+}
+
+.titelLuecke {
+  height: clamp(170px, 30dvh, 290px)
+}
+
+.kachelText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1
+}
+
+.bank::before {
+  /* Die Leiste: dunkles Holz mit heller Oberkante, unter den Fuessen. */
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 4px;
+  height: 34%;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 46px, rgba(0, 0, 0, 0.12) 46px 48px),
+    linear-gradient(180deg, #a06a3c 0%, #7a4c28 35%, #4f2f18 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 214, 160, 0.45), 0 4px 10px rgba(0, 0, 0, 0.45)
+}
+
+.bankplatz::after {
+  /* Der Stellplatz: ein heller Fleck auf der Leiste. */
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 6%;
+  height: 16%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 230, 190, 0.32), rgba(255, 230, 190, 0.08));
+  pointer-events: none
+}
+
+.karte:not([data-rahmenbild]) .karteKnopf {
+  box-shadow:
+    inset 0 0 0 2px var(--rahmen),
+    0 3px 0 rgba(0, 0, 0, 0.45)
+}
+
+.splash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top
+}
+
+.feldstand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--tn-anz);
+  font-size: 16px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7)
+}
+
+.feldstand small {
+  font-family: var(--tn-txt);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--tn-gruen-hell)
+}
+
+.zuschauen {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: 22rem;
+  margin: 16px auto 0
+}
+
+.zuschauenText {
+  margin: 0;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--tn-tinte)
+}
+
+.paare {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.paar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--tn-tinte);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer
+}
+
+.paar em {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--tn-leise)
+}
+
+.paar[data-laeuft] em {
+  color: var(--tn-gruen-hell)
+}
+
+/* Ein kurzer Regelsatz im Blatt („Jede Einheit zählt für eine Marke nur einmal"). */
+.hinweisSatz {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(111, 220, 142, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(111, 220, 142, 0.35);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Die Striche des gezeichneten Rollenzeichens (`RollenZeichen` in grafik.tsx).
+   Bis zum 28.11.2026 stand die Regel in styles.css beim alten Tafelrunde;
+   sie gilt ueberall, wo das Zeichen steht — auch in Blaettern ausserhalb des
+   Tisches —, deshalb global. */
+:global(.tr-rolle) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
