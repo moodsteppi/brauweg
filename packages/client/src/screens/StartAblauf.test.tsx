@@ -220,11 +220,21 @@ describe('Quick-Play', () => {
   });
 
   it('sagt freundlich, wenn für die Auswahl kein Spiel frei ist, und wo man das ändert', async () => {
-    a.schnellspielStarten.mockRejectedValue(new ApiError('kein_spiel', 'fehler.kein_spiel', 409));
+    // Der echte Code aus server/src/schnellspiel.ts (badRequest), nicht eine
+    // geratene Statuszahl — so stand es bis zum Zusammenführen hier.
+    a.schnellspielStarten.mockRejectedValue(new ApiError('schnellspielKeinSpiel', 'error.schnellspielKeinSpiel', 400));
     await zeige();
     fireEvent.click(knopf('Quick-Play: sofort in eine Runde'));
     await act(async () => {});
     expect(screen.getByRole('alert')).toHaveTextContent(/Nimm im Zahnrad mehr Spiele dazu/);
+  });
+
+  it('sagt beim laufenden Tisch, den das Gerät noch nicht kannte, erst zurück an den Tisch', async () => {
+    a.schnellspielStarten.mockRejectedValue(new ApiError('schnellspielLaufenderTisch', 'error.schnellspielLaufenderTisch', 409));
+    await zeige();
+    fireEvent.click(knopf('Quick-Play: sofort in eine Runde'));
+    await act(async () => {});
+    expect(screen.getByRole('alert')).toHaveTextContent(/laufenden Tisch/);
   });
 
   it('sagt bei einem anderen Fehler, dass es gleich noch mal geht', async () => {
