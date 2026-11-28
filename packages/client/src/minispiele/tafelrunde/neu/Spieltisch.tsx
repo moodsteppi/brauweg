@@ -496,6 +496,17 @@ export function Spieltisch({
         onRegeln={() => setRegelnOffen(true)}
       />
 
+      {/* Die Marken als Spalte am linken Rand, in Ruestphase UND Kampf (Robin,
+          28.11.2026: "ich sehe die Buffs nicht mehr"). Als Zeile ueber dem
+          Feld lagen sie seit dem Arenabild darunter, und im Kampf gab es sie
+          gar nicht. Am Rand stehen sie ueber der Arenamauer und nehmen dem
+          Feld keine Hoehe. */}
+      {staende.length > 0 && (
+        <div className={stil.markenRand} data-phase={kampfLaeuft ? 'kampf' : 'ruesten'}>
+          <Markenleiste staende={staende} tabelle={synergieTabelle} gewaehlt={marke} onWahl={waehleMarke} />
+        </div>
+      )}
+
       {kampfLaeuft ? (
         <div className={stil.kampfFlaeche} data-unten={kampfHandel && !sicht.fertig ? '' : undefined}>
           {kampf ? (
@@ -576,7 +587,6 @@ export function Spieltisch({
         </div>
       ) : (
         <>
-          <Markenleiste staende={staende} tabelle={synergieTabelle} gewaehlt={marke} onWahl={waehleMarke} />
           <Feld
             schauplatz={schauplatz}
             verhaeltnis={rastermass(sicht.brettReihen, sicht.brettSpalten).seitenverhaeltnis}
