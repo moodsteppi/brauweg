@@ -9,6 +9,11 @@
  * Eine Kachel antippen legt das Brett dieses Mitspielers oben aufs Feld (in
  * der Ruestphase) bzw. zeigt seinen Kampf (im Kampf). Was das heisst,
  * entscheidet der Tisch; hier wird nur gemeldet, wer angetippt wurde.
+ *
+ * GRAFIK (seit dem 28.11.2026): Namensschild, Uhr-Medaille und Kopfknoepfe
+ * sind gemalte Messingteile (`uiBild`), als CSS-Hintergrund ueber eine
+ * Variable gesetzt und mit `data-bild` eingeschaltet. Fehlt ein Teil, bleibt
+ * der gezeichnete Look von vorher — kein `<img>` auf eine fehlende Datei.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,7 +21,7 @@ import { useEffect, useState } from 'react';
 import { type Leistenplatz, leistenplaetze } from '../platzierung';
 import type { TafelrundeSicht } from '../sicht';
 import { tz, tzAnzahl } from '../text';
-import { Herz } from './grafik';
+import { Herz, uiHintergrund } from './grafik';
 import stil from './neu.module.css';
 import { Gesicht } from './Suche';
 
@@ -93,11 +98,15 @@ export function Kopfband({
   const offen = reihe.filter((p) => p.ausRunde === null).length;
   const bereit = reihe.filter((p) => p.ausRunde === null && p.bereit).length;
   const zeile = (sitz: number): Sitzzeile | undefined => sitze.find((s) => s.seat === sitz);
+  const schild = uiHintergrund('spielerschild', '--tn-schild');
+  // Die Kopfknoepfe bekommen denselben runden Knopf wie Bereit, aber
+  // abgedunkelt (Stylesheet) — der gruene Bereit-Haken soll hervorstechen.
+  const knopf = uiHintergrund('knopf-rund', '--tn-knopf');
 
   return (
     <header className={stil.kopfband}>
       <div className={stil.kopfZeile}>
-        <button type="button" className={stil.kopfKnopf} onClick={onZurueck} aria-label={tz('zurueck')}>
+        <button type="button" className={stil.kopfKnopf} onClick={onZurueck} aria-label={tz('zurueck')} {...knopf}>
           ‹
         </button>
         <div className={stil.phase}>
@@ -110,11 +119,17 @@ export function Kopfband({
           </span>
         </div>
         {rest !== null && (
-          <span className={stil.uhr} role="timer" aria-label={tzAnzahl('phase.restSekunden', rest)} data-knapp={rest <= 5 ? '' : undefined}>
+          <span
+            className={stil.uhr}
+            role="timer"
+            aria-label={tzAnzahl('phase.restSekunden', rest)}
+            data-knapp={rest <= 5 ? '' : undefined}
+            {...uiHintergrund('timer', '--tn-medaille')}
+          >
             {rest}
           </span>
         )}
-        <button type="button" className={stil.kopfKnopf} onClick={onRegeln} aria-label={tz('regeln.titel')}>
+        <button type="button" className={stil.kopfKnopf} onClick={onRegeln} aria-label={tz('regeln.titel')} {...knopf}>
           ?
         </button>
       </div>
@@ -132,6 +147,7 @@ export function Kopfband({
                 data-aus={p.ausRunde !== null ? '' : undefined}
                 data-gezeigt={gezeigt === p.sitz ? '' : undefined}
                 data-bereit={p.bereit && p.ausRunde === null ? '' : undefined}
+                {...schild}
                 aria-label={
                   tz('leiste.kachel', { name, leben: p.leben }) +
                   (p.ausRunde !== null ? tz('leiste.kachelAus') : '') +

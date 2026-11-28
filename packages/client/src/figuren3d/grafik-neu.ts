@@ -71,8 +71,14 @@ export function figurNeuBlatt(kennung: string): string | null {
 // Schauplaetze, Kartenrahmen, Zeichen, Effekte, Titel
 // ---------------------------------------------------------------------------
 
-/** Die Schauplaetze in der Reihenfolge, in der sie je Runde wechseln. */
-export const SCHAUPLAETZE = ['burghof', 'dorfplatz', 'herbstwald', 'vulkan'] as const;
+/**
+ * Die Schauplaetze. Seit dem 28.11.2026 sechs echte Arenen mit Rand,
+ * Mittellinie und Boden mit Struktur (Robin: "Was ist aus unseren Arenen
+ * geworden?"). Die erste Fassung waren ruhige, fast leere Flaechen mit Deko
+ * nur in den Ecken — im Spiel sahen sie aus wie gar keine Arena. Bestellung
+ * und Bildzeilen: docs/ASSETS-TAFELRUNDE-NEU.md, Abschnitt Arenen.
+ */
+export const SCHAUPLAETZE = ['burghof', 'dorfplatz', 'herbstwald', 'vulkan', 'hafen', 'kristall'] as const;
 export type Schauplatz = (typeof SCHAUPLAETZE)[number];
 
 /** Welcher Schauplatz in dieser Runde gilt (Runde ab 1). */
@@ -128,6 +134,21 @@ export function effektBild(name: string): string | null {
   return VORHANDEN.has(`effekte/${name}`) ? `${GRAFIK_NEU_WURZEL}/effekte/effekt-${name}.webp` : null;
 }
 
+/**
+ * Die Holz-und-Messing-Teile der Anzeigen (seit dem 28.11.2026, Robin nach dem
+ * Test am iPhone: Bank, Uhr, Namen und Lebensanzeigen sahen „noch so
+ * KI-generiert flau" aus). Freigestellt, ohne Text — Zahlen und Namen legt der
+ * Bildschirm darueber:
+ * `spielerschild` (Namensschild im Kopfband), `timer` (Medaille der Restzeit),
+ * `bank` (Brett unter der Bank), `balken` (Rahmen der Lebensbalken, innen
+ * leer), `plakette` (Gold und Feld ueber dem Laden), `knopf-rund` (Bereit),
+ * `wimpel` und `wimpel-blau` (Seitennamen in der Arena: Gegner, eigen).
+ * Null, solange es das Teil nicht gibt.
+ */
+export function uiBild(name: string): string | null {
+  return VORHANDEN.has(`ui/${name}`) ? `${GRAFIK_NEU_WURZEL}/ui/${name}.webp` : null;
+}
+
 /** Das Titelbild des Einstiegs, oder null. */
 export function titelBild(): string | null {
   return VORHANDEN.has('titel') ? `${GRAFIK_NEU_WURZEL}/titel.webp` : null;
@@ -135,11 +156,14 @@ export function titelBild(): string | null {
 
 /** Alles ausser den Figuren, was schon unter `public/tafelrunde/neu/` liegt. */
 const VORHANDEN: ReadonlySet<string> = new Set<string>([
-  // 27.11.2026: Schauplaetze (szene, 60-116 kB), Rahmen, Zeichen, Effekte (wappen)
+  // 27.11.2026: Rahmen, Zeichen, Effekte (wappen). Schauplaetze seit dem
+  // 28.11.2026 als Arenen neu (szene).
   'feld/burghof',
   'feld/dorfplatz',
   'feld/herbstwald',
   'feld/vulkan',
+  'feld/hafen',
+  'feld/kristall',
   'karten/rahmen-1',
   'karten/rahmen-2',
   'karten/rahmen-3',
@@ -148,6 +172,10 @@ const VORHANDEN: ReadonlySet<string> = new Set<string>([
     (m) => `zeichen/marke-${m}`,
   ),
   'titel',
+  // 28.11.2026: Anzeigen im Holz-und-Messing-Stil der Startseite.
+  ...['spielerschild', 'timer', 'bank', 'balken', 'plakette', 'knopf-rund', 'wimpel', 'wimpel-blau'].map(
+    (n) => `ui/${n}`,
+  ),
   'zeichen/stern',
   'zeichen/gold',
   'zeichen/leben',

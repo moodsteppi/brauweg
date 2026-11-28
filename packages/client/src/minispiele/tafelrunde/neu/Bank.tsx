@@ -5,6 +5,9 @@
  * Regelsatz), nicht aus einer 9 hier. Jeder Platz ist ein Ziel fuers Ziehen
  * (`data-ziel`) und fuer den Antipp-Weg; ein leerer Platz nimmt den Tipp nur
  * an, wenn gerade eine Einheit gewaehlt ist und dorthin darf.
+ *
+ * Seit dem 28.11.2026 stehen die Figuren auf einem gemalten Brett mit
+ * Messingkappen (`uiBild('bank')`); ohne Bild auf der gezeichneten Holzleiste.
  */
 
 import type { Einheit } from '../sicht';
@@ -13,6 +16,7 @@ import { tz } from '../text';
 import { type Kaempfer, type Ort, gleicherOrt, ortSchluessel } from '../zuege';
 import type { Zeigerrufe } from '../ziehen';
 import { Einheitsbild, einheitsBeschriftung, zellRufe } from './Feld';
+import { uiHintergrund } from './grafik';
 import stil from './neu.module.css';
 
 export function Bank({
@@ -42,8 +46,14 @@ export function Bank({
   onNachsehen: (ort: Ort) => void;
   marke: string | null;
 }): React.JSX.Element {
+  const brett = uiHintergrund('bank', '--tn-bankbrett');
   return (
-    <ol className={stil.bank} aria-label={tz('bank.titel')} style={{ '--bankplaetze': plaetze } as React.CSSProperties}>
+    <ol
+      className={stil.bank}
+      aria-label={tz('bank.titel')}
+      data-bild={brett['data-bild']}
+      style={{ '--bankplaetze': plaetze, ...brett.style } as React.CSSProperties}
+    >
       {Array.from({ length: plaetze }, (_, platz) => {
         const ort: Ort = { bereich: 'bank', platz };
         const k = bank[platz] ?? null;
