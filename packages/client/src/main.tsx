@@ -11,6 +11,7 @@ import './styles.css';
 import './app-hintergrund.css';
 import './screens/hub-holzrahmen.css';
 import './screens/hub-zierwerk.css';
+import './screens/hub-details.css';
 
 // Vor dem ersten Bild: Die Tonsitzung muss als "ambient" angemeldet sein,
 // bevor irgendetwas klingt, sonst haelt iOS beim ersten Ton die Musik in

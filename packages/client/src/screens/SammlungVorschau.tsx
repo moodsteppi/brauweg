@@ -65,12 +65,19 @@ export function SammlungVorschau({
   );
 }
 
-/** Kleine, klare Symbole im Stil der Games-Kategorien. */
+/** Eigene Bildmotive für die Designbereiche; All und Pinguin behalten ihr Kategorienzeichen. */
 export function SammelIcon({
   art,
 }: {
   art: SammelBereich | "alle" | "pinguin" | "figuren";
 }) {
+  const motive = { blatt: 0, szene: 1, ruecken: 2, figuren: 3 };
+  if (art in motive) {
+    const platz = motive[art as keyof typeof motive];
+    return <span className="sam-icon sam-bildicon" aria-hidden="true" style={{
+      backgroundPosition: `${platz % 2 * 100}% ${Math.floor(platz / 2) * 100}%`,
+    }} />;
+  }
   return (
     <svg
       className="sam-icon"
@@ -82,28 +89,7 @@ export function SammelIcon({
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {art === "blatt" ? (
-        <>
-          <path d="m4 8 4-1-2-4 10-2 4 16-4 1M4 8h11v14H4z" />
-          <path d="m9.5 12 3 3-3 3-3-3z" />
-        </>
-      ) : art === "szene" ? (
-        <>
-          <rect x="3" y="5" width="18" height="11" rx="4" />
-          <rect x="6" y="8" width="12" height="5" rx="2" />
-          <path d="M6 16v4m12-4v4" />
-        </>
-      ) : art === "ruecken" ? (
-        <>
-          <rect x="5" y="2" width="14" height="20" rx="2" />
-          <rect x="8" y="5" width="8" height="14" rx="1" />
-          <path d="m12 8 2 4-2 4-2-4z" />
-        </>
-      ) : art === "figuren" ? (
-        <>
-          <path d="M12 2v5M9.5 4.5h5M8 8h8l-2 5 2 6H8l2-6zM6 22h12M7 19h10" />
-        </>
-      ) : art === "pinguin" ? (
+      {art === "pinguin" ? (
         <>
           <path d="M5 15c0-7 3-12 7-12s7 5 7 12c0 4-3 6-7 6s-7-2-7-6Z" />
           <path d="m10 10 2 2 2-2M4 12l-2 4m18-4 2 4M8 22l2-1m4 0 2 1" />

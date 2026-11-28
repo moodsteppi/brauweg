@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, waitFor, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { api, type Me } from '../api';
 import { cardImage, deckForGame, rueckenBild } from '../decks';
@@ -12,6 +12,7 @@ async function zeige(id: string, themes: Me['themes']) {
   const starten = vi.fn(), sammlung = vi.fn();
   render(<SpieleNeu me={probeKonto({ themes })} offen={id} onOeffne={vi.fn()} onPick={starten} onSolo={vi.fn()} onBald={vi.fn()} onSammlung={sammlung} />);
   const vorschau = await screen.findByRole('group', { name: 'Vorschau deiner gewählten Karten' });
+  await act(async () => {});
   return { vorschau, starten, sammlung };
 }
 it('zeigt vor dem Doppelkopf-Start das gewählte Blatt, den Tisch und die persönliche Rückseite', async () => {
@@ -35,5 +36,18 @@ it('benutzt für Zauberer passende Werte und fängt fehlende Bilder ab', async (
   const bild = vorschau.querySelector('img')!;
   expect(bild).toHaveAttribute('src', cardImage(deckForGame('wizard', 'zauberwald'), { suit: 'Z', rank: '1' }));
   fireEvent.error(bild);
-  expect(vorschau.querySelector('.pc-text--z')).toBeInTheDocument();
+  await waitFor(() => expect(vorschau.querySelector('.pc-text--z')).toBeInTheDocument());
+});
+
+it('führt bei Skat direkt in die passende Designauswahl und startet erst auf Wunsch', async () => {
+  const { starten, sammlung } = await zeige('skat', { skat: { cardDeck: 'text', tableScene: 'stube', cardBack: 'eiche' } });
+  fireEvent.click(screen.getByRole('button', { name: /^Blatt:/ }));
+  expect(sammlung).toHaveBeenLastCalledWith('blatt');
+  fireEvent.click(screen.getByRole('button', { name: /^Tisch:/ }));
+  expect(sammlung).toHaveBeenLastCalledWith('szene');
+  fireEvent.click(screen.getByRole('button', { name: /^Rückseiten:/ }));
+  expect(sammlung).toHaveBeenLastCalledWith('ruecken');
+  expect(starten).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Zum Spiel' }));
+  expect(starten).toHaveBeenCalledWith('skat');
 });
