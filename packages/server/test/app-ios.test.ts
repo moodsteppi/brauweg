@@ -264,9 +264,12 @@ test('die Huelle spricht dieselbe Sprache wie Server und Client', () => {
     if (pfad === '/broremote') {
       assert.ok(huelle.includes('if link.path == "/broremote"'), pfad);
       assert.ok(huelle.includes('link.fragment.map'), 'BroRemote-Einladung im Fragment erhalten');
-    } else if(pfad === '/ice-clash') {
-      assert.ok(huelle.includes('if link.path == "/ice-clash"'), pfad);
-      assert.ok(huelle.includes('code.uppercased()'), 'Ice-Clash-Raumcode erhalten');
+    } else if (pfad === '/ice-clash' || pfad === '/tanks-online') {
+      // Beide Arenen teilen dieselbe Raumcode-Prüfung in der iOS-Hülle.
+      const arenaPfade = /if \[([^\]]+)\]\.contains\(link\.path\)/.exec(huelle)?.[1];
+      assert.ok(arenaPfade?.includes(`"${pfad}"`), pfad);
+      assert.ok(huelle.includes('code.uppercased()'), `${pfad}: Raumcode erhalten`);
+      assert.ok(huelle.includes('return link.path + "?raum="'), `${pfad}: Spielpfad erhalten`);
     } else assert.ok(swiftMuster.startsWith('^' + pfad.replace(/\*$/, '')), pfad);
   }
 
