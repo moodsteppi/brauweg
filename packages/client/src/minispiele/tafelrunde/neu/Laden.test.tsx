@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Laden } from './Laden';
+import { Laden, Shopleiste } from './Laden';
 import { KATALOG, ruestsicht } from './testdaten';
 
 /*
@@ -70,11 +70,36 @@ describe('Laden', () => {
     expect(screen.queryByRole('button', { name: /Rang steigern/ })).not.toBeInTheDocument();
   });
 
-  it('nach „Bereit" ist alles gesperrt', () => {
+  /*
+   * Seit dem 28.11.2026 ist „Bereit" ein kleiner runder Haken (Robin): Die
+   * Beschriftung „Wartet…" gibt es nicht mehr, der Zustand steht in der
+   * Fuellung, in `aria-pressed` und im Vorlesenamen.
+   */
+  it('nach „Bereit" ist alles gesperrt, der Haken ist gefuellt', () => {
     const eigenes = { ...ruestsicht().eigenes!, bereit: true };
     laden({ eigenes, darfHandeln: false });
-    expect(screen.getByRole('button', { name: 'Wartet…' })).toBeDisabled();
+    const haken = screen.getByRole('button', { name: 'Bereit - wartet auf die anderen' });
+    expect(haken).toBeDisabled();
+    expect(haken).toHaveAttribute('data-bereit');
+    expect(haken).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /Pinguinwache, Wache/ })).toBeDisabled();
+  });
+
+  it('der Bereit-Haken sitzt oben neben dem Gold, nicht als Knopf unter den Karten', () => {
+    const { container } = laden();
+    const haken = screen.getByRole('button', { name: 'Bereit' });
+    expect(haken).toHaveAttribute('aria-pressed', 'false');
+    expect(haken).not.toHaveAttribute('data-bereit');
+    // Im Kopf des Ladens, vor der Kartenliste.
+    expect(container.querySelector('section > div')).toContainElement(haken);
+  });
+
+  it('im Kampf: ohne Bereit, mit Griff zum Zuklappen', () => {
+    const onZuklappen = vi.fn();
+    laden({ onBereit: undefined, onZuklappen });
+    expect(screen.queryByRole('button', { name: 'Bereit' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Laden zuklappen' }));
+    expect(onZuklappen).toHaveBeenCalled();
   });
 
   it('Gold und Feldplaetze ueber den Karten, kein Rang mehr; das naechste Feld aus der Sicht', () => {
@@ -90,6 +115,18 @@ describe('Laden', () => {
     const eigenes = { ...ruestsicht().eigenes!, feldplaetze: 7, feldplaetzeNaechsteRunde: 7 };
     laden({ eigenes });
     expect(screen.queryByText(/nächste Runde \d/)).not.toBeInTheDocument();
+  });
+
+  it('die Shopleiste im Kampf: fuenf kleine Karten mit Preis, ein Tipp klappt auf', () => {
+    const onOeffnen = vi.fn();
+    const { container } = render(
+      <Shopleiste eigenes={ruestsicht().eigenes!} plaetze={5} katalog={KATALOG} onOeffnen={onOeffnen} />,
+    );
+    // Vier Einheiten und ein leerer Platz — wie im Laden.
+    expect(container.querySelectorAll('[data-rahmen]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-leer]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Laden öffnen' }));
+    expect(onOeffnen).toHaveBeenCalled();
   });
 
   it('auf der Karte steht der PREIS aus dem Katalog, nicht die Kostenstufe', () => {

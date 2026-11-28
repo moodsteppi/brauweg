@@ -1,8 +1,10 @@
 /**
  * Das Feld der Ruestphase: der gemalte Schauplatz, darueber das Hex-Raster
- * als leichte Markierung — oben das Brett des Gegners (gespiegelt), unten das
- * eigene. Und das Bild einer Einheit (`Einheitsbild`, `zellRufe`), das auch die
- * Bank benutzt.
+ * als leichte Markierung — seit dem 28.11.2026 nur noch EIN Brett, das eigene
+ * (Robin: „nur die eigene Haelfte", dafuer ein groesserer Laden). Wer oben
+ * einen Mitspieler antippt, bekommt kurz DESSEN Brett an derselben Stelle,
+ * gespiegelt und mit Namen und Zurueck-Knopf (`kopf`, `fremd`). Und das Bild
+ * einer Einheit (`Einheitsbild`, `zellRufe`), das auch die Bank benutzt.
  *
  * DAS RASTER IST NICHT EINGEMALT (Umsetzungsplan, Abschnitt 4): Der
  * Schauplatz ist ein Bild ohne Felder, die Waben legt der Code darueber, aus
@@ -308,28 +310,35 @@ export function aufBrett(felder: readonly (Kaempfer | null)[]): Set<string> {
 }
 
 /**
- * Das Feld: Schauplatz und die beiden Bretter. Das gegnerische nur zum
- * Ansehen, das eigene zum Bedienen.
+ * Das Feld: die Flaeche fuer EIN Brett — das eigene zum Bedienen, oder das
+ * angetippte fremde zum Ansehen.
  */
 export function Feld({
   verhaeltnis,
-  gegner,
+  kopf,
+  fremd,
   children,
 }: {
-  /** Breite durch Hoehe eines Bretts (`rastermass`) — daran misst das Stylesheet die Bretter. */
+  /** Breite durch Hoehe eines Bretts (`rastermass`) — daran misst das Stylesheet das Brett. */
   verhaeltnis: number;
-  /** Das Brett des gezeigten Gegners, fertig gebaut — oder nichts. */
-  gegner: React.ReactNode;
-  /** Das eigene Brett. */
+  /** Ueberschrift ueber dem Brett (Name und Zurueck), nur beim fremden. */
+  kopf?: React.ReactNode;
+  /** Zeigt gerade ein fremdes Brett — anders getoent, damit es niemand fuer das eigene haelt. */
+  fremd?: boolean;
+  /** Das Brett. */
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <section className={stil.feld} style={{ '--verhaeltnis': verhaeltnis } as React.CSSProperties}>
+    <section
+      className={stil.feld}
+      data-fremd={fremd ? '' : undefined}
+      style={{ '--verhaeltnis': verhaeltnis } as React.CSSProperties}
+    >
       {/* Kein eigener Grund: Der Schauplatz liegt unter dem ganzen Tisch
-          (Spieltisch.tsx), das Feld ist nur die Flaeche, auf der die Bretter
-          stehen. */}
+          (Spieltisch.tsx), das Feld ist nur die Flaeche, auf der das Brett
+          steht. */}
       <div className={stil.feldInnen}>
-        <div className={stil.feldGegner}>{gegner}</div>
+        {kopf}
         <div className={stil.feldEigen}>{children}</div>
       </div>
     </section>

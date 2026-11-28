@@ -38,12 +38,16 @@ function mitHeer(
   return { ...partie, heere: { ...partie.heere, [sitz]: { ...partie.heere[sitz]!, ...teil } } };
 }
 
+/*
+ * Seit dem 28.11.2026 verschmelzen ZWEI gleiche (vorher drei, Robin: "2 Units
+ * zusammen sind schon das naechste Level", "4 statt 9" fuer Stufe 3). Die
+ * Proben hier pruefen dasselbe wie vorher, nur mit den neuen Zahlen.
+ */
 describe('Verschmelzen', () => {
-  it('macht aus drei gleichen der Stufe 1 eine der Stufe 2', () => {
+  it('macht aus zwei gleichen der Stufe 1 eine der Stufe 2', () => {
     const bank = leer(9);
     bank[0] = k('dorfwache');
     bank[1] = k('dorfwache');
-    bank[2] = k('dorfwache');
 
     const raus = verschmelze(leer(BRETT_FELDER), bank);
     assert.equal(raus.verschmolzen, 1);
@@ -51,47 +55,54 @@ describe('Verschmelzen', () => {
   });
 
   it('verschmilzt nur, was WIRKLICH gleich ist', () => {
+    // Seit dem 28.11.2026 verschmelzen schon zwei — also nur EINE Dorfwache
+    // der Stufe 1, sonst waere das Paar selbst schon ein Treffer.
     const bank = leer(9);
     bank[0] = k('dorfwache');
-    bank[1] = k('dorfwache');
-    bank[2] = k('schildknappe');
+    bank[1] = k('schildknappe');
     // Auch verschiedene STUFEN derselben Einheit verschmelzen nicht: Sonst
-    // waere eine Stufe-2-Einheit plus zwei Karten so viel wert wie drei.
-    bank[3] = k('dorfwache', 2);
+    // waere eine Stufe-2-Einheit plus eine Karte schon eine Stufe 3, obwohl
+    // nur drei statt vier Kopien darin stecken.
+    bank[2] = k('dorfwache', 2);
 
     const raus = verschmelze(leer(BRETT_FELDER), bank);
     assert.equal(raus.verschmolzen, 0);
-    assert.equal(alle(raus.bank).length, 4);
+    assert.equal(alle(raus.bank).length, 3);
   });
 
-  it('loest die Kettenreaktion aus: neun gleiche ergeben EINE der Stufe 3', () => {
-    // Der Fall, der zaehlt. Ohne die Schleife bekaeme man drei Einheiten der
+  it('loest die Kettenreaktion aus: vier gleiche ergeben EINE der Stufe 3', () => {
+    // Der Fall, der zaehlt. Ohne die Schleife bekaeme man zwei Einheiten der
     // Stufe 2 und muesste sie von Hand weiterverschmelzen — was gar nicht
-    // ginge, weil das automatisch passiert.
-    const bank = leer(9).map(() => k('gassendieb'));
+    // ginge, weil das automatisch passiert. (Bis zum 28.11.2026 neun Kopien,
+    // seitdem verschmelzen zwei, also vier.)
+    const bank = leer(9);
+    for (let i = 0; i < 4; i++) bank[i] = k('gassendieb');
     const raus = verschmelze(leer(BRETT_FELDER), bank);
-    assert.equal(raus.verschmolzen, 4, 'dreimal Stufe 2, einmal Stufe 3');
+    assert.equal(raus.verschmolzen, 3, 'zweimal Stufe 2, einmal Stufe 3');
     assert.deepEqual(alle(raus.bank, raus.brett), [k('gassendieb', 3)]);
   });
 
   it('laesst den Rest liegen, wenn es fuer die naechste Stufe nicht reicht', () => {
-    // Acht gleiche: zwei verschmelzen zu Stufe 2, zwei bleiben auf Stufe 1,
-    // und zwei Stufe-2-Einheiten sind noch keine Stufe 3.
+    // Sieben gleiche (seit dem 28.11.2026 verschmelzen zwei): vier werden
+    // eine Stufe 3, zwei eine Stufe 2, eine bleibt auf Stufe 1 — und die
+    // einzelne Stufe 2 ist noch keine Stufe 3. So liegt auf JEDER Stufe ein
+    // Rest, der nicht verschmelzen darf.
     const bank = leer(9);
-    for (let i = 0; i < 8; i++) bank[i] = k('irrlicht');
+    for (let i = 0; i < 7; i++) bank[i] = k('irrlicht');
     const raus = verschmelze(leer(BRETT_FELDER), bank);
     const stand = alle(raus.bank, raus.brett);
-    assert.equal(stand.filter((e) => e.stufe === 2).length, 2);
-    assert.equal(stand.filter((e) => e.stufe === 1).length, 2);
+    assert.equal(stand.filter((e) => e.stufe === 3).length, 1);
+    assert.equal(stand.filter((e) => e.stufe === 2).length, 1);
+    assert.equal(stand.filter((e) => e.stufe === 1).length, 1);
   });
 
   it('geht ueber Bank UND Brett hinweg', () => {
-    // Sonst muesste man vor jedem Kauf erst aufraeumen.
+    // Sonst muesste man vor jedem Kauf erst aufraeumen. Seit dem 28.11.2026
+    // reicht dafuer eine Kopie auf dem Brett und eine auf der Bank.
     const brett = leer(BRETT_FELDER);
     brett[3] = k('nachtpfeil');
     const bank = leer(9);
     bank[0] = k('nachtpfeil');
-    bank[1] = k('nachtpfeil');
 
     const raus = verschmelze(brett, bank);
     assert.equal(raus.verschmolzen, 1);
@@ -119,12 +130,13 @@ describe('Verschmelzen', () => {
 });
 
 describe('Kaufen und Verschmelzen', () => {
-  const dreiZumVollen = (partie: TafelrundePartie): TafelrundePartie => {
-    // Bank randvoll: zwei Kopien der Zieleinheit und sieben verschiedene
-    // andere, damit nichts unbeabsichtigt mitverschmilzt.
+  const einerZumVollen = (partie: TafelrundePartie): TafelrundePartie => {
+    // Bank randvoll: EINE Kopie der Zieleinheit (seit dem 28.11.2026 reicht
+    // die zweite zum Verschmelzen) und acht verschiedene andere, damit
+    // nichts unbeabsichtigt mitverschmilzt.
     const bank: (Kaempfer | null)[] = [
       k('dorfwache'),
-      k('dorfwache'),
+      k('grimmbart'),
       k('schildknappe'),
       k('astschuetze'),
       k('steinschleuderer'),
@@ -138,9 +150,9 @@ describe('Kaufen und Verschmelzen', () => {
   };
 
   it('erlaubt bei voller Bank den Kauf, der sofort verschmilzt', () => {
-    // Ohne diese Ausnahme stuende man mit vollem Beutel vor der dritten
+    // Ohne diese Ausnahme stuende man mit vollem Beutel vor der zweiten
     // Kopie und koennte sie nicht holen, obwohl sie nirgends Platz braucht.
-    const partie = dreiZumVollen(erstellePartie(DEFAULT_REGELN, [0, 1], SAAT));
+    const partie = einerZumVollen(erstellePartie(DEFAULT_REGELN, [0, 1], SAAT));
     assert.ok(
       erlaubteZuege(partie, 0).some((z) => z.typ === 'kaufen' && z.platz === 0),
       'Der Kauf steht nicht in den erlaubten Zuegen',

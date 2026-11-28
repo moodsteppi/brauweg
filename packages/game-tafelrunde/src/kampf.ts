@@ -244,6 +244,13 @@ export const SCHADEN_GRUNDWERT = 1;
  * Wer den Teiler doch anfasst, misst danach mit werkzeug/spielzeit.mjs: Von 3
  * auf 2 sind es heute 8 Runden und 6:42 statt 9 und 7:27.
  *
+ * AM 28.11.2026 GEPRUEFT UND BEI DREI GEBLIEBEN: Seit zwei statt drei Kopien
+ * verschmelzen, schrumpfte die Partie zu viert von 6:48 auf 5:27. Teiler 6
+ * haette sie auf 6:37 gebracht, aber dann kosten ein und vier Ueberlebende der
+ * Stufe 1 gleich viel — die Probe "zaehlt hoehere Stufen beim Schaden
+ * schwerer" in kampf.test.ts haelt genau das fest. Verlaengert wurde
+ * stattdessen ueber die Startleben (12 auf 16, regeln.ts).
+ *
  * `ceil` und nicht `round`: Eine Niederlage gegen einen einzelnen Ueberlebenden
  * der Stufe 1 soll die vollen zwei Punkte kosten (Grundwert plus eins) und
  * nicht durch die Rundung zum halben Preis werden.

@@ -1,7 +1,16 @@
 /**
  * Der Laden: fuenf Porträtkarten mit EINEM Rahmen in Bronze, Silber oder Gold
- * je Kostenstufe, darueber Gold und Feldplaetze, darunter der eine Knopf
- * „Bereit" — ganz unten, in Daumenreichweite.
+ * je Kostenstufe, darueber Gold, Feldplaetze und rechts der kleine runde
+ * Bereit-Haken.
+ *
+ * DER BEREIT-KNOPF IST SEIT DEM 28.11.2026 KLEIN (Robin am iPhone): Der grosse
+ * Knopf ueber die ganze Breite kostete eine Kartenhoehe, die jetzt die Karten
+ * bekommen. Ob man bereit ist, sagt die Fuellung (gruen = bereit) und das
+ * `aria-label`, nicht mehr eine Beschriftung.
+ *
+ * IM KAMPF gibt es den Laden zweimal (Robin: „schmale Leiste, aufklappbar"):
+ * zugeklappt als `Shopleiste` — die fuenf Karten klein, ein Tipp klappt auf —
+ * und aufgeklappt als dieser Laden ohne Bereit-Haken, mit Zuklappen-Griff.
  *
  * SEIT DEM 27.11.2026 ABENDS (Robin nach dem Spiel am iPhone) gibt es weder
  * „Neu wuerfeln" noch „Rang steigern": Die Feldplaetze wachsen mit der Runde
@@ -143,6 +152,15 @@ export function Portraetkarte({
   );
 }
 
+/** Ein Haken, gezeichnet — kein Bild, das fehlen koennte (CLAUDE.md). */
+function Haken(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" className={stil.haken} aria-hidden="true">
+      <path d="M5 12.5 10 17.5 19 7" />
+    </svg>
+  );
+}
+
 export function Laden({
   eigenes,
   plaetze,
@@ -154,6 +172,7 @@ export function Laden({
   onKauf,
   onBlatt,
   onBereit,
+  onZuklappen,
 }: {
   eigenes: EigeneSicht;
   plaetze: number;
@@ -165,7 +184,10 @@ export function Laden({
   trifft: (marke: string, einheitId?: string) => boolean;
   onKauf: (platz: number) => void;
   onBlatt: (platz: number) => void;
-  onBereit: () => void;
+  /** Fehlt im Kampf: Dort meldet niemand bereit. */
+  onBereit?: () => void;
+  /** Nur im Kampf, aufgeklappt: zurueck zur schmalen Leiste. */
+  onZuklappen?: () => void;
 }): React.JSX.Element {
   const bankVoll = !eigenes.bank.includes(null);
   /* Waechst das Feld zur naechsten Runde? Das sagt die Sicht, nicht die Runde
@@ -173,7 +195,12 @@ export function Laden({
   const naechste = eigenes.feldplaetzeNaechsteRunde;
   const waechst = naechste !== undefined && naechste > eigenes.feldplaetze;
   return (
-    <section className={stil.laden} aria-label={tz('laden.titel')}>
+    <section className={stil.laden} aria-label={tz('laden.titel')} data-aufgeklappt={onZuklappen ? '' : undefined}>
+      {onZuklappen && (
+        <button type="button" className={stil.ladenGriff} onClick={onZuklappen} aria-label={tz('neu.ladenZu')}>
+          <i aria-hidden="true" />
+        </button>
+      )}
       <div className={stil.ladenKopf}>
         <span className={stil.goldstand} aria-label={tz('neu.goldstand', { n: eigenes.gold, plus: eigenes.einkommen })}>
           <Muenze />
@@ -185,6 +212,19 @@ export function Laden({
           {tz('neu.feld', { belegt: eigenes.belegt, plaetze: eigenes.feldplaetze })}
           {waechst && <small>{tz('neu.feldNaechste', { n: naechste })}</small>}
         </span>
+        {onBereit && (
+          <button
+            type="button"
+            className={stil.bereitknopf}
+            data-bereit={eigenes.bereit ? '' : undefined}
+            aria-pressed={eigenes.bereit}
+            aria-label={tz(eigenes.bereit ? 'laden.bereitGemeldet' : 'laden.bereit')}
+            disabled={eigenes.bereit || !darfHandeln}
+            onClick={onBereit}
+          >
+            <Haken />
+          </button>
+        )}
       </div>
       <ol className={stil.karten} style={{ '--ladenplaetze': plaetze } as React.CSSProperties}>
         {Array.from({ length: plaetze }, (_, platz) => {
@@ -205,15 +245,52 @@ export function Laden({
           );
         })}
       </ol>
-      <button
-        type="button"
-        className={stil.bereitknopf}
-        data-bereit={eigenes.bereit ? '' : undefined}
-        disabled={eigenes.bereit || !darfHandeln}
-        onClick={onBereit}
-      >
-        {tz(eigenes.bereit ? 'laden.wartet' : 'laden.bereit')}
-      </button>
     </section>
+  );
+}
+
+/**
+ * Der zugeklappte Laden im Kampf: die fuenf Karten klein, Gold daneben, das
+ * Ganze EIN Knopf, der aufklappt. Gekauft wird hier nicht — eine 40 px
+ * schmale Karte ist zu klein, um sie sicher zu treffen, und ein Fehlkauf
+ * kostet Gold. Die Arena darueber bleibt dabei moeglichst gross.
+ */
+export function Shopleiste({
+  eigenes,
+  plaetze,
+  katalog,
+  onOeffnen,
+}: {
+  eigenes: EigeneSicht;
+  plaetze: number;
+  katalog: Record<string, Einheit>;
+  onOeffnen: () => void;
+}): React.JSX.Element {
+  return (
+    <button type="button" className={stil.shopleiste} onClick={onOeffnen} aria-label={tz('neu.ladenOeffnen')}>
+      <span className={stil.shopleisteGold} aria-hidden="true">
+        <Muenze />
+        <strong>{eigenes.gold}</strong>
+      </span>
+      <span className={stil.shopleisteKarten} aria-hidden="true">
+        {Array.from({ length: plaetze }, (_, platz) => {
+          const id = eigenes.laden[platz] ?? null;
+          const einheit = id ? katalog[id] : undefined;
+          return (
+            <span key={platz} className={stil.miniKarte} data-rahmen={einheit ? kostenStufe(einheit.kosten) : undefined} data-leer={einheit ? undefined : ''}>
+              {einheit && (
+                <>
+                  <Figur einheit={einheit} klasse={stil.miniFigur} />
+                  <em>{preisVon(einheit)}</em>
+                </>
+              )}
+            </span>
+          );
+        })}
+      </span>
+      <span className={stil.shopleistePfeil} aria-hidden="true">
+        ▴
+      </span>
+    </button>
   );
 }

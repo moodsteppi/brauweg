@@ -13,9 +13,20 @@
  * Kern, damit niemand beim Lesen hinueberspringen muss.
  *
  * AUFBAU HOCHKANT, von oben nach unten: Kopfband (Mitspieler, Runde, Zeit),
- * Markenleiste, das gemalte Feld mit beiden Brettern, die Bank, der Laden.
+ * Markenleiste, das gemalte Feld mit dem EIGENEN Brett, die Bank, der Laden.
  * Laden und Bank unten, in Daumenreichweite. Im Kampf nimmt die Arena die
- * ganze Flaeche unter dem Kopfband.
+ * Flaeche unter dem Kopfband, darunter Bank und die schmale Shopleiste.
+ *
+ * ROBINS RUECKMELDUNG VOM IPHONE (28.11.2026), hier umgesetzt:
+ * - Ruestphase nur mit der eigenen Haelfte; ein Tipp auf einen Mitspieler
+ *   oben legt kurz SEIN Brett an diese Stelle (`gezeigterGegner`), mit
+ *   Zurueck-Knopf. Einen vorgewaehlten Gegner gibt es nicht mehr — der
+ *   goldene Rahmen stand sonst immer auf dem ersten Mitspieler, auch wenn man
+ *   gar nicht gegen ihn spielte. Rot umrandet ist nur der naechste Gegner.
+ * - Verkaufen per Ziehen nach unten: die Verkaufszone mit dem Erloes aus
+ *   `stufenwerte` (dieselbe Quelle wie der Verkaufen-Knopf im Blatt).
+ * - Im Kampf kaufen, von der Bank verkaufen und die Bank umsortieren — mit
+ *   den Zuegen aus `eigenes.kampfZuege`, weil `legalActions` dort leer ist.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,7 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { schauplatzFuerPartie } from '../../../figuren3d/grafik-neu';
 import { type Kampfpaarung, type Paarungsergebnis, abzuspielen } from '../kampfbericht';
 import { eigenerPlatz, gegnerDieseRunde } from '../platzierung';
-import type { Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
+import type { Aktion, Einheit, Faehigkeit, Stufenwerte, TafelrundeSicht } from '../sicht';
 import { type Synergie, type Synergiestand, markennamen, schwellenPruefer } from '../marken';
 import { einheitName, tz } from '../text';
 import {
@@ -36,33 +47,24 @@ import {
   rastermass,
   tippfolge,
 } from '../zuege';
-import { useZiehen } from '../ziehen';
+import { VERKAUFSZIEL, useZiehen } from '../ziehen';
 import { Abschluss } from './Abschluss';
 import { Bank } from './Bank';
 import { Einheitenblatt } from './Einheitenblatt';
 import { Feld, Hexbrett, Schauplatzgrund, aufBrett } from './Feld';
-import { Figur, Sterne } from './grafik';
+import { Figur, Muenze, Sterne } from './grafik';
 import { Kampf } from './Kampf';
 import { Kopfband, type Sitzzeile, sitzName } from './Kopfband';
-import { Laden } from './Laden';
+import { Laden, Shopleiste } from './Laden';
 import { Markenleiste, Markenpopup } from './Markenleiste';
 import stil from './neu.module.css';
 import { Regelblatt } from './Regelblatt';
 import { Rundenende, Zuschauen } from './Rundenende';
 
-/**
- * Die Aktionen des Moduls (partie.ts). `neuwuerfeln` und `levelAuf` gibt es
- * seit dem 27.11.2026 abends nicht mehr (Robin) — die Feldplaetze wachsen mit
- * der Runde, und der Laden ist, was er ist. Kommen sie in einer alten Liste
- * noch vor, bietet dieser Bildschirm sie nicht an.
- */
-export type Aktion =
-  | { typ: 'kaufen'; platz: number }
-  | { typ: 'neuwuerfeln' }
-  | { typ: 'levelAuf' }
-  | { typ: 'verschieben'; von: Ort; nach: Ort }
-  | { typ: 'verkaufen'; ort: Ort }
-  | { typ: 'bereit' };
+/* Die Aktionen stehen seit dem 28.11.2026 in sicht.ts — die Sicht traegt sie
+   jetzt selbst (`kampfZuege`). Hier weitergereicht, damit Huelle und Probe
+   nicht umziehen muessen. */
+export type { Aktion };
 
 /**
  * Was nur in der ERSTEN Sicht kommt und festgehalten werden muss (sicht.ts,
@@ -77,6 +79,7 @@ export interface Tischwissen {
 
 /** Leere Liste als Konstante — ein `?? []` je Bild waere je Rundruf eine neue Abhaengigkeit. */
 const OHNE_SYNERGIEN: Synergiestand[] = [];
+const OHNE_ZUEGE: readonly Aktion[] = [];
 
 /** Wie lange die Arena nach dem Phasenwechsel noch verblasst. */
 const AUSKLANG_MS = 400;
@@ -155,7 +158,13 @@ export function Spieltisch({
      derselbe, auf jedem Geraet am Tisch derselbe. */
   const schauplatz = schauplatzFuerPartie(tischKennung);
 
+  /**
+   * Der angetippte Mitspieler: im Kampf wessen Kampf laeuft, in der
+   * Ruestphase wessen Brett STATT des eigenen liegt. Null heisst: das eigene.
+   */
   const [gezeigterGegner, setGezeigterGegner] = useState<number | null>(null);
+  /** Im Kampf: ob der Laden aufgeklappt ist (sonst die schmale Leiste). */
+  const [ladenOffen, setLadenOffen] = useState(false);
   const [regelnOffen, setRegelnOffen] = useState(false);
   const [endbildWeg, setEndbildWeg] = useState<'aus' | 'ende' | null>(null);
   const [gewaehlt, setGewaehlt] = useState<Ort | null>(null);
@@ -170,6 +179,7 @@ export function Spieltisch({
      Blick aufs Nachbarbrett darf einen nicht den eigenen Kampf kosten. */
   useEffect(() => {
     setGezeigterGegner(null);
+    setLadenOffen(false);
   }, [sicht.phase]);
 
   // --- Senden mit Sperre ---------------------------------------------------
@@ -219,12 +229,37 @@ export function Spieltisch({
     return () => window.clearTimeout(uhr);
   }, [verschmolzen?.marke]);
 
+  // --- Welche Zuege gerade gelten -------------------------------------------
+
+  /*
+   * In der Kampfphase ist `legalActions` LEER (der Server liesse Bots sonst in
+   * der Kampfpause endlos handeln); was man dann darf, steht in der eigenen
+   * Sicht als `kampfZuege`. An der PHASE entschieden, nicht am Kampfbild: Im
+   * Ausklang der Arena ist schon wieder Ruestphase und `legalActions` gilt.
+   */
+  const imKampf = sicht.phase === 'kampf';
+  const legal = imKampf ? (eigenes?.kampfZuege ?? OHNE_ZUEGE) : legaleZuege;
+  /* Kann dieser Tisch ueberhaupt im Kampf handeln? Ein Tisch aus der Zeit
+     davor schickt das Feld nicht — dann bleibt der Kampf, wie er war: nur
+     die Arena. */
+  const kampfHandel = imKampf && eigenes !== null && eigenes.ausRunde === null && eigenes.kampfZuege !== undefined;
+  const darfHandeln = !wartet && (imKampf ? kampfHandel && legal.length > 0 : eigenes?.darfHandeln === true);
+  /** Welches fremde Brett das eigene gerade vertritt (nur Ruestphase). */
+  const fremdSitz = !imKampf && eigenes ? gezeigterGegner : null;
+
   // --- Ziehen und Antippen -------------------------------------------------
 
-  const darfHandeln = eigenes?.darfHandeln === true && !wartet;
   const zielbar = useCallback(
-    (von: Ort, nach: Ort): boolean => (eigenes ? darfSchieben(eigenes, von, nach) : false),
-    [eigenes],
+    (von: Ort, nach: Ort): boolean => {
+      if (!eigenes) return false;
+      /* Im Kampf steht das Feld in der Arena: aufstellen und abziehen gehen
+         erst danach. `verschieben` zaehlt keine Liste auf (Kopf von zuege.ts),
+         also sagt es hier der Bildschirm — nur Bank zu Bank, so wie der
+         Regelkern es im Kampf annimmt. */
+      if (imKampf && (von.bereich !== 'bank' || nach.bereich !== 'bank')) return false;
+      return darfSchieben(eigenes, von, nach);
+    },
+    [eigenes, imKampf],
   );
   const schiebe = useCallback(
     (von: Ort, nach: Ort): void => {
@@ -248,25 +283,38 @@ export function Spieltisch({
   const sieheNach = useCallback((sitz: number | null, ort: Ort): void => {
     setBlatt({ sitz, ort });
   }, []);
+
+  // --- Ableitungen aus den Zuegen -------------------------------------------
+
+  const kaufbar = useMemo(() => {
+    const raus = new Set<number>();
+    for (const z of legal) if (z.typ === 'kaufen') raus.add(z.platz);
+    return raus;
+  }, [legal]);
+  const verkaufbar = useMemo(() => {
+    const raus = new Set<string>();
+    for (const z of legal) if (z.typ === 'verkaufen') raus.add(ortSchluessel(z.ort));
+    return raus;
+  }, [legal]);
+
+  /* Verkaufen per Ziehen (Robin, 28.11.2026): Nach unten aus dem Bildschirm
+     gezogen ist verkauft — aber nur, was die Zugliste fuer diesen Ort anbietet. */
+  const darfVerkaufen = useCallback((von: Ort): boolean => verkaufbar.has(ortSchluessel(von)), [verkaufbar]);
+  const verkaufe = useCallback(
+    (von: Ort): void => {
+      if (!darfHandeln || !verkaufbar.has(ortSchluessel(von))) return;
+      schicke({ typ: 'verkaufen', ort: von });
+    },
+    [darfHandeln, verkaufbar, schicke],
+  );
   const { zug, ziehtVon, ablegeZiel, zeiger } = useZiehen({
     darf: darfHandeln,
     zielbar,
     tippe: tippeOrt,
     schiebe,
+    verkaufbar: darfVerkaufen,
+    verkaufe,
   });
-
-  // --- Ableitungen aus legalActions ----------------------------------------
-
-  const kaufbar = useMemo(() => {
-    const raus = new Set<number>();
-    for (const z of legaleZuege) if (z.typ === 'kaufen') raus.add(z.platz);
-    return raus;
-  }, [legaleZuege]);
-  const verkaufbar = useMemo(() => {
-    const raus = new Set<string>();
-    for (const z of legaleZuege) if (z.typ === 'verkaufen') raus.add(ortSchluessel(z.ort));
-    return raus;
-  }, [legaleZuege]);
   /* Der erste freie Bankplatz — dieselbe Wahl wie das Modul beim Kauf. */
   const freierBankplatz = useMemo<number | null>(() => {
     if (!eigenes) return null;
@@ -293,11 +341,15 @@ export function Spieltisch({
   const naechster = eigenes?.naechsterGegner ?? null;
   const gegnerJetzt = gegnerDieseRunde(sicht.kaempfe, sicht.ich) ?? naechster?.sitz ?? null;
   const lebendeGegner = sicht.gegner.filter((g) => g.ausRunde === null);
+  /* Das angetippte fremde Brett — und nur fuer Zuschauer (kein eigenes Brett)
+     ein vorgewaehltes, damit dort ueberhaupt etwas steht. Fuer Spieler gibt
+     es keinen Vorschlag mehr (Kopf dieser Datei). */
+  const fremd = fremdSitz !== null ? (sicht.gegner.find((g) => g.sitz === fremdSitz) ?? null) : null;
   const gegner =
-    sicht.gegner.find((g) => g.sitz === gezeigterGegner) ??
-    sicht.gegner.find((g) => g.sitz === naechster?.sitz) ??
-    lebendeGegner[0] ??
-    sicht.gegner[0];
+    fremd ??
+    (eigenes
+      ? undefined
+      : (sicht.gegner.find((g) => g.sitz === gezeigterGegner) ?? lebendeGegner[0] ?? sicht.gegner[0]));
   const gegnerTitel = (sitz: number): string => {
     const name = sitzName(zeile(sitz), sitz, sitze);
     if (naechster?.sitz !== sitz) return tz('neu.feldVon', { name });
@@ -345,7 +397,9 @@ export function Spieltisch({
   })();
   const blattEinheit = blattKaempfer ? katalog[blattKaempfer.id] : undefined;
   const blattWerte = blattKaempfer && blattEinheit ? stufenwerte[blattEinheit.id]?.[blattKaempfer.stufe - 1] : undefined;
-  const blattNurLesen = blatt !== null && (blatt.sitz !== null || !darfHandeln);
+  /* Im Kampf hat man nur die Bank in der Hand; eine Feldeinheit kaempft gerade. */
+  const blattNurLesen =
+    blatt !== null && (blatt.sitz !== null || !darfHandeln || (imKampf && blatt.ort.bereich !== 'bank'));
   const ladenEinheit = ladenBlatt !== null && eigenes ? katalog[eigenes.laden[ladenBlatt] ?? ''] : undefined;
 
   const waehleMarke = (m: string): void => {
@@ -365,9 +419,10 @@ export function Spieltisch({
       : null;
 
   const kampfLaeuft = kampfbild !== null;
-  const brettSitz = eigenes ? null : (gegner?.sitz ?? null);
-  const staende = eigenes ? eigeneSynergien : (gegner?.synergien ?? OHNE_SYNERGIEN);
+  /* Liegt ein fremdes Brett, gehoeren auch die Marken darueber ihm. */
+  const staende = eigenes && !fremd ? eigeneSynergien : (gegner?.synergien ?? OHNE_SYNERGIEN);
   const eigenesBrett = eigenes?.brett ?? [];
+  const gezeigtesBrett = eigenes && !fremd ? eigenesBrett : (gegner?.brett ?? []);
 
   const zwischenstand = [
     ...(eigenes ? [{ sitz: eigenes.sitz, leben: eigenes.leben, aus: eigenes.ausRunde !== null, ich: true }] : []),
@@ -376,6 +431,49 @@ export function Spieltisch({
 
   const gezogen =
     zug && eigenes ? ((zug.von.bereich === 'bank' ? eigenes.bank : eigenes.brett)[zug.von.platz] ?? null) : null;
+  /* Der Erloes fuer die Verkaufszone — aus `stufenwerte`, derselben Quelle wie
+     der Verkaufen-Knopf im Blatt. Nichts gerechnet. */
+  const zugVerkaufbar = zug !== null && verkaufbar.has(ortSchluessel(zug.von));
+  const zugErloes = gezogen ? stufenwerte[gezogen.id]?.[gezogen.stufe - 1]?.erloes : undefined;
+
+  /* Kopfband: Antippen eines Mitspielers. In der Ruestphase legt es dessen
+     Brett statt des eigenen hin; dieselbe Kachel oder die eigene noch einmal
+     bringt das eigene zurueck. */
+  const waehleSitz = (sitz: number): void => {
+    if (kampfLaeuft) {
+      setGezeigterGegner(sitz === sicht.ich ? null : sitz);
+      return;
+    }
+    setGewaehlt(null);
+    setGezeigterGegner((alt) => (sitz === sicht.ich || alt === sitz ? null : sitz));
+  };
+
+  /* Die Bank — in der Ruestphase und (unter der Arena) im Kampf dieselbe. */
+  const bank = eigenes ? (
+    <Bank
+      plaetze={sicht.bankPlaetze}
+      bank={eigenes.bank}
+      katalog={katalog}
+      aktiv={darfHandeln}
+      gewaehlt={gewaehlt}
+      istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
+      ablegeZiel={ablegeZiel}
+      ziehtVon={ziehtVon}
+      zeiger={zeiger}
+      onTippe={tippeOrt}
+      onNachsehen={(ort) => sieheNach(null, ort)}
+      marke={marke}
+    />
+  ) : null;
+  const auswahlband =
+    gewaehlt && darfHandeln ? (
+      <div className={stil.auswahlband} role="status">
+        <span>{tz('hinweis.ziel')}</span>
+        <button type="button" className={stil.zweitknopf} onClick={() => setGewaehlt(null)}>
+          {tz('abbrechen')}
+        </button>
+      </div>
+    ) : null;
 
   return (
     <main className={stil.tisch} data-phase={kampfLaeuft ? 'kampf' : 'ruesten'}>
@@ -388,15 +486,18 @@ export function Spieltisch({
         sicht={sicht}
         sitze={sitze}
         gegnerJetzt={gegnerJetzt}
-        gezeigt={kampfLaeuft ? kampfSitz : (gegner?.sitz ?? null)}
+        /* Hervorgehoben nur, was man selbst angetippt hat — nie ein Vorschlag
+           (Robin: „Emil" hatte immer einen Rahmen, obwohl er gar nicht der
+           Gegner war). Der eigene Kampf ist kein Antippen. */
+        gezeigt={kampfLaeuft ? (kampfSitz !== sicht.ich ? kampfSitz : null) : (gegner?.sitz ?? null)}
         frist={frist ?? rundenfrist}
-        onWahl={(sitz) => setGezeigterGegner(sitz === sicht.ich ? null : sitz)}
+        onWahl={waehleSitz}
         onZurueck={onZurueck}
         onRegeln={() => setRegelnOffen(true)}
       />
 
       {kampfLaeuft ? (
-        <div className={stil.kampfFlaeche}>
+        <div className={stil.kampfFlaeche} data-unten={kampfHandel && !sicht.fertig ? '' : undefined}>
           {kampf ? (
             <Kampf
               key={kampfSchluessel(kampfbild.kaempfe)}
@@ -441,62 +542,84 @@ export function Spieltisch({
               {tz('kampf.zurueckZuDeinem')}
             </button>
           )}
+          {/* Unter der Arena: die eigene Bank und der Laden — zugeklappt als
+              schmale Leiste, aufgeklappt gross (Robins Wahl, 28.11.2026). Die
+              Arena oben bleibt dabei sichtbar, sie wird nur kleiner. */}
+          {kampfHandel && eigenes && !sicht.fertig && (
+            <div className={stil.kampfUnten}>
+              {bank}
+              {auswahlband ??
+                (ladenOffen ? (
+                  <Laden
+                    eigenes={eigenes}
+                    plaetze={sicht.ladenPlaetze}
+                    katalog={katalog}
+                    kaufbar={kaufbar}
+                    darfHandeln={darfHandeln}
+                    fehlen={fehlen}
+                    trifft={trifft}
+                    onKauf={(platz) => schicke({ typ: 'kaufen', platz })}
+                    onBlatt={setLadenBlatt}
+                    onZuklappen={() => setLadenOffen(false)}
+                  />
+                ) : (
+                  <Shopleiste
+                    eigenes={eigenes}
+                    plaetze={sicht.ladenPlaetze}
+                    katalog={katalog}
+                    onOeffnen={() => setLadenOffen(true)}
+                  />
+                ))}
+            </div>
+          )}
         </div>
       ) : (
         <>
           <Markenleiste staende={staende} tabelle={synergieTabelle} gewaehlt={marke} onWahl={waehleMarke} />
           <Feld
             verhaeltnis={rastermass(sicht.brettReihen, sicht.brettSpalten).seitenverhaeltnis}
-            gegner={
-              eigenes && gegner ? (
-                <>
-                <p className={stil.feldName} data-naechster={naechster?.sitz === gegner.sitz ? '' : undefined}>
-                  {gegnerTitel(gegner.sitz)}
-                </p>
-                <Hexbrett
-                  reihen={sicht.brettReihen}
-                  spalten={sicht.brettSpalten}
-                  felder={gegner.brett}
-                  katalog={katalog}
-                  gespiegelt
-                  aktiv={false}
-                  gewaehlt={null}
-                  ablegeZiel={null}
-                  ziehtVon={null}
-                  marke={null}
-                  onNachsehen={(ort) => sieheNach(gegner.sitz, ort)}
-                  beschriftung={tz('neu.feldVon', { name: sitzName(zeile(gegner.sitz), gegner.sitz, sitze) })}
-                />
-                </>
-              ) : null
+            fremd={fremd !== null}
+            kopf={
+              fremd ? (
+                <div className={stil.fremdKopf}>
+                  <p className={stil.feldName} data-naechster={naechster?.sitz === fremd.sitz ? '' : undefined}>
+                    {gegnerTitel(fremd.sitz)}
+                  </p>
+                  <button type="button" className={stil.zurueckFeld} onClick={() => setGezeigterGegner(null)}>
+                    <span aria-hidden="true">‹</span>
+                    {tz('neu.zurueckZuDeinemFeld')}
+                  </button>
+                </div>
+              ) : undefined
             }
           >
-            {eigenes && eigenes.belegt === 0 && <p className={stil.leerSatz}>{tz('brett.leer')}</p>}
-            <Hexbrett
-              reihen={sicht.brettReihen}
-              spalten={sicht.brettSpalten}
-              felder={eigenes ? eigenesBrett : (gegner?.brett ?? [])}
-              katalog={katalog}
-              eigen={eigenes !== null}
-              aktiv={darfHandeln}
-              gewaehlt={gewaehlt}
-              istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
-              ablegeZiel={ablegeZiel}
-              ziehtVon={ziehtVon}
-              zeiger={zeiger}
-              onTippe={tippeOrt}
-              onNachsehen={(ort) => sieheNach(brettSitz, ort)}
-              marke={marke}
-              beschriftung={tz('neu.deinFeld')}
-            />
-          </Feld>
-
-          {eigenes && eigenes.ausRunde === null && !sicht.fertig && (
-            <>
-              <Bank
-                plaetze={sicht.bankPlaetze}
-                bank={eigenes.bank}
+            {eigenes && !fremd && eigenes.belegt === 0 && <p className={stil.leerSatz}>{tz('brett.leer')}</p>}
+            {fremd || !eigenes ? (
+              /* Ein fremdes Brett: gespiegelt wie im Kampf (seine Front
+                 zeigt zu einem), nur zum Ansehen. Ohne `eigen` traegt keine
+                 Wabe ein `data-ziel` — Ziehen aufs Feld ist damit aus. */
+              <Hexbrett
+                key={`fremd-${gegner?.sitz ?? 'keiner'}`}
+                reihen={sicht.brettReihen}
+                spalten={sicht.brettSpalten}
+                felder={gegner?.brett ?? []}
                 katalog={katalog}
+                gespiegelt={fremd !== null}
+                aktiv={false}
+                gewaehlt={null}
+                ablegeZiel={null}
+                ziehtVon={null}
+                onNachsehen={(ort) => sieheNach(gegner?.sitz ?? null, ort)}
+                marke={marke}
+                beschriftung={gegner ? gegnerTitel(gegner.sitz) : tz('neu.deinFeld')}
+              />
+            ) : (
+              <Hexbrett
+                reihen={sicht.brettReihen}
+                spalten={sicht.brettSpalten}
+                felder={eigenesBrett}
+                katalog={katalog}
+                eigen
                 aktiv={darfHandeln}
                 gewaehlt={gewaehlt}
                 istZiel={gewaehlt ? (ort) => zielbar(gewaehlt, ort) : undefined}
@@ -506,15 +629,15 @@ export function Spieltisch({
                 onTippe={tippeOrt}
                 onNachsehen={(ort) => sieheNach(null, ort)}
                 marke={marke}
+                beschriftung={tz('neu.deinFeld')}
               />
-              {gewaehlt && darfHandeln ? (
-                <div className={stil.auswahlband} role="status">
-                  <span>{tz('hinweis.ziel')}</span>
-                  <button type="button" className={stil.zweitknopf} onClick={() => setGewaehlt(null)}>
-                    {tz('abbrechen')}
-                  </button>
-                </div>
-              ) : (
+            )}
+          </Feld>
+
+          {eigenes && eigenes.ausRunde === null && !sicht.fertig && (
+            <>
+              {bank}
+              {auswahlband ?? (
                 <Laden
                   eigenes={eigenes}
                   plaetze={sicht.ladenPlaetze}
@@ -525,7 +648,8 @@ export function Spieltisch({
                   trifft={trifft}
                   onKauf={(platz) => schicke({ typ: 'kaufen', platz })}
                   onBlatt={setLadenBlatt}
-                  onBereit={() => schicke({ typ: 'bereit' })}
+                  /* Bereit meldet man nur in der Ruestphase. */
+                  onBereit={imKampf ? undefined : () => schicke({ typ: 'bereit' })}
                 />
               )}
             </>
@@ -555,11 +679,14 @@ export function Spieltisch({
             blattNurLesen
               ? undefined
               : () => {
+                  // Zum Aufstellen braucht es das eigene Brett, nicht ein fremdes.
+                  setGezeigterGegner(null);
                   setGewaehlt(blatt.ort);
                   setBlatt(null);
                 }
           }
-          aufstellenTitel={tz(blatt.ort.bereich === 'bank' ? 'knopf.aufstellen' : 'knopf.verschieben')}
+          /* Im Kampf geht eine Bankeinheit nur auf einen anderen Bankplatz. */
+          aufstellenTitel={tz(blatt.ort.bereich === 'bank' && !imKampf ? 'knopf.aufstellen' : 'knopf.verschieben')}
           onMarke={(m) => setMarkePopup(m)}
           escapeAus={markePopup !== null}
           onSchliessen={() => setBlatt(null)}
@@ -584,14 +711,17 @@ export function Spieltisch({
           stand={staende.find((s) => s.marke === markePopup)}
           synergie={synergieTabelle.find((s) => s.marke === markePopup)}
           katalog={katalog}
-          aufBrett={aufBrett(eigenes ? eigenesBrett : (gegner?.brett ?? []))}
+          aufBrett={aufBrett(gezeigtesBrett)}
           aufBank={aufBrett(eigenes?.bank ?? [])}
           ebene={blatt || ladenBlatt !== null ? 2 : 1}
           onSchliessen={() => setMarkePopup(null)}
         />
       )}
       {regelnOffen && (
-        <Regelblatt wissen={{ katalog, faehigkeiten, synergieTabelle }} onSchliessen={() => setRegelnOffen(false)} />
+        <Regelblatt
+          wissen={{ katalog, faehigkeiten, synergieTabelle, verschmelzZahl: sicht.verschmelzZahl }}
+          onSchliessen={() => setRegelnOffen(false)}
+        />
       )}
 
       {verschmolzen && (
@@ -601,6 +731,28 @@ export function Spieltisch({
             n: sicht.verschmelzZahl,
             name: katalog[verschmolzen.id] ? einheitName(katalog[verschmolzen.id]!) : tz('einheit'),
           })}
+        </div>
+      )}
+
+      {/* Die Verkaufszone am unteren Rand, nur waehrend eine verkaufbare
+          Einheit am Finger haengt. Sie liegt ueber dem Laden (den braucht
+          beim Ziehen niemand) und laesst die Bank frei, damit Umsortieren
+          weiter geht. Loslassen hier — oder unter dem Bildschirmrand — verkauft. */}
+      {zugVerkaufbar && (
+        <div
+          className={stil.verkaufZone}
+          data-ziel={VERKAUFSZIEL}
+          data-unter={ablegeZiel === VERKAUFSZIEL ? '' : undefined}
+          data-phase={imKampf ? 'kampf' : 'ruesten'}
+          role="status"
+        >
+          <span>{tz('neu.verkaufZone')}</span>
+          {zugErloes !== undefined && (
+            <strong>
+              +<Muenze />
+              {zugErloes}
+            </strong>
+          )}
         </div>
       )}
 
