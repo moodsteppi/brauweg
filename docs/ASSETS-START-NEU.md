@@ -38,3 +38,16 @@ Die vorhandenen `aufgaben/lernen/browort/play.webp` liegen als 1254² mit
 
 Originale: `packages/client/art/start-neu/` (lokal, `.gitignore`), danach ins
 Archiv `moodsteppi/brauweg-art`.
+
+## 3. Spielart-Karten — `hub/spielarten/<spiel>-<id>.webp`
+
+25 freigestellte Motive (256², je ~25 kB) für die Spielart-Karten der
+Spiel-Einstiege (`docs/STARTSEITE-UMBAU-PLAN.md` Abschnitt 11): doppelkopf
+anfaenger/normal/standard/hart, skat normal/klassisch/hart, zauberer
+normal/profi/chaos, cambio normal/hart, poker locker/abend/hoch, eiland
+klar/nebel, brochess bullet/blitz/schnell/spezial, partykiste
+turnier/eskalation/themenabend/team. Über codex mit `aufgaben.webp`/`lernen.webp`
+als Stilvorlage erzeugt, auf Rot geprüft (Kontaktbogen), Spielkarten nur mit
+Farbsymbolen, ohne Buchstaben/Zahlen. Farbduell (Vorschaubrett) und Golf
+(Bahnminiatur) bleiben gezeichnet. Prompts und Originale:
+`packages/client/art/spielarten/` (lokal), Archiv `brauweg-art`.
