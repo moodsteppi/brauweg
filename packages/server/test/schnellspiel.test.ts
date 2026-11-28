@@ -337,6 +337,25 @@ test('Wahl 4: sonst der Zufall — Suche oder Arena, nur unter dem Erlaubten', a
   assert.equal((await p.vermittlung.abruf('doppelkopf', anna.id)).sucht, false, 'die alte Suche ist verlassen');
 });
 
+test('Wahl 4 bei einem Spiel mit Spielarten: gesucht wird in der Vorgabe-Spielart', async (t) => {
+  const p = await probe();
+  t.after(() => p.close());
+  const anna = await p.konto('Anna');
+  const bert = await p.konto('Bert');
+  const cara = await p.konto('Cara');
+
+  // Zufall 0 = Doppelkopf, und dort wartet niemand.
+  const res = await starten(p, anna.kopf(), { spiele: ['doppelkopf'] });
+  assert.equal(res.json().gameId, 'doppelkopf');
+
+  // Wer ueber den Spieleinstieg „Standard" sucht, steht im selben Topf ...
+  const standard = requireModule('doppelkopf').meta.spielarten![0]!;
+  assert.equal(standard.id, 'standard');
+  assert.equal((await p.vermittlung.betritt('doppelkopf', bert.id, standard.config)).suchende, 2);
+  // ... wer mit der nackten Vorgabe des Moduls sucht (ohne variante), nicht.
+  assert.equal((await p.vermittlung.betritt('doppelkopf', cara.id)).suchende, 1);
+});
+
 test('Die gespeicherte Auswahl gilt, wenn der Aufruf keine nennt', async (t) => {
   const p = await probe();
   t.after(() => p.close());

@@ -413,7 +413,16 @@ export async function schnellspielStarten(deps: StartDeps, wunsch: StartWunsch):
     // Aus jeder anderen Suche heraus: Quick-Play ist EINE Suche, nicht eine
     // zusaetzliche neben der, die vielleicht noch in einem Reiter laeuft.
     deps.vermittlung.verlaesstAlle(accountId);
-    const stand = await deps.vermittlung.betrittBeiDenWartenden(gameId, accountId);
+    /*
+     * Wartet in diesem Spiel noch niemand, sucht Quick-Play in der
+     * VORGABE-SPIELART (der ersten aus `GameMeta.spielarten`, beim Doppelkopf
+     * „Standard") und nicht mit `defaultConfig()`: Die Vorgabe des Moduls
+     * traegt keine `variante`, stuende also in einem eigenen Topf neben allen,
+     * die ueber den Spieleinstieg eine Spielart suchen — und wer nach ihr
+     * kommt, faende dort niemanden. Wartet schon jemand, gilt dessen Topf.
+     */
+    const vorgabe = requireModule(gameId).meta.spielarten?.[0]?.config ?? null;
+    const stand = await deps.vermittlung.betrittBeiDenWartenden(gameId, accountId, vorgabe);
     return { art: 'suche', gameId, stand };
   };
   const arena = async (id: SchnellspielArena): Promise<Schnellspielstand> => {

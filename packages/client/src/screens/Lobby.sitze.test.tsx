@@ -22,6 +22,7 @@ vi.mock('../api', () => ({
     tables: () => Promise.resolve([]),
     joinTable: vi.fn(),
   },
+  spielartenApi: { liste: () => Promise.resolve({ spielarten: [] }) },
 }));
 
 import { Lobby } from './Lobby';
@@ -36,9 +37,9 @@ async function durchatmen(): Promise<void> {
 async function ersterTisch(): Promise<Record<string, unknown>> {
   render(<Lobby gameId="skat" onEnter={() => {}} onBack={() => {}} />);
   await durchatmen();
-  fireEvent.click(screen.getByRole('button', { name: 'Tisch erstellen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mit Freunden' }));
   await durchatmen();
-  fireEvent.click(screen.getByRole('button', { name: 'Tisch erstellen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tisch aufmachen' }));
   await durchatmen();
   expect(createTable).toHaveBeenCalledTimes(1);
   return createTable.mock.calls[0]![0] as Record<string, unknown>;

@@ -2175,6 +2175,30 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
+  /**
+   * Die Spielarten eines Spiels (seit dem 28.11.2026): fertige Regelsaetze mit
+   * Kennung, die erste ist die Vorgabe. Unbesehen aus dem Modul
+   * (`GameMeta.spielarten`) — der Client zeichnet die Karten und schickt die
+   * `config` der gewaehlten an Suche oder Tischbau, ohne sie abzuschreiben.
+   *
+   * Eigene Route und kein Feld in `/defaults`: Der Einstieg braucht die
+   * Spielarten sofort beim Oeffnen, die Vorgabe erst beim Regeleditor; und
+   * ein Spiel ohne Spielarten antwortet mit einer leeren Liste statt mit
+   * einem Feld, das jeder Leser auf `undefined` pruefen muss.
+   */
+  app.get('/api/games/:gameId/spielarten', async (request, reply) => {
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    const module = requireModule(gameId as GameId);
+    if (module.meta.nurIos) requireSpielbar(gameId, plattformVon(request), umfang);
+    return reply.send({
+      spielarten: (module.meta.spielarten ?? []).map((art) => ({
+        id: art.id,
+        config: art.config,
+        ...(art.runden !== undefined ? { runden: art.runden } : {}),
+      })),
+    });
+  });
+
   // -------------------------------------------------------------------------
   // Clans (Plan 9.3)
   // -------------------------------------------------------------------------

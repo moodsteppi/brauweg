@@ -15,7 +15,11 @@ import { abschlussdaten, type Abschlussdaten } from '../minispiele/golf/abschlus
 import { schlagAus, vorschau } from '../minispiele/golf/eingabe';
 import { Kamera } from '../minispiele/golf/kamera';
 import { type Karte, loeseBahnen } from '../minispiele/golf/karte';
-import { Bahnauswahl, BahnauswahlAnzeige } from '../minispiele/golf/Bahnauswahl';
+import { Bahnauswahl, BahnauswahlAnzeige, Bahnminiatur } from '../minispiele/golf/Bahnauswahl';
+import { Einladung } from '../minispiele/partykiste/Einladung';
+import { SpielartKarten, SuchWarten, quickplayUnter, spielartName } from '../spielarten/SpielartKarten';
+import { useSchnellsuche } from '../spielarten/useSchnellsuche';
+import { useSpielarten } from '../spielarten/useSpielarten';
 import { FunAnsage, ModusAnzeige, ModusWahl, gemerkterModus, regelnMitModus } from '../minispiele/golf/FunAnsage';
 import { PowerupAnzeige } from '../minispiele/golf/PowerupAnzeige';
 import {
@@ -231,6 +235,14 @@ export function Golf({
   const sperre = useInhaltsSperren('golf');
   const kursSperre = (kurs: string): string | undefined => sperre('kurs', kurs);
   const [botWahl, setBotWahl] = useState<Bahnwahl>(gemerkteWahl);
+  /*
+   * Die Kurse als Spielarten (seit dem 28.11.2026, `GameMeta.spielarten`):
+   * Karten im Menue, Quick-Play sucht im gewaehlten Kurs, Bots und Freunde
+   * starten mit ihm. Die Miniatur bleibt gezeichnet (Bahnminiatur).
+   */
+  const spielartwahl = useSpielarten('golf');
+  const kursArt = spielartwahl.gewaehlt;
+  const suche = useSchnellsuche('golf', (id) => setTischId(id));
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ich, setIch] = useState<Me | null>(null);
@@ -341,37 +353,35 @@ export function Golf({
 
   /* ---------------------------------------------------------------- */
 
-  /**
-   * Online spielen: der offenen Gruppe beitreten, sonst eine aufmachen.
-   *
-   * Ohne `config`: Der Server nimmt dann `defaultConfig()` des Moduls. Eine
-   * mitgeschickte Kopie des Regelsatzes überstimmte das Modul, ohne dass es
-   * irgendwo auffiele (siehe CLAUDE.md, Tafelrunde).
+  /*
+   * HIER STAND BIS ZUM 28.11.2026 „Online spielen": der ersten offenen Gruppe
+   * aus der Tischliste beitreten, sonst eine oeffentliche aufmachen. Robin:
+   * Tischlisten verwirren. An ihre Stelle treten Quick-Play (Suche im
+   * gewaehlten Kurs ueber die Schlange) und „Mit Freunden".
    */
-  const spieleOnline = useCallback(async (): Promise<void> => {
+
+  /**
+   * Mit Freunden: eine private Gruppe fuer acht im gewaehlten Kurs. In der
+   * Gruppe stehen Einladung und — fuer Sitz 0 — die Bahnauswahl wie bisher.
+   */
+  const spieleMitFreunden = useCallback(async (): Promise<void> => {
     setFehler(null);
     setLaedt(true);
     try {
-      const liste = await api.tables('golf');
-      const offen = liste.find((zeile) => zeile.gameId === 'golf' && zeile.occupied < zeile.seats);
-      if (offen) {
-        await api.joinTable(offen.id);
-        setTischId(offen.id);
-        return;
-      }
       const { id } = await api.createTable({
         gameId: 'golf',
         seats: 8,
-        rounds: 9,
-        visibility: 'public',
+        rounds: kursArt?.runden ?? 9,
+        visibility: 'on_request',
+        ...(kursArt ? { config: kursArt.config } : {}),
       });
       setTischId(id);
-    } catch {
-      setFehler(t('golf.menue.fehlerOnline'));
+    } catch (e) {
+      setFehler(tischFehler(e, t('golf.menue.fehlerOnline')));
     } finally {
       setLaedt(false);
     }
-  }, []);
+  }, [kursArt]);
 
   /**
    * Gegen Bots: eigener Tisch, `on_request` und sofort mit Bots gefüllt.
@@ -574,6 +584,25 @@ export function Golf({
         </SpielRahmen>
       );
     }
+    if (suche.suchstand) {
+      return (
+        <SuchWarten
+          gameId="golf"
+          stand={suche.suchstand}
+          unter={kursArt ? `${t('game.golf')} · ${spielartName('golf', kursArt.id)}` : t('game.golf')}
+          akzent={AKZENT}
+          onAbbrechen={suche.brichAb}
+        />
+      );
+    }
+    /** Die Miniatur eines Kurses: seine letzte Bahn, wie in der Bahnauswahl. */
+    const kursMiniatur = (id: string): React.ReactNode | null => {
+      const kurs = lobby.daten?.kurse.find((k) => k.kennung === id);
+      const finale = kurs ? KARTEN.find((k) => k.id === kurs.bahnen[kurs.bahnen.length - 1]) : undefined;
+      return finale ? <Bahnminiatur karte={finale} /> : null;
+    };
+    const gesperrt = kursArt ? (kursSperre(kursArt.id) ?? null) : null;
+    const unterQuick = quickplayUnter('golf', kursArt);
     return (
       <SpielRahmen
         gameId="golf"
@@ -584,35 +613,68 @@ export function Golf({
         fuss={
           <>
             <button
-              className="hb-kn is-gold is-haupt is-breit"
+              className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
               type="button"
-              data-golf-online=""
-              onClick={() => void spieleOnline()}
-              disabled={laedt}
+              data-einstieg="quickplay"
+              onClick={() => {
+                setFehler(null);
+                void suche.starte(kursArt?.config);
+              }}
+              disabled={laedt || suche.startet || spielartwahl.spielarten === null || gesperrt !== null}
             >
-              {t('golf.menue.online')}
+              {t('einstieg.quickplay')}
+              {unterQuick && <small>{unterQuick}</small>}
             </button>
-            <button
-              className="hb-kn is-blau is-breit"
-              type="button"
-              data-golf-bots=""
-              onClick={() => setBotsOffen(true)}
-            >
-              {t('golf.menue.gegenBots')}
-            </button>
+            {/* Nebeneinander wie im Spieleinstieg der Lobby-Spiele: Die Karten darueber sind der Inhalt. */}
+            <div className="hb-knopfreihe">
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-golf-bots=""
+                data-einstieg="bots"
+                onClick={() => {
+                  // Der Bot-Tisch beginnt im gewaehlten Kurs; die Bahnauswahl
+                  // dort laesst ihn wie bisher umstellen.
+                  if (kursArt && gesperrt === null) setBotWahl({ art: 'kurs', kurs: kursArt.id });
+                  setBotsOffen(true);
+                }}
+              >
+                {t('einstieg.bots')}
+              </button>
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-einstieg="freunde"
+                onClick={() => void spieleMitFreunden()}
+                disabled={laedt || gesperrt !== null}
+              >
+                {t('einstieg.freunde')}
+              </button>
+            </div>
           </>
         }
       >
         <p className="spe-text">{t('golf.menue.text')}</p>
-        <div className="gf-probe" aria-hidden="true">
-          {menueFarben.map((farbe, i) => (
-            <Golfball key={i} farbe={farbe} groesse={34} />
-          ))}
-        </div>
         {KARTEN.length === 0 && (
           <p className="hb-fehler">{t('golf.menue.keineBahnen')}</p>
         )}
         {fehler && <p className="hb-fehler">{fehler}</p>}
+        {suche.fehler && <p className="hb-fehler">{t(suche.fehler)}</p>}
+        {spielartwahl.spielarten && spielartwahl.spielarten.length > 0 && (
+          <SpielAbschnitt titel={t('einstieg.spielart')}>
+            <SpielartKarten
+              gameId="golf"
+              spielarten={spielartwahl.spielarten}
+              gewaehlt={kursArt?.id ?? null}
+              onWahl={spielartwahl.waehle}
+              vorschau={(art) => kursMiniatur(art.id)}
+              hinweis={(art) =>
+                art.runden !== undefined ? tn('golf.anzahl.loecher', art.runden, { n: zahl(art.runden) }) : null
+              }
+              gesperrt={(art) => kursSperre(art.id) ?? null}
+            />
+          </SpielAbschnitt>
+        )}
       </SpielRahmen>
     );
   }
@@ -904,6 +966,9 @@ function Lobby({
         <ul className="hb-liste gf-neu-gruppe">{zeilen}</ul>
       </SpielAbschnitt>
       <GastHinweis sitze={sitze} className="hb-klein" />
+      {/* Die Gruppe ist privat (seit dem 28.11.2026 gibt es keine Tischliste
+          mehr) — wer dazukommen soll, kommt ueber Code, Link oder QR. */}
+      <Einladung spiel="golf" neu />
       {binHost ? (
         <>
           {bahnwahl}

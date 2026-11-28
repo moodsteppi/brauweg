@@ -40,6 +40,7 @@ import {
   suggestedRounds,
 } from './regeln.js';
 import { type FillerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -58,6 +59,8 @@ type GespeichertePartie = FillerPartie & {
 };
 
 const meta: GameMeta = {
+  // Nebel, Klar, Build, Extreme — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'filler',
   nameKey: 'game.filler',
   availability: 'playable',

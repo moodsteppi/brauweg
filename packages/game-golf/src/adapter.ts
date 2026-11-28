@@ -59,6 +59,7 @@ import {
   type GolfRegeln,
   type Zug,
 } from './regeln.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /*
  * Bleibt 1, obwohl `GolfPartie` am 22.09.2026 das Feld `bahnen` bekam: Ein
@@ -102,6 +103,8 @@ export interface GolfView {
 }
 
 const meta: GameMeta = {
+  // Die Kurse — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'golf',
   nameKey: 'game.golf',
   availability: 'playable',

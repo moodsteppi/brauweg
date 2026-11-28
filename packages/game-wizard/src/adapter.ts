@@ -41,6 +41,7 @@ import { DEFAULT_RULESET, type RuleSet, SEAT_COUNTS, rotationSize, suggestedRoun
 import { validateRuleSet } from './validator.js';
 import { type PlayerView, spectatorView as roundSpectatorView, viewFor as roundViewFor } from './view.js';
 import { botAction as engineBotAction } from './bot.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -69,6 +70,8 @@ export interface WizardView {
 }
 
 const meta: GameMeta = {
+  // Normal, Profi, Chaos — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'wizard',
   nameKey: 'game.wizard',
   availability: 'playable',

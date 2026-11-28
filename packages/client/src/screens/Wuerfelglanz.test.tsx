@@ -21,6 +21,18 @@ it('legt Solo mit einem Platz und eine Mehrspielerrunde mit gewählter Spielerza
   fireEvent.click(screen.getByRole('button', { name: 'Offenen Tisch für 4 erstellen' }));
   await waitFor(() => expect(api.createTable).toHaveBeenLastCalledWith({ gameId: 'wuerfelglanz', seats: 4, rounds: 1, visibility: 'public' }));
 });
+// Seit dem 28.11.2026: Quick-Play über die Schlange statt der Liste offener Tische.
+it('Quick-Play sucht über die Schlange; eine Tischliste gibt es nicht mehr', async () => {
+  vi.spyOn(api, 'sucheStarten').mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null } as never);
+  vi.spyOn(api, 'sucheStand').mockReturnValue(new Promise(() => {}));
+  vi.spyOn(api, 'sucheAbbrechen').mockResolvedValue({ ok: true });
+  render(<WuerfelglanzMenue onBack={vi.fn()} onTisch={vi.fn()} />);
+  expect(screen.queryByText(/Offene Würfeltische/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Quick-Play' }));
+  await waitFor(() => expect(api.sucheStarten).toHaveBeenCalledWith('wuerfelglanz', undefined));
+  expect(await screen.findByRole('heading', { name: 'Mitspieler suchen' })).toBeTruthy();
+  expect(api.tables).not.toHaveBeenCalled();
+});
 it('startet ohne geladene Spielvorgabe nichts und erlaubt einen erneuten Abruf', async () => {
   vi.mocked(api.defaults).mockRejectedValueOnce(new Error('Server nicht erreichbar'));
   render(<WuerfelglanzMenue onBack={vi.fn()} onTisch={vi.fn()} />);

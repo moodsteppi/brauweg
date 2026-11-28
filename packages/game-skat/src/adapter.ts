@@ -40,6 +40,7 @@ import {
   upcomingBock,
 } from './party.js';
 import { botAction as engineBotAction } from './bot.js';
+import { SPIELARTEN } from './spielarten.js';
 
 const SNAPSHOT_VERSION = 1;
 
@@ -59,6 +60,8 @@ export interface SkatView {
 }
 
 const meta: GameMeta = {
+  // Normal, Klassisch, Hart — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'skat',
   nameKey: 'game.skat',
   availability: 'playable',

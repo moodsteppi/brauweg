@@ -1,0 +1,79 @@
+/*
+ * Spielart-Karten im Spieleinstieg (SpielartKarten.tsx, seit dem 28.11.2026).
+ *
+ * Das Raster selbst ist `.aw-*` (styles.css); hier steht nur, was die Karte
+ * eines Spielmodus anders hat: ein Bildfeld fester Hoehe, damit Karten mit
+ * Bild und Karten mit Banner-Ersatz gleich hoch sind. Die Bilder sind
+ * quadratisch und freigestellt (256 × 256) und stehen deshalb ganz im Feld;
+ * das Banner ist breit und fuellt es.
+ */
+.spe .spa-karten .aw-kachel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 6px 8px;
+  border: 1.5px solid var(--hb-kontur);
+  border-radius: 16px;
+  background: var(--hb-karte);
+  text-align: left;
+}
+.spe .spa-karten .aw-kachel.is-an {
+  border: 2px solid var(--spe-akzent);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--spe-akzent) 14%, var(--hb-karte));
+}
+.spe .spa-karten .aw-titel {
+  font: 800 14px/1.2 var(--hb-txt);
+}
+.spe .spa-karten .aw-text {
+  font: 700 12px/1.3 var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spa-art {
+  display: block;
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--hb-grund-tief, rgba(0, 0, 0, 0.25));
+}
+.spa-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.spa-art.is-banner img {
+  object-fit: cover;
+}
+.spa-art.is-gezeichnet {
+  display: grid;
+  place-items: center;
+}
+.spa-art.is-gezeichnet > * {
+  max-width: 100%;
+  max-height: 100%;
+}
+/* Ohne Spielarten: eine breite Karte mit dem Banner. */
+.spa-einzel {
+  display: grid;
+  gap: 10px;
+}
+.spa-einzel .spa-art {
+  aspect-ratio: 2 / 1;
+  border: 1.5px solid var(--hb-kontur);
+  border-radius: 16px;
+}
+/* „Eigene Regeln" unter „Mit Freunden": klein, ein Textknopf. */
+.spe .spa-eigene {
+  align-self: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--hb-leise);
+  font: 800 13px var(--hb-txt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}

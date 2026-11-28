@@ -27,8 +27,14 @@ const { createTable, joinTable, tables, leaveTable, me, defaults, tableRules, st
     setRules: vi.fn(),
   }));
 
+const { spielartenListe } = vi.hoisted(() => ({
+  spielartenListe: vi.fn(() => Promise.resolve({ spielarten: [] as unknown[] })),
+}));
+
 vi.mock('../api', () => ({
   api: { createTable, joinTable, tables, leaveTable, me, defaults, tableRules },
+  // Die Kurse als Spielarten (seit dem 28.11.2026); hier ohne, ausser wo eigens geprueft.
+  spielartenApi: { liste: () => spielartenListe() },
 }));
 
 let tischStand: unknown = null;

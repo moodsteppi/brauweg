@@ -1550,3 +1550,30 @@ export const pushApi = {
       body: JSON.stringify(aenderung),
     }),
 };
+
+// ---------------------------------------------------------------------------
+// Spielarten (seit dem 28.11.2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * Eine Spielart, wie sie das Modul liefert (`GameMeta.spielarten`). Die
+ * `config` ist ein fertiger Regelsatz samt `variante` — der Client schickt
+ * sie unveraendert an Suche und Tischbau und schreibt nichts davon ab.
+ * Name und Satz stehen im Woerterbuch (`spielart.<spiel>.<id>.name/.text`).
+ */
+export interface Spielart {
+  id: string;
+  config: Record<string, unknown>;
+  /** Rundenzahl der Suche in dieser Spielart, falls nicht die erste Vorschlagszahl. */
+  runden?: number;
+}
+
+/**
+ * Eigener Block statt eines Eintrags in `api`: Am Startseitenumbau arbeiten
+ * mehrere Zweige gleichzeitig in derselben Datei, und jeder neue Eintrag
+ * mitten in `api` waere eine Konfliktzeile mehr.
+ */
+export const spielartenApi = {
+  /** Die Spielarten eines Spiels; leer, wenn es keine hat. Die erste ist die Vorgabe. */
+  liste: (gameId: string) => request<{ spielarten: Spielart[] }>(`/games/${gameId}/spielarten`),
+};

@@ -27,8 +27,14 @@ const { createTable, joinTable, tables, leaveTable, me, startNow, setSeatColor }
   }),
 );
 
+const { spielartenListe } = vi.hoisted(() => ({
+  spielartenListe: vi.fn(() => Promise.resolve({ spielarten: [] as unknown[] })),
+}));
+
 vi.mock('../api', () => ({
   api: { createTable, joinTable, tables, leaveTable, me },
+  // Die Kurse als Spielarten (seit dem 28.11.2026); hier ohne, ausser wo eigens geprueft.
+  spielartenApi: { liste: () => spielartenListe() },
 }));
 
 /** Was `useTable` gerade zurückgibt — je Test gesetzt. */
@@ -111,41 +117,41 @@ describe('Golf: Menü', () => {
     localStorage.clear();
   });
 
-  it('tritt einer wartenden Gruppe bei, statt eine zweite aufzumachen', async () => {
-    tables.mockResolvedValue([
-      { id: 'gruppe-7', gameId: 'golf', seats: 8, occupied: 3, maxRounds: 9 },
-    ]);
+  /*
+   * Bis zum 28.11.2026 standen hier drei Proben zu „Online spielen" (der
+   * ersten offenen Gruppe aus der Tischliste beitreten, sonst eine
+   * oeffentliche aufmachen). Den Weg gibt es nicht mehr — Robin: Tischlisten
+   * verwirren. An seiner Stelle stehen Quick-Play (Golf.neu.test.tsx) und
+   * „Mit Freunden".
+   */
+  it('„Mit Freunden" macht eine private Gruppe für acht auf, ohne Tischliste', async () => {
     render(<Golf onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Online spielen' }));
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Mit Freunden' }));
     await durchatmen();
 
-    expect(joinTable).toHaveBeenCalledWith('gruppe-7');
-    expect(createTable).not.toHaveBeenCalled();
-  });
-
-  it('geht an einer vollen Gruppe vorbei und macht eine neue auf', async () => {
-    tables.mockResolvedValue([
-      { id: 'voll', gameId: 'golf', seats: 8, occupied: 8, maxRounds: 9 },
-    ]);
-    render(<Golf onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Online spielen' }));
-    await durchatmen();
-
+    expect(tables).not.toHaveBeenCalled();
     expect(joinTable).not.toHaveBeenCalled();
-    expect(createTable).toHaveBeenCalledTimes(1);
+    // Ohne Spielarten vom Server kein Regelsatz — den kennt das Modul.
     expect(createTable.mock.calls[0]?.[0]).toEqual({
       gameId: 'golf',
       seats: 8,
       rounds: 9,
-      visibility: 'public',
+      visibility: 'on_request',
     });
   });
 
-  it('schickt keinen Regelsatz mit — den kennt das Modul', async () => {
+  it('„Mit Freunden" startet im gewählten Kurs mit dessen Bahnzahl', async () => {
+    spielartenListe.mockResolvedValueOnce({ spielarten: [{ id: 'anfaengerrunde', runden: 6, config: { kurs: 'anfaengerrunde', variante: 'anfaengerrunde' } }] });
     render(<Golf onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Online spielen' }));
     await durchatmen();
-    expect(createTable.mock.calls[0]?.[0]).not.toHaveProperty('config');
+    fireEvent.click(screen.getByRole('button', { name: 'Mit Freunden' }));
+    await durchatmen();
+    expect(createTable.mock.calls[0]?.[0]).toMatchObject({
+      rounds: 6,
+      visibility: 'on_request',
+      config: { kurs: 'anfaengerrunde', variante: 'anfaengerrunde' },
+    });
   });
 
   it('legt den Bot-Tisch mit Bots, Löchern und Stufe an', async () => {
