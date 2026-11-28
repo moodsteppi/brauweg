@@ -13,6 +13,7 @@ export function bannerFuer(gameId: string): string {
   // DreckBro hat noch kein geliefertes Banner (Bestellung:
   // docs/ASSETS-DRECKBRO.md). Bis dahin ein gezeichnetes SVG statt eines Pfads
   // auf eine WebP, die es nicht gibt — sonst stuende ein leeres Feld da.
+  if (gameId === 'brobluff') return '/brobluff/icon.webp';
   if (gameId === 'dreckbro') return '/broremote/ausbau/dreckbro.webp';
   const name: Record<string, string> = {
     wizard: 'zauberer',

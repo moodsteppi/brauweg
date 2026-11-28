@@ -63,6 +63,7 @@ try {
 } catch {
   /* Gesperrter Speicher: nichts zu tun. */
 }
+const BroBluffTable = lazy(() => import('./screens/BroBluffTable').then(m => ({ default: m.BroBluffTable })));
 const DreckBroTable = lazy(() =>
   import('./screens/DreckBroTable').then((m) => ({ default: m.DreckBroTable })),
 );
@@ -174,7 +175,7 @@ type Screen =
   | { name: 'profil'; accountId: string; vorher: Screen };
 
 /** Spiele, deren `lobby` die gewoehnliche Kartenlobby ist (siehe useZuruecktaste unten). */
-const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro']);
+const MIT_KARTENLOBBY: ReadonlySet<string> = new Set(['doppelkopf', 'skat', 'wizard', 'cambio', 'brochess', 'dreckbro', 'brobluff']);
 
 /**
  * Der Lade-Zustand des Clients.
@@ -773,6 +774,9 @@ export function App(): React.JSX.Element {
       // „Text" zuruecksetzen wuerde.
       // DreckBro zeichnet Pinguine und Karten selbst (minispiele/dreckbro),
       // ein Kartenblatt aus der Sammlung gibt es dafuer nicht.
+      if (screen.gameId === 'brobluff') {
+        return <BroBluffTable tableId={screen.tableId} onNeu={() => setScreen({ name: 'lobby', gameId: 'brobluff' })} onLeave={() => { setScreen({ name: 'games' }); void reload(); }} />;
+      }
       if (screen.gameId === 'dreckbro') {
         return (
           <DreckBroTable

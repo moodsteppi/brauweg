@@ -96,6 +96,7 @@ function istProbe(name: string): boolean {
 }
 
 const probeBroChess = istProbe('brochess');
+const probeBroBluff = istProbe('brobluff');
 const probeDreckBro = istProbe('dreckbro');
 const probeManufaktur = istProbe('manufaktur');
 const probeFlyingbro = istProbe('flyingbro');
@@ -171,6 +172,7 @@ const ProbeManufaktur = lazy(() =>
 const ProbeFlyingbro = lazy(() =>
   import('./proben/flyingbro/ProbeFlyingbro').then((m) => ({ default: m.ProbeFlyingbro })),
 );
+const ProbeBroBluff = lazy(() => import('./proben/brobluff/ProbeBroBluff').then(m => ({ default: m.ProbeBroBluff })));
 const ProbeDreckBro = lazy(() =>
   import('./proben/dreckbro/ProbeDreckBro').then((m) => ({ default: m.ProbeDreckBro })),
 );
@@ -193,6 +195,8 @@ const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
   <ProbeTafelrundeNeu />
 ) : probeBroChess ? (
   <ProbeBroChess />
+) : probeBroBluff ? (
+  <ProbeBroBluff />
 ) : probeDreckBro ? (
   <ProbeDreckBro />
 ) : probeManufaktur ? (

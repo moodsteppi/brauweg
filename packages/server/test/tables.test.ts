@@ -56,6 +56,7 @@ test('die interne Spielauswahl führt alle implementierten Spiele und Vorschauen
       'partykiste',
       'brocooked',
       'brochess',
+      'brobluff',
       'dreckbro',
       'wuerfelglanz',
     ],
