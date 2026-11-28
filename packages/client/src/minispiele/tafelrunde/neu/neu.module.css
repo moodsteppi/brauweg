@@ -3647,3 +3647,46 @@
   min-height: 38px;
   padding: 0 12px;
 }
+
+/*
+ * Marken am linken Rand (seit dem 28.11.2026), siehe Spieltisch.tsx. Eine
+ * schmale Spalte aus Chips — Zeichen oben, Zaehler darunter —, damit sie auf
+ * der Arenamauer Platz hat und hoechstens die aeusserste Wabenspalte streift.
+ * Ueber Arena und Feld (z-index), unter Blaettern und Pop-ups.
+ */
+.markenRand {
+  position: absolute;
+  z-index: 6;
+  top: calc(max(6px, env(safe-area-inset-top)) + 150px);
+  left: max(4px, calc(50% - 15rem + 4px));
+  max-height: calc(100dvh - 360px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+.markenRand::-webkit-scrollbar {
+  display: none;
+}
+.markenRand .markenleiste {
+  flex-direction: column;
+  overflow: visible;
+  padding: 0;
+  gap: 5px;
+  pointer-events: auto;
+}
+.markenRand .markenchip {
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  width: 42px;
+  min-height: 0;
+  padding: 5px 2px 4px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.1;
+  background: rgba(5, 11, 29, 0.72);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.markenRand .markenchip small {
+  font-size: 10px;
+}
