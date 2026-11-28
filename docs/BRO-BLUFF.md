@@ -8,7 +8,7 @@ Eigenständiges Tischspiel `brobluff` für 2–4 Spieler, im Games-Tab unter Kar
 
 Mindestens eine falsche Karte: Der Legende verliert eine Halterung. Alles passend: Der Zweifler verliert eine Halterung. Drei verlorene Halterungen bedeuten Ausscheiden. Der letzte verbliebene Spieler gewinnt. Ausgeschiedene können zuschauen, sehen aber weiterhin keine fremden Hände. Platzierungen folgen der Ausscheidereihenfolge.
 
-Die letzte Ablage einer leeren Hand bleibt anfechtbar. Danach werden leere Hände bei der Zugfolge übersprungen. Sobald nur noch ein Spieler Karten hat, muss er die letzte Ablage anzweifeln. Damit endet jede Austeilung und niemand hängt fest. Nach der Aufdeckung bestätigt der nächste Startspieler „Neu austeilen“; der bestehende Zugtimer bzw. Bot kann diese Aktion ebenfalls ausführen. Der bestrafte Spieler beginnt, sofern er noch dabei ist, sonst der nächste aktive Platz. Ein Verlassen markiert den Sitz für die bestehende Bot-Übernahme.
+Die letzte Ablage einer leeren Hand bleibt anfechtbar. Danach werden leere Hände bei der Zugfolge übersprungen. Sobald nur noch ein Spieler Karten hat, muss er die letzte Ablage anzweifeln. Damit endet jede Austeilung und niemand hängt fest. Nach der Aufdeckung läuft eine 3,5 Sekunden lange serverseitige Schaupause, dann wird automatisch neu ausgeteilt. Während der Schaupause sind keine Aktionen erlaubt. Bots überspringen die Animation nicht. Der bestrafte Spieler beginnt, sofern er noch dabei ist, sonst der nächste aktive Platz. Ein Verlassen markiert den Sitz für die bestehende Bot-Übernahme.
 
 ## Architektur
 

@@ -96,7 +96,7 @@ function istProbe(name: string): boolean {
 }
 
 const probeBroChess = istProbe('brochess');
-const probeBroBluff = istProbe('brobluff');
+const probeBroBluff = import.meta.env.DEV && istProbe('brobluff');
 const probeDreckBro = istProbe('dreckbro');
 const probeManufaktur = istProbe('manufaktur');
 const probeFlyingbro = istProbe('flyingbro');

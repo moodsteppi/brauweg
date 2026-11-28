@@ -4,7 +4,7 @@ import { mische, zufall } from './zufall.js';
 export const MOTIVE = ['krone', 'anker', 'diamant'] as const;
 export type Motiv = typeof MOTIVE[number];
 export interface Karte { readonly id: number; readonly motiv: Motiv | 'joker' }
-export type Aktion = { readonly type: 'legen'; readonly karten: readonly number[] } | { readonly type: 'bluff' } | { readonly type: 'weiter' };
+export type Aktion = { readonly type: 'legen'; readonly karten: readonly number[] } | { readonly type: 'bluff' };
 export interface Aufdeckung {
   readonly nummer: number; readonly spieler: number; readonly zweifler: number;
   readonly bestraft: number; readonly gelogen: boolean; readonly motiv: Motiv;
@@ -51,7 +51,7 @@ export function erstellen(sitze: number, saat: string): Partie {
 /** Maximal 25 Kartenkombinationen. Vollständige Zugliste ist auch für Zeitablauf/Bots verwendbar. */
 export function zuege(s: Sicht): Aktion[] {
   if (s.meinSitz === null || s.meinSitz !== s.amZug || s.phase === 'ende') return [];
-  if (s.phase === 'aufdecken') return [{ type: 'weiter' }];
+  if (s.phase === 'aufdecken') return [];
   const aus: Aktion[] = s.letzterZug ? [{ type: 'bluff' }] : [];
   // Der letzte Spieler mit Karten muss die letzte Ablage anzweifeln.
   if (s.letzterZug && s.handAnzahl.filter((n) => n > 0).length === 1) return aus;
@@ -76,7 +76,6 @@ export function handeln(p: Partie, sitz: number, aktion: Aktion): Partie {
   const a = legal.find((a) => a.type === aktion?.type && (a.type !== 'legen' || (aktion.type === 'legen' && Array.isArray(aktion.karten) && a.karten.length === aktion.karten.length && a.karten.every((k) => aktion.karten.includes(k)))));
   if (!a) throw new Error('Dieser Zug ist nicht erlaubt');
   const neu = { ...p, zug: p.zug + 1 };
-  if (a.type === 'weiter') return geben({ ...neu, runde: p.runde + 1 }, p.amZug);
   if (a.type === 'legen') {
     const karten = p.haende[sitz]!.filter((k) => a.karten.includes(k.id));
     const haende = p.haende.map((h, i) => i === sitz ? h.filter((k) => !a.karten.includes(k.id)) : h);
@@ -122,7 +121,10 @@ export const brobluff: GameModule<Partie, Aktion, Sicht, Readonly<Record<string,
     return rounds === 1 ? [] : [{ path: 'rounds', messageKey: 'ruleset.roundsOutOfRange', severity: 'error' }];
   },
   createParty: ({ seats, seed, seedHex }) => erstellen(seats, seedHex ?? String(seed)),
-  act: handeln, currentActor: (p) => p.phase === 'ende' ? null : p.amZug,
+  act: handeln, currentActor: (p) => p.phase === 'legen' ? p.amZug : null,
+  // Bots dürfen die Aufdeckung nicht sofort überspringen; die Plattform hält die Schaupause.
+  interludeMs: (p) => p.phase === 'aufdecken' ? 3500 : null,
+  advanceInterlude: (p) => p.phase === 'aufdecken' ? geben({ ...p, zug: p.zug + 1, runde: p.runde + 1 }, p.amZug) : p,
   legalActions: (p, s) => zuege(sichtFuer(p, s)), isFinished: (p) => p.phase === 'ende', standings: platzierungen,
   markLeft: (p, s) => p.verlassen.includes(s) ? p : { ...p, verlassen: [...p.verlassen, s] },
   viewFor: sichtFuer, spectatorView: (p) => sichtFuer(p, null), botAction: bot,

@@ -24,8 +24,8 @@ test('Leere Hand bleibt anfechtbar, letzter Spieler muss aufdecken', () => {
 });
 test('Aufdeckung bleibt bis zum Fortsetzen sichtbar; dann neue Karten', () => {
   let p=handeln(lage(false),0,{type:'legen',karten:[0]});p=handeln(p,1,{type:'bluff'});
-  assert.deepEqual(zuege(sichtFuer(p,p.amZug)),[{type:'weiter'}]);assert.throws(()=>handeln(p,p.amZug,{type:'bluff'}));
-  p=handeln(p,p.amZug,{type:'weiter'});assert.equal(p.runde,2);assert.equal(p.phase,'legen');assert.equal(p.letzterZug,null);assert.ok(p.haende.every(h=>h.length===5));assert.equal(p.fehler[0],1);
+  assert.deepEqual(zuege(sichtFuer(p,p.amZug)),[]);assert.throws(()=>handeln(p,p.amZug,{type:'bluff'}));
+  p=brobluff.advanceInterlude!(p);assert.equal(p.runde,2);assert.equal(p.phase,'legen');assert.equal(p.letzterZug,null);assert.ok(p.haende.every(h=>h.length===5));assert.equal(p.fehler[0],1);
 });
 test('Dritter Fehler beendet den Zweiertisch und vergibt die richtige Platzierung', () => {
   let p: Partie={...lage(false),fehler:[2,0]};p=handeln(p,0,{type:'legen',karten:[0]});p=handeln(p,1,{type:'bluff'});assert.equal(p.phase,'ende');assert.equal(p.sieger,1);assert.deepEqual(platzierungen(p).map(x=>x.place),[2,1]);assert.deepEqual(zuege(sichtFuer(p,1)),[]);
@@ -38,8 +38,10 @@ test('Falscher Sitz, fremde Karten, doppelte Karten, leere und zu große Ablage 
 test('Viele vollständige Bot-Partien enden ohne Blockade; Snapshot bleibt reproduzierbar', () => {
   for(const n of [2,3,4])for(let seed=0;seed<30;seed++){
     let p=erstellen(n,`bot-${seed}`);let schritte=0;
-    while(p.phase!=='ende'&&schritte++<600){const sicht=sichtFuer(p,p.amZug);const a=bot(sicht);const kopie=JSON.parse(JSON.stringify(p));assert.deepEqual(handeln(p,p.amZug,a),handeln(kopie,p.amZug,a));p=handeln(p,p.amZug,a);}
+    while(p.phase!=='ende'&&schritte++<600){if(p.phase==='aufdecken'){p=brobluff.advanceInterlude!(p);continue;}const sicht=sichtFuer(p,p.amZug);const a=bot(sicht);const kopie=JSON.parse(JSON.stringify(p));assert.deepEqual(handeln(p,p.amZug,a),handeln(kopie,p.amZug,a));p=handeln(p,p.amZug,a);}
     assert.equal(p.phase,'ende',`${n} Sitze, Saat ${seed}`);assert.equal(p.ausgeschieden.length,n-1);assert.equal(new Set(platzierungen(p).map(x=>x.place)).size,n);
   }
 });
 test('Verlassen nutzt Bot-Übernahme statt Spielabbruch, Konfiguration prüft Sitze',()=>{const p=erstellen(3,'weg');const neu=brobluff.markLeft(p,0);assert.deepEqual(neu.verlassen,[0]);assert.equal(neu.phase,'legen');assert.ok(brobluff.validateConfig({},5,1).length);assert.ok(brobluff.validateConfig({},4,2).length);assert.deepEqual(brobluff.validateConfig({},4,1),[]);});
+
+test('Server-Schaupause verhindert sofortige Bot-Folge und teilt danach aus',()=>{let p=handeln(lage(false),0,{type:'legen',karten:[0]});p=handeln(p,1,{type:'bluff'});assert.equal(brobluff.currentActor(p),null);assert.equal(brobluff.interludeMs!(p),3500);const weiter=brobluff.advanceInterlude!(p);assert.equal(weiter.phase,'legen');assert.equal(weiter.runde,2);assert.equal(brobluff.interludeMs!(weiter),null);});
