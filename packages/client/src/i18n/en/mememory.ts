@@ -24,7 +24,7 @@ export default {
   'mememory.mehrSeite.bald': 'soon',
 
   'mememory.menue.unter': 'Two pictures, one pair, two to four players.',
-  'mememory.menue.zurueck': 'Back to the game page',
+  'mememory.menue.zurueck': 'Back to all games',
   'mememory.menue.online': 'Find an online match…',
   'mememory.menue.ki': 'Against the AI',
   'mememory.menue.kiText': 'Up to three opponents, each with their own strength.',

@@ -610,6 +610,7 @@ export function Golf({
         unter={t('golf.menue.unter')}
         akzent={AKZENT}
         onBack={onBack}
+        uebersicht="golf"
         fuss={
           <>
             <button

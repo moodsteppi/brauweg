@@ -50,24 +50,43 @@ export function SpielartKarten({
   /** Der GRUND, warum die Karte nicht waehlbar ist (gekauftes Paket fehlt). */
   gesperrt?: (art: Spielart) => string | null;
 }): React.JSX.Element {
+  /*
+   * Kompakt seit dem 28.11.2026 abends (Robin: der Einstieg soll auf einem
+   * grossen Handy ohne Rollen passen). Bis vier Spielarten stehen in EINER
+   * Reihe mit kleinem Bild und nur dem Namen; der Satz steht einmal darunter,
+   * fuer die gewaehlte Karte. Vier Saetze in vier schmalen Karten machten
+   * jede Karte doppelt so hoch und waren auf 80 px Breite kaum zu lesen. Mehr
+   * als vier (Golf, sieben Kurse) laufen als waagerecht wischbare Reihe,
+   * statt in Zweierreihen nach unten zu wachsen.
+   *
+   * Der Sperrgrund bleibt AN der Karte: Er ist die Nachricht dieser einen
+   * Karte, nicht der gewaehlten.
+   */
+  const wisch = spielarten.length > 4;
+  const gewaehlteArt = spielarten.find((a) => a.id === gewaehlt) ?? null;
+  const zusatz = gewaehlteArt ? (hinweis?.(gewaehlteArt) ?? null) : null;
+  const beschreibung = gewaehlteArt ? spielartText(gameId, gewaehlteArt.id) : null;
   return (
-    <AuswahlRaster
-      label={t('einstieg.spielart')}
-      className="spa-karten"
-      gewaehlt={gewaehlt}
-      onWahl={(id) => onWahl(id)}
-      eintraege={spielarten.map((art) => {
-        const zusatz = hinweis?.(art) ?? null;
-        const text = spielartText(gameId, art.id);
-        return {
+    <>
+      <AuswahlRaster
+        label={t('einstieg.spielart')}
+        className={`spa-karten${wisch ? ' is-wisch' : ''}`}
+        spalten={wisch ? undefined : Math.max(spielarten.length, 1)}
+        gewaehlt={gewaehlt}
+        onWahl={(id) => onWahl(id)}
+        eintraege={spielarten.map((art) => ({
           kennung: art.id,
           titel: spielartName(gameId, art.id),
-          untertitel: zusatz ? `${text} ${zusatz}` : text,
           vorschau: <SpielartBild gameId={gameId} art={art} vorschau={vorschau?.(art) ?? null} />,
           deaktiviert: gesperrt?.(art) ?? undefined,
-        };
-      })}
-    />
+        }))}
+      />
+      {beschreibung && (
+        <p className="spa-beschreibung" aria-live="polite">
+          {zusatz ? `${beschreibung} ${zusatz}` : beschreibung}
+        </p>
+      )}
+    </>
   );
 }
 

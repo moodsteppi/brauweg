@@ -1070,6 +1070,7 @@ export function FeldherrTisch({
       unter={t('feldherr.einstieg.unter')}
       akzent={FELDHERR_AKZENT}
       onBack={onBack}
+      uebersicht="feldherr"
       zurueckText={t('feldherr.zurueck')}
       fuss={
         <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void erstelleTisch()}>

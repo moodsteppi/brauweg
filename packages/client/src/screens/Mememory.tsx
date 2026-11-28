@@ -1336,6 +1336,7 @@ export function Mememory({
                 onBack={onBack}
                 zurueckText={t('mememory.menue.zurueck')}
                 rechts={einstellungsKnopf}
+                uebersicht="mememory"
                 fuss={
                   <>
                     <button

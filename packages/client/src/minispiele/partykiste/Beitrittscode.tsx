@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type TischVorschau } from '../../api';
 import { t } from '../../i18n';
+import { HbBlatt } from '../../screens/HbBlatt';
 import { codeNormalisieren, fehlschlagLesen, fehlschlagVergessen } from './einladungslink';
 
 /**
@@ -23,15 +24,49 @@ import { codeNormalisieren, fehlschlagLesen, fehlschlagVergessen } from './einla
  * drin und darunter der Grund — wer den Link geoeffnet hat, soll sehen, was
  * los ist, statt auf einem leeren Menue zu landen.
  */
+/**
+ * Der Code als kleiner Textlink im Fuss des Spieleinstiegs (28.11.2026
+ * abends). Bis dahin stand das Feld als eigener Abschnitt im Einstieg und
+ * schob die Spielarten aus dem Bild — gebraucht wird es aber nur von dem,
+ * dem jemand einen Code gegeben hat. Antippen oeffnet es als Blatt.
+ *
+ * Scheiterte davor ein Einladungslink, ist das Blatt gleich offen: Sein Code
+ * und der Grund stehen darin (siehe oben), und zugeklappt saehe sie niemand.
+ */
+export function CodeBeitritt({
+  spiel,
+  onBeigetreten,
+}: {
+  spiel: string;
+  onBeigetreten: (tableId: string) => void;
+}): React.JSX.Element {
+  const [offen, setOffen] = useState(() => fehlschlagLesen() !== null);
+  return (
+    <>
+      <button type="button" className="spa-eigene" data-einstieg="code" onClick={() => setOffen(true)}>
+        {t('einladung.eingabeTitel')}
+      </button>
+      {offen && (
+        <HbBlatt titel={t('einladung.eingabeTitel')} onClose={() => setOffen(false)}>
+          <Beitrittscode neu ohneTitel spiel={spiel} onBeigetreten={onBeigetreten} />
+        </HbBlatt>
+      )}
+    </>
+  );
+}
+
 export function Beitrittscode({
   spiel,
   onBeigetreten,
   neu = false,
+  ohneTitel = false,
 }: {
   spiel: string;
   onBeigetreten: (tableId: string) => void;
   /** Neues Hub: als Abschnitt des Spieleinstiegs, Beitreten als Nebenweg. */
   neu?: boolean;
+  /** Im Blatt von `CodeBeitritt` steht der Titel schon oben. */
+  ohneTitel?: boolean;
 }): React.JSX.Element {
   const [vorher] = useState(fehlschlagLesen);
   const [code, setCode] = useState(vorher?.code ?? '');
@@ -90,7 +125,7 @@ export function Beitrittscode({
           if (fertig && !laeuft) void trittBei();
         }}
       >
-        <h2 className="hb-ab">{t('einladung.eingabeTitel')}</h2>
+        {!ohneTitel && <h2 className="hb-ab">{t('einladung.eingabeTitel')}</h2>}
         <div className="hb-suchzeile">
           <input
             className="spe-feld spe-codefeld"

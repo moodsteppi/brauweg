@@ -23,7 +23,7 @@ import {
 } from '../minispiele/partykiste/sicht';
 import { binReihumDran, useTischwache } from '../minispiele/partykiste/useTischwache';
 import { Abrechnung, Tabelle } from '../minispiele/partykiste/Wertung';
-import { Beitrittscode } from '../minispiele/partykiste/Beitrittscode';
+import { CodeBeitritt } from '../minispiele/partykiste/Beitrittscode';
 import { Einladung } from '../minispiele/partykiste/Einladung';
 import { einzelKennung, einzelName, tischPasst } from '../minispiele/partykiste/einzelspiele';
 import { MitspielerMelden } from '../melden/MeldenBlatt';
@@ -379,6 +379,7 @@ export function Partykiste({
         akzent={PARTY_AKZENT}
         onBack={onBack}
         zurueckText="Zurück"
+        uebersicht="partykiste"
         fuss={
           angebot ? (
             <OffeneRunde
@@ -485,7 +486,9 @@ export function Partykiste({
             </div>
           ) : null}
         </SpielAbschnitt>
-        <Beitrittscode neu spiel="partykiste" onBeigetreten={setTischId} />
+        <div className="spa-links">
+          <CodeBeitritt spiel="partykiste" onBeigetreten={setTischId} />
+        </div>
       </SpielRahmen>
     );
   }

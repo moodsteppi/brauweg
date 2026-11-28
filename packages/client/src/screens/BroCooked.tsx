@@ -696,6 +696,7 @@ export function BroCookedMenue({
       unter={t('brocooked.ui.unter')}
       akzent={AKZENT}
       onBack={onBack}
+      uebersicht="brocooked"
       fuss={
         <>
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={onAllein}>

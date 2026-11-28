@@ -46,9 +46,12 @@
   pointer-events: none;
 }
 /* Kopf: das Spielbanner bis unter die Statusleiste, unten in den Grund verlaufend */
+/* 112 statt 176 px (28.11.2026 abends): Der Einstieg soll auf einem großen
+   Handy ohne Rollen passen, und das Banner ist Kulisse, nicht Inhalt —
+   dieselbe Höhe wie der Kopf der Übersicht im Hub (hub-details.css). */
 .spe-kopf {
   position: relative;
-  height: calc(176px + var(--hb-oben));
+  height: calc(112px + var(--hb-oben));
   background-size: cover;
   background-position: center 35%;
 }
@@ -89,7 +92,7 @@
 }
 .spe-titel h1 {
   margin: 0;
-  font: 400 30px/1 var(--hb-anz);
+  font: 400 27px/1 var(--hb-anz);
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 .spe-titel span {
@@ -97,23 +100,46 @@
   color: var(--hb-leise);
 }
 .spe-inhalt {
-  padding: 12px 16px 24px;
+  padding: 8px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 .spe-fuss {
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  gap: 6px;
+  padding: 8px 16px max(10px, env(safe-area-inset-bottom, 0px));
   background: linear-gradient(180deg, rgba(14, 26, 61, 0), var(--hb-grund) 30%);
   border-top: 1px solid rgba(53, 81, 140, 0.4);
 }
 .spe-fuss .hb-klein {
   text-align: center;
   margin: 0;
+}
+/* Nebenwege als Textlinks („Eigene Regeln", „Mit Code beitreten"), in einer
+   Zeile unter den Knöpfen. Steht hier und nicht in spielarten.css, weil auch
+   Einstiege ohne Spielartkarten (Partykiste) den Code-Link tragen. */
+.spe .spa-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 18px;
+}
+.spe .spa-eigene {
+  align-self: center;
+  /* Klein in der Schrift, nicht in der Tippfläche (DESIGN.md: 44 pt). */
+  min-height: 44px;
+  margin: -4px 0;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--hb-leise);
+  font: 800 13px var(--hb-txt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 /* Segment-Wahl: gleich breite Knöpfe, der gewählte in der Spielfarbe umrandet */
 .spe-wahl {

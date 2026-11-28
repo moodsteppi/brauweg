@@ -740,6 +740,7 @@ export function Filler({
         akzent={AKZENT}
         onBack={onBack}
         zurueckText={t('filler.zurueckZurSpielseite')}
+        uebersicht="filler"
         fuss={
           sitzzahl === 4 ? (
             /*

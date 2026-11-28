@@ -23,7 +23,7 @@ export default {
   'eiland.suche.gefunden.mehr': '{n} Spieler gefunden',
   'eiland.abbrechen': 'Abbrechen',
   'eiland.menue.unter': '2 Spieler · ihr zieht gleichzeitig',
-  'eiland.zurueckZurSpielseite': 'Zurück zur Spielseite',
+  'eiland.zurueckZurSpielseite': 'Zurück zu allen Spielen',
   'eiland.menue.suchen': 'Online Match suchen…',
   'eiland.menue.text':
     'Nimm Land, sammle Ornamente und komm dem anderen zuvor. Ihr zieht gleichzeitig - und wer dasselbe Feld will, muss darum kämpfen.',

@@ -1,0 +1,78 @@
+/*
+ * Herz und Übersicht oben rechts im Spieleinstieg (EinstiegEcke.tsx).
+ *
+ * Die runden Knöpfe tragen `.hb-rund`, sehen im Einstieg also aus wie der
+ * Zurück-Knopf daneben. Die Regeln hier stehen trotzdem ohne `.spe` davor:
+ * Tafelrunde und Würfelglanz haben eigene Seiten, und dort griffe
+ * `:is(.hb, .spe) .hb-rund` (hub-neu.css) nicht — die Knöpfe wären nackte
+ * Browserknöpfe.
+ */
+.spe-eckknopf {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(7, 19, 47, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f3f5ff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.spe-eckknopf svg {
+  width: 22px;
+  height: 22px;
+}
+.spe-eckknopf img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.spe-eckknopf:active {
+  transform: scale(0.94);
+}
+.spe-eckknopf:focus-visible {
+  outline: 3px solid #ffd75a;
+  outline-offset: 2px;
+}
+/* Gesetzter Favorit: dasselbe Rot wie das Herz der Übersicht im Hub. */
+.spe-eckknopf.spe-herz.is-an {
+  color: #ff6b78;
+}
+/* Die Knöpfe stehen in einer Reihe, der Fehler hängt darunter, ohne den Kopf
+   aufzuschieben. */
+.spe-ecke {
+  position: relative;
+  display: flex;
+  gap: 8px;
+}
+.spe-ecke-fehler {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(240px, 70vw);
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(7, 19, 47, 0.94);
+  border: 1px solid #d94b55;
+  color: #f3f5ff;
+  font: 700 12px/1.35 'Nunito Variable', 'Nunito', system-ui, sans-serif;
+  text-align: left;
+}
+
+/* Die Übersicht als Vollbild über dem Einstieg. `.hb` bringt Lage (fest,
+   ganze Höhe, 30rem breit) und das Holzkleid mit; hier nur, dass sie über
+   `.spe` (z-index 5) und dem Bock-Band liegt. */
+.hb.spe-uebersicht {
+  z-index: 60;
+}
+.hb.spe-uebersicht > .hb-spielseite {
+  flex: 1;
+  min-height: 0;
+}

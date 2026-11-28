@@ -126,10 +126,13 @@ describe('Poker im neuen Hub', () => {
     });
   });
 
-  it('die Karte nennt, was die Spielart an BroJetons kostet', async () => {
+  // Seit dem 28.11.2026 abends stehen die Karten kompakt in einer Reihe, nur
+  // mit Bild und Namen; Satz und Preis stehen einmal darunter, für die
+  // gewählte Spielart (SpielartKarten.tsx).
+  it('nennt unter den Karten, was die gewählte Spielart an BroJetons kostet', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
-    expect(screen.getByRole('button', { name: /^Hoch/ }).getAttribute('aria-describedby')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /^Hoch/ }));
     expect(screen.getByText(/Kostet 2000 BroJetons/)).toBeInTheDocument();
   });
 

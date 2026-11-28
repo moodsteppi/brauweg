@@ -159,4 +159,16 @@ describe('Spieleinstieg der Lobby-Spiele', () => {
     await act(async () => {});
     expect(sucheStarten).toHaveBeenCalledWith('dreckbro', undefined);
   });
+
+  // Seit dem 28.11.2026 abends: Das Codefeld stand als eigener Abschnitt über
+  // dem Fuß und kostete den Spielarten den Platz. Jetzt ein Textlink neben
+  // „Eigene Regeln", das Feld kommt als Blatt.
+  it('der Code ist ein Textlink im Fuß und öffnet ein Blatt mit dem Feld', async () => {
+    await zeige();
+    expect(screen.queryByLabelText('Beitrittscode eingeben')).toBeNull();
+    const link = screen.getByRole('button', { name: 'Mit Code beitreten' });
+    expect(link.closest('.spe-fuss')).not.toBeNull();
+    fireEvent.click(link);
+    expect(screen.getByLabelText('Beitrittscode eingeben')).toBeInTheDocument();
+  });
 });

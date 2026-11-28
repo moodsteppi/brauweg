@@ -829,6 +829,7 @@ export function EasyPoker({
         akzent={AKZENT}
         onBack={onBack}
         rechts={infoKnopfNeu}
+        uebersicht="easypoker"
         fuss={
           <>
             <button

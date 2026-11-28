@@ -185,6 +185,14 @@
   cursor: pointer
 }
 
+/* Gegenüber dem Zurück-Knopf: Herz und Übersicht des Spiels (EinstiegEcke.tsx). */
+.seitenRechts {
+  position: absolute;
+  z-index: 3;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px
+}
+
 .seitenTitel {
   text-align: center;
   padding: 6px 48px 0;
