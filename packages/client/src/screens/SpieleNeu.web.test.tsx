@@ -60,7 +60,7 @@ describe('Spiele auf der Webseite', () => {
   it('stellt den Mehrkampf wie in der App unter „Kommt bald" zur Wahl, nicht doppelt unter „Modi"', async () => {
     await zeige();
     expect(screen.queryByText('Modi')).toBeNull();
-    const mehrkampf = zeile('Brauweg-Bock');
+    const mehrkampf = zeile('BroweG-Bock');
     expect(within(mehrkampf).getByText(/Runden aus mehreren Spielen · 2 Stimmen/)).toBeTruthy();
     fireEvent.click(within(mehrkampf).getByRole('button', { name: 'Dafür' }));
     await act(async () => {});
@@ -73,14 +73,14 @@ describe('Spiele auf der Webseite', () => {
     await zeige();
     expect(within(zeile('Schafkopf')).getByRole('button', { name: 'Abgestimmt' })).toBeDisabled();
     const namen = screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'));
-    expect(namen).toEqual(['Rommé', 'Schafkopf', 'Brauweg-Bock', 'Werwolf']);
+    expect(namen).toEqual(['Rommé', 'Schafkopf', 'BroweG-Bock', 'Werwolf']);
   });
 
   it('nimmt die Bald-Bilder wie die App', async () => {
     await zeige();
     const bild = (name: string) => (zeile(name).querySelector('.hb-bald-bild') as HTMLElement).style.backgroundImage;
     expect(bild('Schafkopf')).toContain('/hub/bald-schafkopf.webp');
-    expect(bild('Brauweg-Bock')).toContain('/hub/banner-mehrkampf.webp');
+    expect(bild('BroweG-Bock')).toContain('/hub/banner-mehrkampf.webp');
     // Ohne eigenes Motiv bleibt das gemeinsame Rückfallbild.
     expect(bild('Werwolf')).toContain('/hub/spielwahl-bald.webp');
   });
@@ -103,7 +103,7 @@ describe('Spiele auf der Webseite', () => {
     liste.spiele = WEB().filter((g) => g.id === 'doppelkopf' || g.id === 'skat' || g.id === 'schafkopf');
     await zeige();
     expect(screen.getByText('Modi')).toBeTruthy();
-    expect(screen.getByText('Brauweg-Bock')).toBeTruthy();
+    expect(screen.getByText('BroweG-Bock')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Dafür' })).toBeNull();
     expect(within(zeile('Schafkopf')).getByText('Bald')).toBeTruthy();
   });
@@ -113,6 +113,6 @@ describe('Spiele auf der Webseite', () => {
     liste.spiele = WEB().filter((g) => g.id === 'doppelkopf' || g.id === 'skat' || g.id === 'schafkopf');
     await zeige();
     expect(screen.queryByText('Modi')).toBeNull();
-    expect(screen.queryByText('Brauweg-Bock')).toBeNull();
+    expect(screen.queryByText('BroweG-Bock')).toBeNull();
   });
 });

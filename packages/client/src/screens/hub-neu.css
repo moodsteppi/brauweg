@@ -3784,3 +3784,78 @@
 .hb .hb-profil-schrank:focus-visible { outline: 2px solid var(--hb-gold); outline-offset: 3px; }
 
 .hb-profil .hb-einstiege { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ---------- Spiele-Reiter: „Deine Spiele" und das Herz (28.11.2026) ---------- */
+/* Die Register stehen seitdem in der Rolle (unter „Deine Spiele") und kleben
+   oben fest, sobald sie dort ankommen. Der dunkle Grund verhindert, dass die
+   Kacheln beim Rollen durch die Leiste scheinen. */
+.hb.hb .hb-spiele-rolle > .hb-chips-klebend {
+  position: sticky;
+  top: -4px;
+  z-index: 5;
+  flex: none;
+  margin: 0 -16px;
+  background:
+    linear-gradient(#bd955c55, #bd955c55) left 16px bottom 5px / calc(100% - 32px) 1px no-repeat,
+    linear-gradient(#0c1813f0, #0c1813e0);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+/* „Deine Spiele" als waagerechte Streifen statt Raster: Acht zuletzt gespielte
+   Spiele wären sonst drei Rasterzeilen vor dem eigentlichen Katalog. */
+.hb.hb .hb-einheitlich .hb-deine .hb-reihe {
+  display: flex;
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 0 16px;
+  gap: 9px;
+}
+.hb.hb .hb-einheitlich .hb-deine .hb-sk {
+  flex: none;
+  width: 108px;
+}
+:is(.hb, .spe) .hb-deine-reihe + .hb-deine-reihe {
+  margin-top: 10px;
+}
+:is(.hb, .spe) .hb-deine-unter {
+  margin: 0 0 6px;
+  font: 800 13px var(--hb-txt);
+  color: var(--hb-leise);
+}
+:is(.hb, .spe) .hb-sk {
+  position: relative;
+}
+/* Kleines Herz an Favoriten-Kacheln, auf Abdeckung, damit es auf jedem Banner steht. */
+:is(.hb, .spe) .hb-sk-herz {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #07132fd9;
+  color: #ff6b78;
+}
+:is(.hb, .spe) .hb-sk-herz .hb-ic {
+  width: 16px;
+  height: 16px;
+}
+:is(.hb, .spe) .hb-sk-herz-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Gegenüber dem Zurück-Knopf. Gleiche Spezifität wie die Regel für .hb-rund
+   im Kopf weiter oben, deshalb muss diese hier danach stehen. */
+:is(.hb, .spe) .hb-sp-kopf .hb-sp-herz {
+  left: auto;
+  right: 16px;
+}
+:is(.hb, .spe) .hb-sp-herz.is-an {
+  color: #ff6b78;
+}

@@ -9,13 +9,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Reiter mit Start in der Mitte, der Weg über die Spielseite zu „Zum Spiel",
  * dass Weiterspielen an den Tisch führt, dass „Heute" Aufgaben abholen lässt
  * und dass im Shop auch Kartenblätter und Tische zu haben sind.
+ *
+ * Seit dem Startseiten-Umbau (28.11.2026) heißen drei Einstiege anders: Die
+ * Weiterspielen-Karte ist dem großen Pop-up gewichen, Aufgaben und Truhen
+ * sind Seitensymbole mit der Zahl im Namen, und statt des Play-Kreises führt
+ * das Schild „Zu den Spielen" zur Übersicht. Die Tests prüfen dieselben Wege
+ * unter den neuen Namen; das Neue selbst prüft StartAblauf.test.tsx.
  */
 
-const { claimQuest, vote, wegHolen, wegStand } = vi.hoisted(() => {
+const { claimQuest, vote, wegHolen, wegStand, kontoStand } = vi.hoisted(() => {
   // Der Weg ist zustandsbehaftet: Nach dem Holen liefert /api/weg die Stufe
   // als geholt, so wie der Server es täte.
   const wegStand = { geholt: false };
   return {
+    // `/api/me` holt der Start frisch, bevor er nach der Runde fragt.
+    kontoStand: { me: null as unknown },
     claimQuest: vi.fn(() => Promise.resolve({ ok: true })),
     vote: vi.fn(() => Promise.resolve({ ok: true })),
     wegStand,
@@ -42,7 +50,7 @@ vi.mock('../api', async () => {
     api: {
       ...echt.api,
       tagesmarkt: () => Promise.resolve(probeTagesmarkt()),
-      aktiveGesamt: () => Promise.resolve({ aktiv: 214 }),
+      me: () => Promise.resolve(kontoStand.me),
       games: () =>
         Promise.resolve([
           { id: 'skat', nameKey: 'game.skat', availability: 'playable', seatCounts: [3], votes: 0 },
@@ -121,6 +129,7 @@ async function zeige(konto: Me = me): Promise<{
   const onPick = vi.fn();
   const onResume = vi.fn();
   const onAvatarChange = vi.fn();
+  kontoStand.me = konto;
   render(
     <GameSelect
       me={konto}
@@ -212,15 +221,15 @@ describe('Neues Hub', () => {
     expect(within(reiter()).getByRole('button', { name: 'Start, 2 bereit' })).toBeInTheDocument();
   });
 
-  it('führt mit „Weiterspielen" an den laufenden Tisch', async () => {
+  it('führt mit dem Weiterspielen-Pop-up an den laufenden Tisch', async () => {
     const { onResume } = await zeige();
-    fireEvent.click(screen.getByRole('button', { name: /Weiterspielen/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ja, zurück an den Tisch' }));
     expect(onResume).toHaveBeenCalledWith('doppelkopf', 't1');
   });
 
   it('öffnet Belohnungen direkt bei den Truhen', async () => {
     await zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Belohnungen: Truhen öffnen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Belohnungen, 1 bereit' }));
     const titel = await screen.findByRole('heading', { name: /Truhen/ });
     expect(titel).toHaveFocus();
     expect(screen.getByRole('button', { name: /Tagestruhe.*öffnen/ })).toBeInTheDocument();
@@ -228,7 +237,7 @@ describe('Neues Hub', () => {
 
   it('führt vom Spielen-Einstieg zur Übersicht, ohne schon ein Spiel zu starten', async () => {
     const { onPick } = await zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Spielen: Spieleübersicht öffnen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zu den Spielen' }));
     await act(async () => {});
     expect(within(reiter()).getByRole('button', { name: 'Spiele' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'Spiele' })).toBeInTheDocument();
@@ -276,7 +285,7 @@ describe('Neues Hub', () => {
 
   it('holt in „Heute" eine fertige Aufgabe ab, Abholbares steht oben', async () => {
     await zeige();
-    fireEvent.click(screen.getByRole('button', { name: /^Heute/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tagesaufgaben, 1 bereit' }));
     await act(async () => {});
     const blatt = screen.getByRole('dialog', { name: /Heute/ });
     const knopf = within(blatt).getByRole('button', { name: /5 Münzen abholen/ });
