@@ -625,29 +625,32 @@ export function Golf({
               {t('einstieg.quickplay')}
               {unterQuick && <small>{unterQuick}</small>}
             </button>
-            <button
-              className="hb-kn is-blau is-breit"
-              type="button"
-              data-golf-bots=""
-              data-einstieg="bots"
-              onClick={() => {
-                // Der Bot-Tisch beginnt im gewaehlten Kurs; die Bahnauswahl
-                // dort laesst ihn wie bisher umstellen.
-                if (kursArt && gesperrt === null) setBotWahl({ art: 'kurs', kurs: kursArt.id });
-                setBotsOffen(true);
-              }}
-            >
-              {t('einstieg.bots')}
-            </button>
-            <button
-              className="hb-kn is-blau is-breit"
-              type="button"
-              data-einstieg="freunde"
-              onClick={() => void spieleMitFreunden()}
-              disabled={laedt || gesperrt !== null}
-            >
-              {t('einstieg.freunde')}
-            </button>
+            {/* Nebeneinander wie im Spieleinstieg der Lobby-Spiele: Die Karten darueber sind der Inhalt. */}
+            <div className="hb-knopfreihe">
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-golf-bots=""
+                data-einstieg="bots"
+                onClick={() => {
+                  // Der Bot-Tisch beginnt im gewaehlten Kurs; die Bahnauswahl
+                  // dort laesst ihn wie bisher umstellen.
+                  if (kursArt && gesperrt === null) setBotWahl({ art: 'kurs', kurs: kursArt.id });
+                  setBotsOffen(true);
+                }}
+              >
+                {t('einstieg.bots')}
+              </button>
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-einstieg="freunde"
+                onClick={() => void spieleMitFreunden()}
+                disabled={laedt || gesperrt !== null}
+              >
+                {t('einstieg.freunde')}
+              </button>
+            </div>
           </>
         }
       >

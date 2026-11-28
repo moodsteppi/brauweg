@@ -57,11 +57,11 @@ export default {
   'spielart.cambio.hart.text': 'No peek at the start, a wrong call costs 10.',
 
   'spielart.easypoker.locker.name': 'Casual',
-  'spielart.easypoker.locker.text': '200 chips, blinds 2/4.',
+  'spielart.easypoker.locker.text': 'Blinds 2/4.',
   'spielart.easypoker.abend.name': 'Evening',
-  'spielart.easypoker.abend.text': '500 chips, blinds 5/10.',
+  'spielart.easypoker.abend.text': 'Blinds 5/10.',
   'spielart.easypoker.hoch.name': 'High',
-  'spielart.easypoker.hoch.text': '2000 chips, blinds 20/40.',
+  'spielart.easypoker.hoch.text': 'Blinds 20/40.',
 
   'spielart.filler.nebel.name': 'Fog',
   'spielart.filler.nebel.text': 'You only see your territory and its edge.',

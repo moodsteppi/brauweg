@@ -226,6 +226,13 @@ export function Lobby({
   const sitze = defaults?.seatCounts ?? [4];
   const sitzText = sitze.length > 1 ? `${sitze[0]}-${sitze[sitze.length - 1]}` : `${sitze[0]}`;
   const zeitId = zeitWahl ?? zeitIdAus(art?.config ?? null);
+  /*
+   * Bringt die Spielart selbst einen Modus mit (BroChess „Spezial":
+   * `modus: 'zufall'`), steht der Spezial-Modi-Knopf nicht da. Er zeigte sonst
+   * „Klassisches Schach", obwohl der Partiebau gleich einen Modus zieht — wer
+   * einen bestimmten will, waehlt eine Zeit-Spielart und dann den Modus.
+   */
+  const spezialKnopf = art?.config['modus'] !== undefined ? null : spezial.knopf;
   const zeitRegeln = istSchach && zeitWahl !== null ? regelnFuer(zeitkontrolle(zeitWahl)) : {};
 
   const baseRounds = defaults?.rounds[String(seats)] ?? [];
@@ -353,7 +360,7 @@ export function Lobby({
         titel={t('lobby.bot.titel')}
         unter={artName ? `${name} · ${artName}` : tf('lobby.bot.unter', { spiel: name })}
         onBack={() => setAnsicht('start')}
-        zurueckText={t('lobby.zurueckZurAuswahl')}
+        zurueckText={t('einstieg.zurueck')}
         fuss={
           <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void starteGegenBot()}>
             {t('lobby.bot.starten')}
@@ -361,7 +368,7 @@ export function Lobby({
         }
       >
         {error && <p className="hb-fehler">{error}</p>}
-        {spezial.knopf}
+        {spezialKnopf}
         <SpielAbschnitt titel={t('lobby.botStaerke')}>
           {istSchach ? (
             <SpielWahl
@@ -395,7 +402,7 @@ export function Lobby({
           setRegelnOffen(false);
           setAnsicht('start');
         }}
-        zurueckText={t('lobby.zurueckZurAuswahl')}
+        zurueckText={t('einstieg.zurueck')}
         fuss={
           <>
             <button type="button" className="hb-kn is-gold is-haupt is-breit" onClick={() => void create()}>
@@ -406,7 +413,7 @@ export function Lobby({
         }
       >
         {error && <p className="hb-fehler">{error}</p>}
-        {spezial.knopf}
+        {spezialKnopf}
         {zeitAbschnitt}
         {/* Schach kennt nur zwei Spieler und eine Partie — zwei Wahlen mit
             je einer Möglichkeit wären keine Wahl. */}
@@ -511,22 +518,26 @@ export function Lobby({
             {t('einstieg.quickplay')}
             {unterQuick && <small>{unterQuick}</small>}
           </button>
-          <button
-            type="button"
-            className="hb-kn is-blau is-breit"
-            data-einstieg="bots"
-            onClick={() => (BOT_STAERKE_WAEHLEN.has(gameId) ? setAnsicht('bot') : void starteGegenBot())}
-          >
-            {t('einstieg.bots')}
-          </button>
-          <button
-            type="button"
-            className="hb-kn is-blau is-breit"
-            data-einstieg="freunde"
-            onClick={() => oeffneFreunde(false)}
-          >
-            {t('einstieg.freunde')}
-          </button>
+          {/* Nebeneinander: Vier Zeilen Knoepfe nahmen am Handy fast die
+              Haelfte der Hoehe, und die Spielarten darueber sind der Inhalt. */}
+          <div className="hb-knopfreihe">
+            <button
+              type="button"
+              className="hb-kn is-blau"
+              data-einstieg="bots"
+              onClick={() => (BOT_STAERKE_WAEHLEN.has(gameId) ? setAnsicht('bot') : void starteGegenBot())}
+            >
+              {t('einstieg.bots')}
+            </button>
+            <button
+              type="button"
+              className="hb-kn is-blau"
+              data-einstieg="freunde"
+              onClick={() => oeffneFreunde(false)}
+            >
+              {t('einstieg.freunde')}
+            </button>
+          </div>
           {hatRegeln && (
             <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => oeffneFreunde(true)}>
               {t('einstieg.eigeneRegeln')}

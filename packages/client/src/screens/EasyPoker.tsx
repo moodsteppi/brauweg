@@ -844,25 +844,27 @@ export function EasyPoker({
               {t('einstieg.quickplay')}
               {unterQuick && <small>{unterQuick}</small>}
             </button>
-            <button
-              className="hb-kn is-blau is-breit spe-kn-unter"
-              type="button"
-              data-einstieg="bots"
-              onClick={() => void sofortSpielen()}
-              disabled={!startbar}
-            >
-              {t('einstieg.bots')}
-              <small>{tf('poker.menue.sofortUnter', { n: sitzeWahl })}</small>
-            </button>
-            <button
-              className="hb-kn is-blau is-breit"
-              type="button"
-              data-einstieg="freunde"
-              onClick={() => void freundeAufmachen()}
-              disabled={!startbar}
-            >
-              {t('einstieg.freunde')}
-            </button>
+            {/* Nebeneinander wie im Spieleinstieg der Lobby-Spiele: Die Karten darueber sind der Inhalt. */}
+            <div className="hb-knopfreihe">
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-einstieg="bots"
+                onClick={() => void sofortSpielen()}
+                disabled={!startbar}
+              >
+                {t('einstieg.bots')}
+              </button>
+              <button
+                className="hb-kn is-blau"
+                type="button"
+                data-einstieg="freunde"
+                onClick={() => void freundeAufmachen()}
+                disabled={!startbar}
+              >
+                {t('einstieg.freunde')}
+              </button>
+            </div>
             <button type="button" className="spa-eigene" data-einstieg="eigene" onClick={() => setEinsatzOffen(true)}>
               {t('einstieg.eigeneRegeln')}
             </button>

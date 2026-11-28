@@ -82,7 +82,7 @@ export default {
   // Tisch beitreten
   'tafelrunde.ui.beitreten.unter': 'Mit Code oder an einen offenen Tisch',
   'tafelrunde.ui.beitreten.knopf': 'Beitreten',
-  'tafelrunde.ui.beitreten.text': 'Tippe den Code ein, den du bekommen hast - oder nimm einen offenen Tisch.',
+  'tafelrunde.ui.beitreten.text': 'Tippe den Code ein, den du bekommen hast.',
   'tafelrunde.ui.beitreten.code': 'Beitrittscode',
   'tafelrunde.ui.beitreten.vorschau': '{tisch} · {belegt}/{plaetze} Plätzen besetzt',
   'tafelrunde.ui.beitreten.offeneTische': 'Offene Tische',
@@ -217,7 +217,7 @@ export default {
   'tafelrunde.ui.neu.marke.zaehlt': 'zählt',
   'tafelrunde.ui.neu.schnellsuche': 'Quick-Play',
   'tafelrunde.ui.neu.erstellenUnter': 'Mit Code für Freunde',
-  'tafelrunde.ui.neu.beitretenUnter': 'Code eintippen oder offenen Tisch wählen',
+  'tafelrunde.ui.neu.beitretenUnter': 'Mit dem Code deiner Freunde',
   'tafelrunde.ui.neu.botsUnter': 'Sofort los, vier Plätze',
   'tafelrunde.ui.neu.regelnUnter': 'Regeln, Fähigkeiten, Marken',
   'tafelrunde.ui.neu.suche.titel': 'Mitspieler werden gesucht',

@@ -74,11 +74,11 @@ export default {
 
   // Poker
   'spielart.easypoker.locker.name': 'Locker',
-  'spielart.easypoker.locker.text': '200 Jetons, Blinds 2/4.',
+  'spielart.easypoker.locker.text': 'Blinds 2/4.',
   'spielart.easypoker.abend.name': 'Abend',
-  'spielart.easypoker.abend.text': '500 Jetons, Blinds 5/10.',
+  'spielart.easypoker.abend.text': 'Blinds 5/10.',
   'spielart.easypoker.hoch.name': 'Hoch',
-  'spielart.easypoker.hoch.text': '2000 Jetons, Blinds 20/40.',
+  'spielart.easypoker.hoch.text': 'Blinds 20/40.',
 
   // Farbduell
   'spielart.filler.nebel.name': 'Nebel',

@@ -478,24 +478,27 @@ export function Eiland({
               {t('einstieg.quickplay')}
               {unterQuick && <small>{unterQuick}</small>}
             </button>
-            <button
-              type="button"
-              className="hb-kn is-blau is-breit"
-              data-einstieg="bots"
-              onClick={() => void gegenKi()}
-              disabled={sucht}
-            >
-              {t('einstieg.bots')}
-            </button>
-            <button
-              type="button"
-              className="hb-kn is-blau is-breit"
-              data-einstieg="freunde"
-              onClick={() => void mitFreunden()}
-              disabled={sucht}
-            >
-              {t('einstieg.freunde')}
-            </button>
+            {/* Nebeneinander wie im Spieleinstieg der Lobby-Spiele: Die Karten darueber sind der Inhalt. */}
+            <div className="hb-knopfreihe">
+              <button
+                type="button"
+                className="hb-kn is-blau"
+                data-einstieg="bots"
+                onClick={() => void gegenKi()}
+                disabled={sucht}
+              >
+                {t('einstieg.bots')}
+              </button>
+              <button
+                type="button"
+                className="hb-kn is-blau"
+                data-einstieg="freunde"
+                onClick={() => void mitFreunden()}
+                disabled={sucht}
+              >
+                {t('einstieg.freunde')}
+              </button>
+            </div>
             {spielerZeile}
           </>
         }
