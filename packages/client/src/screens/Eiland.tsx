@@ -22,7 +22,10 @@ import { serverAdresse } from '../laufzeit';
 import { GastHinweis } from '../tisch/GastHinweis';
 import { mitFett } from './ClanTeile';
 import { HbBlatt } from './HbBlatt';
-import { SpielAbschnitt, SpielRahmen, SpielWahl } from './SpielEinstieg';
+import { SpielAbschnitt, SpielRahmen } from './SpielEinstieg';
+import { Einladung } from '../minispiele/partykiste/Einladung';
+import { SpielartKarten, quickplayUnter } from '../spielarten/SpielartKarten';
+import { useSpielarten } from '../spielarten/useSpielarten';
 import './spiel-einstieg-mini.css';
 
 /**
@@ -143,15 +146,18 @@ export function Eiland({
    * die Spielart, die man ohne Erklaerung versteht, der Nebel die fuer den
    * zweiten Abend.
    *
-   * ACHTUNG, seit dem 06.09.2026 gilt sie nur noch fuer den KI-Knopf: Die
-   * Mitspielersuche laeuft ueber die Schlange des Servers, und die baut ihren
-   * Tisch mit `defaultConfig()` des Moduls — dort steht `variante: 'nebel'`.
-   * Das Online-Match spielt also im Nebel, egal was hier gewaehlt ist. Der
-   * Widerspruch zum Nutzerwunsch steht als Karte auf dem Issueboard; er laesst
-   * sich nur an einer von zwei Stellen aufloesen (Schlange mit Regelsatz oder
-   * DEFAULT_REGELN umstellen), und beides ist keine Sache dieses Bildschirms.
+   * Vom 06.09. bis zum 28.11.2026 galt sie nur fuer den KI-Knopf: Die Suche
+   * baute ihren Tisch mit `defaultConfig()` des Moduls, also immer im Nebel.
+   * Seitdem sind Klar und Nebel Spielarten des Moduls (`GameMeta.spielarten`,
+   * Klar vorn), die Karten kommen vom Server, und Quick-Play schickt die
+   * gewaehlte mit — die Schlange fuehrt je Spielart einen Topf. Der
+   * Widerspruch zum Nutzerwunsch ist damit aufgeloest.
    */
-  const [variante, setVariante] = useState<EilandVariante>('klar');
+  const spielartwahl = useSpielarten('eiland');
+  const art = spielartwahl.gewaehlt;
+  const variante: EilandVariante = art?.id === 'nebel' ? 'nebel' : 'klar';
+  /** Der Freundestisch, den ich aufgemacht habe — dort steht die Einladung. */
+  const [freundeTisch, setFreundeTisch] = useState<string | null>(null);
 
   /*
    * Der Regelsatz des Moduls, vorab beim Server geholt. Die gewaehlte
@@ -189,7 +195,7 @@ export function Eiland({
     setFehler(null);
     setSucht(true);
     try {
-      const stand = await api.sucheStarten('eiland');
+      const stand = await api.sucheStarten('eiland', art?.config);
       if (stand.tischId) setTischId(stand.tischId);
       else setSuchstand(stand);
     } catch {
@@ -197,7 +203,7 @@ export function Eiland({
     } finally {
       setSucht(false);
     }
-  }, []);
+  }, [art]);
 
   /**
    * Nachfragen, solange gesucht wird.
@@ -270,25 +276,34 @@ export function Eiland({
    * einem Bot auffuellt — so kommt niemand hinein, der auf einen Menschen
    * hofft.
    */
-  const gegenKi = useCallback(async (): Promise<void> => {
-    setFehler(null);
-    setSucht(true);
-    try {
-      const { id } = await api.createTable({
-        gameId: 'eiland',
-        config: { ...(await holeVorgabe()), variante },
-        seats: 2,
-        rounds: 1,
-        visibility: 'on_request',
-        fillWithBots: true,
-      });
-      setTischId(id);
-    } catch {
-      setFehler(t('eiland.fehler.tisch'));
-    } finally {
-      setSucht(false);
-    }
-  }, [holeVorgabe, variante]);
+  const tischAufmachen = useCallback(
+    async (bots: boolean): Promise<void> => {
+      setFehler(null);
+      setSucht(true);
+      try {
+        const { id } = await api.createTable({
+          gameId: 'eiland',
+          // Die Spielart des Moduls; ohne Antwort vom Server die Vorgabe mit
+          // der Kennung darauf, wie bis zum 28.11.2026.
+          config: art?.config ?? { ...(await holeVorgabe()), variante },
+          seats: 2,
+          rounds: 1,
+          visibility: 'on_request',
+          fillWithBots: bots,
+        });
+        setFreundeTisch(bots ? null : id);
+        setTischId(id);
+      } catch {
+        setFehler(t('eiland.fehler.tisch'));
+      } finally {
+        setSucht(false);
+      }
+    },
+    [holeVorgabe, variante, art],
+  );
+  const gegenKi = useCallback((): Promise<void> => tischAufmachen(true), [tischAufmachen]);
+  /** Mit Freunden: Tisch fuer zwei ohne Bot, im Wartebereich die Einladung. */
+  const mitFreunden = useCallback((): Promise<void> => tischAufmachen(false), [tischAufmachen]);
 
   const brichAb = useCallback((): void => {
     const id = tischId;
@@ -438,10 +453,11 @@ export function Eiland({
 
   if (!tischId) {
     /*
-     * Der Spieleinstieg-Baukasten. Die Suche ist der Hauptknopf im Fuss; die
-     * Spielart steht im Block des KI-Knopfes, weil sie nur dort wirkt (siehe
-     * `variante`).
+     * Der Spieleinstieg wie bei Farbduell (28.11.2026): Spielart-Karten (Klar,
+     * Nebel), darunter Quick-Play in Gold, Gegen Bots und Mit Freunden in
+     * Blau — alle drei mit der gewaehlten Spielart.
      */
+    const unterQuick = quickplayUnter('eiland', art);
     return (
       <SpielRahmen
         gameId="eiland"
@@ -454,52 +470,48 @@ export function Eiland({
           <>
             <button
               type="button"
-              className="hb-kn is-gold is-haupt is-breit"
+              className="hb-kn is-gold is-haupt is-breit spe-kn-unter"
+              data-einstieg="quickplay"
               onClick={() => void starteSuche()}
+              disabled={sucht || spielartwahl.spielarten === null}
+            >
+              {t('einstieg.quickplay')}
+              {unterQuick && <small>{unterQuick}</small>}
+            </button>
+            <button
+              type="button"
+              className="hb-kn is-blau is-breit"
+              data-einstieg="bots"
+              onClick={() => void gegenKi()}
               disabled={sucht}
             >
-              {t('eiland.menue.suchen')}
+              {t('einstieg.bots')}
+            </button>
+            <button
+              type="button"
+              className="hb-kn is-blau is-breit"
+              data-einstieg="freunde"
+              onClick={() => void mitFreunden()}
+              disabled={sucht}
+            >
+              {t('einstieg.freunde')}
             </button>
             {spielerZeile}
           </>
         }
       >
         <p className="spe-text">{t('eiland.menue.text')}</p>
-        <div className="ei-probe spe-motiv" aria-hidden="true">
-          <span data-art="gras" />
-          <span data-art="gras">
-            <Ornamentbild art={0} />
-          </span>
-          <span data-art="wasser" />
-          <span data-art="berg" />
-          {variante === 'nebel' && <span data-art="nebel" />}
-        </div>
         {fehler && <p className="hb-fehler">{fehler}</p>}
-        <SpielAbschnitt titel={t('eiland.ki.titel')}>
-          <p className="hb-klein">{t('eiland.ki.hinweis')}</p>
-          <SpielWahl
-            name={t('eiland.spielart')}
-            werte={[
-              { wert: 'klar' as const, text: t('eiland.spielart.klar') },
-              { wert: 'nebel' as const, text: t('eiland.spielart.nebel') },
-            ]}
-            wert={variante}
-            onWahl={setVariante}
-          />
-          <p className="hb-klein">
-            {variante === 'nebel'
-              ? t('eiland.spielart.nebel.text')
-              : t('eiland.spielart.klar.text')}
-          </p>
-          <button
-            type="button"
-            className="hb-kn is-blau is-breit"
-            onClick={() => void gegenKi()}
-            disabled={sucht}
-          >
-            {t('eiland.ki.spielen')}
-          </button>
-        </SpielAbschnitt>
+        {spielartwahl.spielarten && spielartwahl.spielarten.length > 0 && (
+          <SpielAbschnitt titel={t('einstieg.spielart')}>
+            <SpielartKarten
+              gameId="eiland"
+              spielarten={spielartwahl.spielarten}
+              gewaehlt={art?.id ?? null}
+              onWahl={spielartwahl.waehle}
+            />
+          </SpielAbschnitt>
+        )}
         <SpielAbschnitt titel={t('eiland.anleitung')}>
           <div className="hb-liste">
             <button type="button" className="spe-zeile" onClick={() => setRegelnOffen(true)}>
@@ -560,6 +572,7 @@ export function Eiland({
           </div>
           <GastHinweis sitze={tisch.table?.seats ?? []} className="spe-text" />
         </div>
+        {freundeTisch !== null && freundeTisch === tischId && <Einladung spiel="eiland" tischId={tischId} neu />}
       </SpielRahmen>
     );
   }
