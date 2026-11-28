@@ -22,6 +22,7 @@ import { brochess } from '@brauweg/game-brochess';
 import { brocooked } from '@brauweg/game-brocooked';
 import { cambio } from '@brauweg/game-cambio';
 import { doppelkopf } from '@brauweg/game-doppelkopf';
+import { brobluff } from '@brauweg/game-brobluff';
 import { dreckbro } from '@brauweg/game-dreckbro';
 import { easypoker } from '@brauweg/game-easypoker';
 import { eiland } from '@brauweg/game-eiland';
@@ -51,6 +52,7 @@ const MODULES: readonly AnyGameModule[] = [
   partykiste as unknown as AnyGameModule,
   brocooked as unknown as AnyGameModule,
   brochess as unknown as AnyGameModule,
+  brobluff as unknown as AnyGameModule,
   dreckbro as unknown as AnyGameModule,
   wuerfelglanz as unknown as AnyGameModule,
 ];
@@ -235,6 +237,7 @@ export const FREIGABE: Readonly<Partial<Record<GameId, SpielFreigabe>>> = {
      war ausdruecklich, es in der iOS-App zu haben. Loest die Vorschau
      `drecksau` ab — fuer die Produktion bleibt UMFANG die Obergrenze, dort
      muss `dreckbro` statt `drecksau` stehen. */
+  brobluff: { web: 'spielbar', app: 'spielbar' },
   dreckbro: { web: 'spielbar', app: 'spielbar' },
   wuerfelglanz: { web: 'aus', app: 'spielbar' },
   /* Vorschau-Spiel mit Moderationsbedarf (freier Text zwischen Sitzen, siehe

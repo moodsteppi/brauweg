@@ -1,0 +1,9 @@
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
+import { erstellen, handeln, sichtFuer, zuege } from '@brauweg/game-brobluff';
+import { Brett } from './Brett';
+afterEach(cleanup);
+test('Karten auswählen sendet erst nach Bestätigung eine legale Ablage',()=>{const p=erstellen(4,'ui');const s=sichtFuer(p,0);const zug=vi.fn();render(<Brett sicht={s} legal={zuege(s)} name={i=>`Platz ${i}`} onZug={zug}/>);fireEvent.click(screen.getAllByRole('button',{name:/Karte \d/})[0]!);expect(zug).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'1 Karte legen'}));expect(zug).toHaveBeenCalledWith({type:'legen',karten:[0]});});
+test('Unterbrochene Verbindung verhindert Aktionen',()=>{const p=erstellen(2,'ui');const s=sichtFuer(p,0);render(<Brett sicht={s} legal={zuege(s)} name={String} onZug={vi.fn()} verbunden={false}/>);expect(screen.getByRole('button',{name:'Karten auswählen'})).toBeDisabled();expect(screen.getAllByRole('button',{name:/Karte \d/})[0]).toBeDisabled();});
+test('Aufdeckung zeigt nur aufgedeckte Karten und Fortsetzen',()=>{let p=erstellen(2,'ui');p=handeln(p,0,{type:'legen',karten:[0]});p=handeln(p,1,{type:'bluff'});const s=sichtFuer(p,p.amZug);render(<Brett sicht={s} legal={zuege(s)} name={String} onZug={vi.fn()}/>);expect(screen.queryByRole('button',{name:'Neu austeilen'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Bluff!'})).not.toBeInTheDocument();});
+test('Anleitung führt durch alle fünf Schritte',()=>{const s=sichtFuer(erstellen(2,'ui'),0);render(<Brett sicht={s} legal={zuege(s)} name={String} onZug={vi.fn()}/>);fireEvent.click(screen.getByRole('button',{name:'So geht’s'}));for(let i=0;i<4;i++)fireEvent.click(screen.getByRole('button',{name:'Weiter'}));fireEvent.click(screen.getByRole('button',{name:'Verstanden'}));expect(screen.queryByRole('dialog')).not.toBeInTheDocument();});

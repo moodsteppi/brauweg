@@ -25,7 +25,8 @@
     "pixi.js": "8.22.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "@brauweg/game-brobluff": "*"
   },
   "devDependencies": {
     "@brauweg/game-brochess": "*",
