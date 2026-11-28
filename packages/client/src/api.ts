@@ -75,6 +75,38 @@ const bauAnfrage = async <T>(path: string, body?: unknown): Promise<T> => {
 const patch = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 
+const put = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+
+/**
+ * Die Online-Arenen ausserhalb der Tischschicht, die Quick-Play ansteuern kann
+ * (seit dem 28.11.2026). Kennungen wie die Pfade der Arenen.
+ */
+export const SCHNELLSPIEL_ARENEN = ['tanks-online', 'ice-clash'] as const;
+export type SchnellspielArena = (typeof SCHNELLSPIEL_ARENEN)[number];
+
+/** Ein Spiel, das Quick-Play auf dieser Plattform nehmen kann. */
+export interface SchnellspielKandidat {
+  /** Spielkennung (`GameSummary.id`) oder Arena (`SchnellspielArena`). */
+  id: string;
+  art: 'tisch' | 'arena';
+  /** Wie viele Menschen gerade in Suche oder offenem Tisch darauf warten. */
+  wartende: number;
+}
+
+/**
+ * Was Quick-Play entschieden hat (`POST /api/schnellspiel`):
+ * - `tisch`: an einen wartenden Tisch gesetzt — direkt dorthin.
+ * - `suche`: in die Mitspielersuche dieses Spiels eingereiht — weiter wie bei
+ *   jeder Suche mit `sucheStand`/`sucheAbbrechen`, bis `stand.tischId` steht.
+ * - `arena`: die Arena oeffnen und dort online suchen (der Server kennt deren
+ *   Raeume nur zum Zaehlen, beitreten tut die Arena selbst).
+ */
+export type Schnellspielstand =
+  | { art: 'tisch'; gameId: string; tableId: string }
+  | { art: 'suche'; gameId: string; stand: Suchstand }
+  | { art: 'arena'; arena: SchnellspielArena };
+
 export interface GameSummary {
   id: string;
   nameKey: string;
@@ -231,6 +263,20 @@ export interface Me {
   stats: { gameId: string; trophies: number; parties: number; wins: number }[];
   clubs: { id: string; name: string }[];
   activeTable: ActiveTable | null;
+  /**
+   * Vorlieben des Kontos (seit dem 28.11.2026, Startseiten-Umbau): Favoriten
+   * fuer „Deine Spiele" im Spiele-Tab und die Spielauswahl von Quick-Play
+   * (null = alle Kandidaten). Am Konto und nicht im Geraet, damit App und Web
+   * dasselbe zeigen (Robin). Optional wie `bereit.weg`: Ein App-Client kann
+   * an einen Server geraten, der das Feld noch nicht kennt.
+   */
+  vorlieben?: { favoriten: string[]; schnellspiel: string[] | null };
+  /**
+   * Zuletzt gespielte Spiele, neueste zuerst, hoechstens acht — Tischspiele,
+   * Solo-Spiele und Arenen (Kennungen wie in `GameSummary.id` bzw.
+   * `SCHNELLSPIEL_ARENEN`). Optional wie `vorlieben`.
+   */
+  zuletzt?: { spiel: string; am: string }[];
   /**
    * Was dieses Konto darf. Kommt fertig vom Server — der Client rechnet
    * nichts aus Ablaufdaten aus, sonst gäbe es zwei Wahrheiten.
@@ -1096,6 +1142,29 @@ export const api = {
     ),
   sucheStand: (gameId: string) => request<Suchstand>(`/suche/${gameId}`),
   sucheAbbrechen: (gameId: string) => post<{ ok: true }>(`/suche/${gameId}/abbrechen`),
+
+  /**
+   * Quick-Play (seit dem 28.11.2026): Der Server waehlt unter den erlaubten
+   * Spielen zuerst eine Suche, in der schon jemand wartet, dann einen offenen
+   * Tisch mit Menschen, sonst ein zufaelliges Spiel. `spiele` weggelassen =
+   * die gespeicherte Auswahl des Kontos (`vorlieben.schnellspiel`).
+   */
+  schnellspielStarten: (spiele?: string[]) =>
+    post<Schnellspielstand>('/schnellspiel', spiele === undefined ? undefined : { spiele }),
+  /** Was Quick-Play hier nehmen kann — fuer das Zahnrad-Blatt. */
+  schnellspielKandidaten: () => request<{ kandidaten: SchnellspielKandidat[] }>('/schnellspiel/kandidaten'),
+  /** Auswahl fuer Quick-Play speichern; null = alle Kandidaten. */
+  schnellspielAuswahl: (spiele: string[] | null) =>
+    put<{ schnellspiel: string[] | null }>('/me/schnellspiel', { spiele }),
+  /** Herz auf der Spielseite: Favorit an oder aus. Antwort ist die ganze Liste. */
+  favoritSetzen: (spiel: string, an: boolean) =>
+    post<{ favoriten: string[] }>('/me/favoriten', { spiel, an }),
+  /**
+   * „Zuletzt gespielt" fuer Spiele, die der Server nicht selbst sieht (Solo,
+   * Arenen) — der Bildschirm meldet sich beim Oeffnen. Tischspiele traegt der
+   * Server beim Hinsetzen selbst ein.
+   */
+  zuletztMelden: (spiel: string) => post<{ ok: true }>(`/zuletzt/${encodeURIComponent(spiel)}`),
 
   tables: (gameId: string) => request<TableRow[]>(`/tables?game=${gameId}`),
   createTable: (body: {
