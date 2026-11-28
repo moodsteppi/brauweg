@@ -1,12 +1,15 @@
 import { SozialeKanaele } from './SozialeKanaele';
-import type { ActiveTable, Me } from '../api';
-import { t, zahl } from '../i18n';
+import type { Me } from '../api';
+import { t } from '../i18n';
 import { tf } from '../i18n/einsetzen';
-import { inAppSichtbar } from '../app-sichtbar';
 
 import './start-einstiege.css';
 
-/** Start: Spielen und Tagesaufgaben zuerst; der Trophäenweg ist über den Kopf erreichbar. */
+/**
+ * Start: drei Wege ins Spiel (Quick-Play, BroweG-Bock, Schild „Zu den
+ * Spielen“), dazu Lernen und Browort; Aufgaben und Truhen als Seitensymbole.
+ * Der Trophäenweg ist über den Kopf erreichbar.
+ */
 
 /** Banner je Spiel. Drei Spiele heißen im Bild anders als im Code. */
 export function bannerFuer(gameId: string): string {
@@ -35,76 +38,120 @@ export function sicherAb(trophies: number): number {
   return 1000 + Math.floor((trophies - 1000) / 250) * 250;
 }
 
+/**
+ * Die beiden Bilder des Umbaus (docs/ASSETS-START-NEU.md). Als Konstanten mit
+ * null-Möglichkeit, weil sie erst nach dem Code kamen: Steht hier null, zeichnet
+ * die Kachel kein `<img>` — ein weißer Kasten sähe nach Fehler aus
+ * (CLAUDE.md) —, und das Schild fällt auf seinen CSS-Holzgrund zurück.
+ */
+const BOCK_BILD: string | null = '/hub/start-einstiege/bock.webp';
+/**
+ * Der Mittelknopf „Zu den Spielen": grünes Medaillon mit goldenem Controller
+ * (Robin, 28.11.2026, Entwurf 3 von sechs; das Pfeilschild davor wirkte
+ * aufgesetzt). Ohne Schrift im Bild — der Name steht am Knopf.
+ */
+const SPIELE_BILD = '/hub/start-einstiege/spiele.webp';
+
 export function StartNeu({
   me,
-  activeTable,
-  onResume,
-  onPick,
   onAlleSpiele,
   onHeute,
   onBelohnungen,
+  onQuickPlay,
+  onZahnrad,
+  onBock,
+  bockBald,
   onLernen,
   onBrowort,
 }: {
   me: Me;
-  activeTable: ActiveTable | null;
-  onResume: (gameId: string, tableId: string) => void;
-  onPick: (gameId: string) => void;
   onAlleSpiele: () => void;
   onHeute: () => void;
   onBelohnungen: () => void;
+  onQuickPlay: () => void;
+  /** Das Zahnrad der Quick-Play-Kachel: welche Spiele Quick-Play nehmen darf. */
+  onZahnrad: () => void;
+  onBock: () => void;
+  /** Den Bock gibt es noch nicht: Die Kachel trägt ehrlich „Bald“ (DESIGN.md). */
+  bockBald: boolean;
   /** „Doppelkopf lernen" — fehlt es im Umfang, steht keine Lernkarte da. */
   onLernen?: () => void;
   /** Browort — wie `onLernen` nur gesetzt, wenn es im Umfang steht. */
   onBrowort?: () => void;
 }): React.JSX.Element {
-  const eigene = [...me.stats]
-    .filter((s) => inAppSichtbar(s.gameId))
-    .filter((s) => s.parties > 0 || s.trophies > 0)
-    .sort((a, b) => b.trophies - a.trophies)
-    .slice(0, 6);
-
+  const { aufgaben, truhen } = me.bereit;
   return (
     <div className="hb-start">
+      {/* Tagesaufgaben und Belohnungen als breite Knöpfe wie TikTok/Instagram,
+          über Quick-Play bzw. dem Bock (Robin, 28.11.2026 abends: „so viel
+          Platz" — die schwebenden Seitensymbole vom Mittag sind damit weg).
+          Die Zahl steht im Namen, weil die rote Marke allein nichts vorliest
+          (DESIGN.md). */}
+      <section className="hb-social start-social start-heute" aria-label={t('start.symbole')}>
+        <div className="hb-social-links">
+          <button
+            type="button"
+            className="hb-social-link start-holzrahmen start-heute-knopf"
+            onClick={onHeute}
+            aria-label={aufgaben > 0 ? tf('start.symbol.aufgabenBereit', { n: aufgaben }) : t('start.symbol.aufgaben')}
+          >
+            <img className="hb-social-logo" src="/hub/icon-aufgaben.webp" alt="" />
+            <strong>{t('start.symbol.aufgaben')}</strong>
+            {aufgaben > 0 && <b className="start-symbol-zahl" aria-hidden="true">{aufgaben}</b>}
+            <RahmenEcken />
+          </button>
+          <button
+            type="button"
+            className="hb-social-link start-holzrahmen start-heute-knopf"
+            onClick={onBelohnungen}
+            aria-label={truhen > 0 ? tf('start.symbol.truhenBereit', { n: truhen }) : t('start.symbol.truhen')}
+          >
+            <img className="hb-social-logo" src="/hub/truhe-holz.webp" alt="" />
+            <strong>{t('start.symbol.truhen')}</strong>
+            {truhen > 0 && <b className="start-symbol-zahl" aria-hidden="true">{truhen}</b>}
+            <RahmenEcken />
+          </button>
+        </div>
+      </section>
       <section className="start-mosaik" aria-label={t('start.einstiege')}>
+        {/* Zwei Knöpfe nebeneinander statt verschachtelt: Ein Knopf im Knopf
+            ist kein gültiges HTML, und das Zahnrad soll die Kachel nicht
+            auslösen (eigene Tippfläche, Plan Abschnitt 3). */}
+        <div className="start-kachel-huelle">
+          <button
+            type="button"
+            className="start-kachel start-holzrahmen start-quickplay"
+            onClick={onQuickPlay}
+            aria-label={t('start.quickplay.aria')}
+          >
+            <span className="start-kachel-text">
+              <strong>{t('start.quickplay.titel')}</strong>
+              <small>{t('start.quickplay.unter')}</small>
+            </span>
+            <img src="/hub/start-einstiege/play.webp" alt="" fetchPriority="high" />
+            <RahmenEcken />
+          </button>
+          <button
+            type="button"
+            className="start-zahnrad"
+            onClick={onZahnrad}
+            aria-label={t('start.quickplay.zahnrad')}
+          >
+            <img src="/hub/icon-einstellungen.webp" alt="" />
+          </button>
+        </div>
         <button
           type="button"
-          className="start-kachel start-holzrahmen start-quests"
-          onClick={onHeute}
-          aria-label={
-            me.bereit.aufgaben > 0
-              ? tf('start.heute.ariaBereit', { n: me.bereit.aufgaben })
-              : t('start.heute.aria')
-          }
+          className="start-kachel start-holzrahmen start-bock"
+          onClick={onBock}
+          aria-label={t('start.bock.aria')}
         >
           <span className="start-kachel-text">
-            <strong>{t('start.aufgaben.titel')}</strong>
-            <small>{t('start.mosaik.quests')}</small>
+            <strong>{t('start.bock.titel')}</strong>
+            <small>{t('start.bock.unter')}</small>
           </span>
-          <img src="/hub/start-einstiege/aufgaben.webp" alt="" />
-          {me.bereit.aufgaben > 0 && (
-            <b className="start-kachel-badge">
-              {tf('start.heute.bereit', { n: me.bereit.aufgaben })}
-            </b>
-          )}
-          <RahmenEcken />
-        </button>
-        <button
-          type="button"
-          className="start-kachel start-holzrahmen start-rewards"
-          onClick={onBelohnungen}
-          aria-label={t('start.mosaik.belohnungenAria')}
-        >
-          <span className="start-kachel-text">
-            <strong>{t('start.mosaik.belohnungen')}</strong>
-            <small>{t('start.mosaik.truhen')}</small>
-          </span>
-          <img src="/hub/truhe-holz.webp" alt="" />
-          {me.bereit.truhen > 0 && (
-            <b className="start-kachel-badge">
-              {tf('start.heute.bereit', { n: me.bereit.truhen })}
-            </b>
-          )}
+          {bockBald && <b className="start-kachel-badge start-bald">{t('start.bock.bald')}</b>}
+          {BOCK_BILD && <img src={BOCK_BILD} alt="" />}
           <RahmenEcken />
         </button>
         <button
@@ -153,85 +200,22 @@ export function StartNeu({
           />
           <RahmenEcken />
         </button>
+        {/* Mittelknopf zu den Spielen (Controller-Medaillon) — er wischt auf den
+            Spiele-Reiter wie früher der Play-Kreis. */}
         <button
           type="button"
-          className="start-play-kreis"
+          className="start-mitte"
           onClick={onAlleSpiele}
-          aria-label={t('start.spielen.aria')}
+          aria-label={t('start.schildName')}
         >
-          <img
-            src="/hub/start-einstiege/play.webp"
-            alt=""
-            fetchPriority="high"
-          />
+          <img src={SPIELE_BILD} alt="" draggable={false} />
         </button>
       </section>
 
-      {activeTable && inAppSichtbar(activeTable.gameId) && (
-        <button
-          type="button"
-          className="hb-weiter start-holzrahmen"
-          onClick={() => onResume(activeTable.gameId, activeTable.tableId)}
-        >
-          <span
-            className="hb-weiter-bild"
-            style={{
-              backgroundImage: `url(${bannerFuer(activeTable.gameId)})`,
-            }}
-          />
-          <span className="hb-weiter-text">
-            <span className="hb-label">{t('start.weiter.label')}</span>
-            <strong>{t(`game.${activeTable.gameId}`)}</strong>
-            <span>
-              {activeTable.paused
-                ? t('start.weiter.pausiert')
-                : activeTable.status === 'waiting'
-                  ? t('start.weiter.wartet')
-                  : t('start.weiter.laeuft')}
-            </span>
-          </span>
-          <span className="hb-weiter-los" aria-hidden="true">
-            ›
-          </span>
-          <RahmenEcken />
-        </button>
-      )}
-
-      <section className="hb-blk">
-        <h2 className="hb-ab">
-          {t('start.spiele.titel')}
-          <button type="button" className="hb-ab-mehr" onClick={onAlleSpiele}>
-            {t('start.spiele.alle')}
-          </button>
-        </h2>
-        <div className="start-favoriten">
-          {eigene.length === 0 ? (
-            <button type="button" className="hb-leer" onClick={onAlleSpiele}>
-              {t('start.spiele.leer')}
-            </button>
-          ) : (
-            eigene.map((s) => (
-              <button
-                type="button"
-                className="hb-sk start-holzrahmen"
-                key={s.gameId}
-                onClick={() => onPick(s.gameId)}
-              >
-                <span
-                  className="hb-sk-bild"
-                  style={{ backgroundImage: `url(${bannerFuer(s.gameId)})` }}
-                />
-                <strong>{t(`game.${s.gameId}`)}</strong>
-                <RahmenEcken />
-                <span className="hb-pk">
-                  <img src="/hub/symbol-pokal.webp" alt="" />
-                  {zahl(s.trophies)}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-      </section>
+      {/* Weiterspielen und „Deine Spiele“ sind vom Start weg (Robin,
+          28.11.2026): Die laufende Runde melden die Pop-ups
+          (StartAblauf.tsx), die eigenen Spiele stehen oben im Spiele-Reiter.
+          Damit passt der Start ohne Rollen aufs Handy. */}
       <SozialeKanaele kompakt />
     </div>
   );
@@ -254,7 +238,7 @@ export function Haken(): React.JSX.Element {
   );
 }
 
-function RahmenEcken() {
+export function RahmenEcken(): React.JSX.Element {
   return (
     <span className="start-rahmen-ecken" aria-hidden="true">
       <i />

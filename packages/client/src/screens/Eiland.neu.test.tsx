@@ -26,6 +26,15 @@ vi.mock('../api', () => ({
     leaveTable: vi.fn(() => Promise.resolve({ ok: true })),
     aktiveSpieler: () => Promise.resolve({ aktiv: 4 }),
   },
+  spielartenApi: {
+    liste: () =>
+      Promise.resolve({
+        spielarten: [
+          { id: 'klar', config: { spalten: 10, zeilen: 10, variante: 'klar' } },
+          { id: 'nebel', config: { spalten: 10, zeilen: 10, variante: 'nebel' } },
+        ],
+      }),
+  },
 }));
 
 vi.mock('../useTable', () => ({
@@ -58,37 +67,38 @@ describe('Eiland im neuen Hub', () => {
     expect(screen.getByText('4 Spieler gerade in Eiland')).toBeInTheDocument();
   });
 
-  it('„Online Match suchen…" stellt sich in die Schlange und zählt herunter', async () => {
+  it('Quick-Play stellt sich mit der Spielart in die Schlange und zählt herunter', async () => {
     sucheStarten.mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null });
     render(<Eiland onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Online Match suchen…' }));
     await durchatmen();
-    expect(sucheStarten).toHaveBeenCalledWith('eiland');
+    fireEvent.click(screen.getByRole('button', { name: /^Quick-Play/ }));
+    await durchatmen();
+    expect(sucheStarten).toHaveBeenCalledWith('eiland', { spalten: 10, zeilen: 10, variante: 'klar' });
     expect(screen.getByRole('heading', { name: 'Gegner suchen' })).toBeInTheDocument();
     expect(screen.getByText('30')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     await durchatmen();
     expect(sucheAbbrechen).toHaveBeenCalledWith('eiland');
-    expect(screen.getByRole('button', { name: 'Online Match suchen…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Quick-Play/ })).toBeInTheDocument();
   });
 
   it('der KI-Tisch nimmt die gewählte Spielart', async () => {
     createTable.mockResolvedValue({ id: 'tisch-9', joinCode: null });
     render(<Eiland onBack={() => {}} />);
     await durchatmen();
-    // Vorgabe ist die offene Karte (Nutzerwunsch vom 04.09.2026).
-    expect(screen.getByRole('button', { name: 'Offene Karte' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'Im Nebel' }));
-    expect(screen.getByText(/drei Felder darüber hinaus/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen die KI spielen' }));
+    // Vorgabe ist die offene Karte (Nutzerwunsch vom 04.09.2026) — die erste Spielart des Moduls.
+    expect(screen.getByRole('button', { name: 'Klar' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Nebel' }));
+    expect(screen.getByRole('button', { name: 'Nebel' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     await durchatmen();
     expect(createTable).toHaveBeenCalledTimes(1);
     expect(createTable.mock.calls[0]?.[0]).toMatchObject({
       gameId: 'eiland',
       seats: 2,
       fillWithBots: true,
-      config: { ...VORGABE, variante: 'nebel' },
+      config: { spalten: 10, zeilen: 10, variante: 'nebel' },
     });
   });
 

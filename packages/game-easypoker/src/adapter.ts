@@ -45,6 +45,7 @@ import {
   suggestedRounds,
 } from './regeln.js';
 import { type EasyPokerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -54,10 +55,17 @@ import { type EasyPokerSicht, sichtFuer, zuschauerSicht } from './sicht.js';
 const SNAPSHOT_VERSION = 2;
 
 const meta: GameMeta = {
+  // Drei Einsaetze (Locker, Abend, Hoch) — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'easypoker',
   nameKey: 'game.easypoker',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Sechsertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): fuenf Bots um einen
+  // einzelnen Suchenden machen eine Runde nur laenger. Sechs bleiben fuer
+  // die Lobby.
+  suchSitze: 4,
   rotationSize: (seats) => rotationSize(seats),
   suggestedRounds: (seats) => suggestedRounds(seats),
   /**

@@ -20,6 +20,7 @@ import { requireModule } from '../games/registry.js';
 import { tischart, zaehle } from '../statistik.js';
 import { einsatzVon, stakesVon, verlangen } from '../brojetons.js';
 import { verlangeInhaltspakete } from '../tischware.js';
+import { zuletztEintragen } from '../zuletzt.js';
 
 /**
  * Oeffentliche und private Tische muessen in einer Sitzung durchlaufen, daher
@@ -152,7 +153,7 @@ export async function listRuleSets(db: Db, accountId: string, gameId: GameId) {
  * gelesen wird der Code als Grossbuchstabe, verglichen ebenso
  * (`codeNormalisieren`).
  */
-const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 /** Sechs Zeichen aus 31 sind rund 900 Millionen Moeglichkeiten. */
 export const CODE_LAENGE = 6;
@@ -330,6 +331,9 @@ export async function createTable(db: Db, input: CreateTableInput) {
   // Hier und nicht in der Route: Lobby, Mitspielersuche und Uebung legen
   // alle ueber diese Funktion an (statistik.ts).
   zaehle('lobby_erstellt', { spiel: input.gameId });
+  // Aus demselben Grund „zuletzt gespielt" (src/zuletzt.ts) — Hausspieler
+  // filtert die Funktion selbst heraus.
+  await zuletztEintragen(db, [input.accountId], input.gameId);
   return table!;
 }
 
@@ -570,6 +574,9 @@ export async function joinTable(db: Db, tableId: string, accountId: string) {
   if (claimed.length === 0) throw conflict('seatTaken');
 
   await touch(db, tableId);
+  // Jeder Beitritt geht hier durch — Lobby, Code, angenommene Anfrage,
+  // Mitspielersuche und Quick-Play (src/zuletzt.ts).
+  await zuletztEintragen(db, [accountId], table.gameId);
   return table;
 }
 

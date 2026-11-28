@@ -34,6 +34,27 @@ vi.mock('../api', () => ({
     defaults,
     aktiveSpieler: () => Promise.resolve({ aktiv: 4 }),
   },
+  // Die Spielarten des Moduls, wie sie der Server liefert (seit dem 28.11.2026).
+  spielartenApi: {
+    liste: () =>
+      Promise.resolve({
+        spielarten: [
+          { id: 'klar', config: { ...VORGABE_SERVER, variante: 'klar' } },
+          { id: 'nebel', config: { ...VORGABE_SERVER, variante: 'nebel' } },
+        ],
+      }),
+  },
+}));
+
+const VORGABE_SERVER = vi.hoisted(() => ({
+  spalten: 10,
+  zeilen: 10,
+  seen: 2,
+  berge: 4,
+  ornamente: 4,
+  sichtweite: 3,
+  kontingentMax: 6,
+  variante: 'nebel',
 }));
 
 /** Kein Tisch, keine Sicht: der Zustand waehrend und kurz nach der Suche. */
@@ -107,7 +128,9 @@ describe('Eiland: Mitspieler suchen', () => {
 
   async function suchen(): Promise<void> {
     render(<Eiland onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Online Match suchen…' }));
+    // Quick-Play wartet auf die Spielarten vom Server.
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: /^Quick-Play/ }));
     await durchatmen();
   }
 
@@ -154,7 +177,7 @@ describe('Eiland: Mitspieler suchen', () => {
     await suchen();
     await einTakt();
 
-    expect(screen.queryByRole('button', { name: 'Online Match suchen…' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Quick-Play/ })).toBeNull();
     expect(screen.getByText('Tisch wird aufgebaut')).toBeTruthy();
 
     const bisher = sucheStand.mock.calls.length;
@@ -171,7 +194,7 @@ describe('Eiland: Mitspieler suchen', () => {
     await durchatmen();
 
     expect(sucheAbbrechen).toHaveBeenCalledWith('eiland');
-    expect(screen.getByRole('button', { name: 'Online Match suchen…' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Quick-Play/ })).toBeTruthy();
   });
 
   it('sagt es, wenn der Server die Suche nicht mehr kennt', async () => {
@@ -182,18 +205,26 @@ describe('Eiland: Mitspieler suchen', () => {
     await einTakt();
 
     expect(screen.getByText(/Suche wurde beendet/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Online Match suchen…' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Quick-Play/ })).toBeTruthy();
+  });
+
+  it('die Suche schickt die gewaehlte Spielart mit — klar ist die Vorgabe', async () => {
+    /*
+     * Vom 06.09. bis zum 28.11.2026 suchte die Schlange immer im Nebel
+     * (`defaultConfig()` des Moduls). Jetzt geht die Spielart mit, und die
+     * offene Karte — seit dem 04.09.2026 die Vorgabe — gibt es auch online.
+     */
+    sucheStarten.mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null });
+    sucheStand.mockResolvedValue({ sucht: true, suchende: 1, restMs: 29_000, tischId: null });
+    await suchen();
+    expect(sucheStarten).toHaveBeenCalledWith('eiland', { ...VORGABE_SERVER, variante: 'klar' });
   });
 
   it('der KI-Tisch behaelt die gewaehlte Spielart', async () => {
-    /*
-     * Der Schalter wirkt seit dem 06.09.2026 nur noch auf diesen Knopf. Waere
-     * die Spielart hier mitgestrichen worden, gaebe es die offene Karte
-     * nirgends mehr — und genau sie ist seit dem 04.09.2026 die Vorgabe.
-     */
     createTable.mockResolvedValue({ id: 'tisch-9', joinCode: null });
     render(<Eiland onBack={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen die KI spielen' }));
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     await durchatmen();
 
     expect(createTable).toHaveBeenCalledTimes(1);
@@ -205,24 +236,21 @@ describe('Eiland: Mitspieler suchen', () => {
     });
   });
 
-  it('legt die Spielart auf den Regelsatz des Servers, statt ihn abzuschreiben', async () => {
+  it('nimmt den Regelsatz der Spielart vom Server, statt ihn abzuschreiben', async () => {
     /*
      * Bis zum 07.09.2026 stand der Regelsatz als Konstante im Bildschirm. Der
      * Server schreibt eine mitgeschickte `config` unveraendert als Regelsatz
-     * des Tisches fest — die Abschrift UEBERSTIMMTE also das Modul, und beim
-     * Auseinanderlaufen wurde nichts rot. Diese Probe haelt beides fest: dass
-     * gefragt wird, und dass die Antwort ungekuerzt mitgeht.
+     * des Tisches fest — eine Abschrift UEBERSTIMMTE also das Modul. Seit dem
+     * 28.11.2026 kommt der ganze Regelsatz als Spielart vom Server und geht
+     * ungekuerzt mit.
      */
     createTable.mockResolvedValue({ id: 'tisch-10', joinCode: null });
     render(<Eiland onBack={() => {}} />);
     await durchatmen();
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen die KI spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nebel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     await durchatmen();
 
-    expect(defaults).toHaveBeenCalledWith('eiland');
-    expect(createTable.mock.calls[0]?.[0]).toMatchObject({
-      // `variante` ueberschreibt die des Moduls — das ist die Wahl des Nutzers.
-      config: { ...VORGABE, variante: 'klar' },
-    });
+    expect(createTable.mock.calls[0]?.[0]).toMatchObject({ config: { ...VORGABE, variante: 'nebel' } });
   });
 });

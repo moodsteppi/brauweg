@@ -2,16 +2,23 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
- * Poker im neuen Hub (Spieleinstieg-Baukasten, 26.09.2026).
+ * Poker im neuen Hub (Spieleinstieg-Baukasten, 26.09.2026; seit dem
+ * 28.11.2026 mit Spielart-Karten wie bei Farbduell).
  *
- * Geprüft wird, dass der neue Look dieselben Wege hat wie das alte Menü:
- * „Sofort spielen" legt den Bot-Tisch mit Einsatz und Spielerzahl an, der
- * Online-Tisch sucht nach gleichem Einsatz, das Einsatzblatt stellt den
- * Regelsatz, und im Wartebereich füllt der eine goldene Knopf mit Computern
- * auf. Der Filz selbst kommt hier nicht vor — er ist unverändert.
+ * Geprüft wird: Die Einsätze kommen als Karten aus dem Modul (Spielarten),
+ * „Gegen Bots" legt den Bot-Tisch mit Einsatz und Spielerzahl an, Quick-Play
+ * sucht über die Schlange in der gewählten Spielart (bis zum 28.11.2026 stand
+ * hier „der Online-Tisch tritt einem Tisch mit gleichem Einsatz bei" — die
+ * Tischliste gibt es nicht mehr), „Mit Freunden" macht einen privaten Tisch
+ * auf, „Eigene Regeln" (das Einsatzblatt) stellt einen eigenen Einsatz, und im
+ * Wartebereich füllt der eine goldene Knopf mit Computern auf.
  */
 
-const { createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules, startNow, addBot } = vi.hoisted(
+const LOCKER = { variante: 'locker', startJetons: 200, kleinerBlind: 2, grosserBlind: 4 };
+const ABEND = { variante: 'abend', startJetons: 500, kleinerBlind: 5, grosserBlind: 10 };
+const HOCH = { variante: 'hoch', startJetons: 2000, kleinerBlind: 20, grosserBlind: 40 };
+
+const { createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules, startNow, addBot, sucheStarten } = vi.hoisted(
   () => ({
     createTable: vi.fn(),
     joinTable: vi.fn(),
@@ -22,6 +29,7 @@ const { createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRule
     tableRules: vi.fn(),
     startNow: vi.fn(),
     addBot: vi.fn(),
+    sucheStarten: vi.fn(),
   }),
 );
 
@@ -29,7 +37,28 @@ vi.mock('../api', async () => {
   const echt = await vi.importActual<typeof import('../api')>('../api');
   return {
     ...echt,
-    api: { createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules },
+    api: {
+      createTable,
+      joinTable,
+      tables,
+      leaveTable,
+      me,
+      aktiveSpieler,
+      tableRules,
+      sucheStarten,
+      sucheStand: () => new Promise(() => {}),
+      sucheAbbrechen: () => Promise.resolve({ ok: true }),
+    },
+    spielartenApi: {
+      liste: () =>
+        Promise.resolve({
+          spielarten: [
+            { id: 'locker', config: LOCKER },
+            { id: 'abend', config: ABEND },
+            { id: 'hoch', config: HOCH },
+          ],
+        }),
+    },
   };
 });
 
@@ -60,7 +89,8 @@ async function durchatmen(): Promise<void> {
 }
 
 beforeEach(() => {
-  for (const f of [createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules, startNow, addBot]) f.mockReset();
+  for (const f of [createTable, joinTable, tables, leaveTable, me, aktiveSpieler, tableRules, startNow, addBot, sucheStarten]) f.mockReset();
+  sucheStarten.mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null });
   createTable.mockResolvedValue({ id: 'neu-1', joinCode: null });
   joinTable.mockResolvedValue({ ok: true });
   tables.mockResolvedValue([]);
@@ -73,20 +103,22 @@ beforeEach(() => {
 });
 
 describe('Poker im neuen Hub', () => {
-  it('„Sofort spielen" legt den Bot-Tisch mit Einsatz und Spielerzahl an', async () => {
+  it('„Gegen Bots" legt den Bot-Tisch mit Einsatz der Karte und Spielerzahl an', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
     expect(screen.getByRole('heading', { name: 'Poker' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^Abend/ }));
+    const karten = screen.getByRole('group', { name: 'Spielart' });
+    expect(within(karten).getByRole('button', { name: /^Locker/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(karten).getByRole('button', { name: /^Abend/ }));
     fireEvent.click(within(screen.getByRole('group', { name: 'Spielerzahl' })).getByRole('button', { name: '4' }));
     expect(screen.getByText('Du und 3 Computer')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Sofort spielen/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Gegen Bots/ }));
     await durchatmen();
 
     expect(createTable).toHaveBeenCalledWith({
       gameId: 'easypoker',
-      config: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 },
+      config: ABEND,
       seats: 4,
       rounds: 12,
       visibility: 'on_request',
@@ -94,35 +126,48 @@ describe('Poker im neuen Hub', () => {
     });
   });
 
-  it('der Online-Tisch tritt einem Tisch mit gleichem Einsatz bei', async () => {
-    tables.mockResolvedValue([
-      { id: 'hoch', gameId: 'easypoker', seats: 6, occupied: 1, stakes: { startJetons: 2000, kleinerBlind: 20, grosserBlind: 40 } },
-      { id: 'locker', gameId: 'easypoker', seats: 6, occupied: 2, host: 'Kiebitz', stakes: { startJetons: 200, kleinerBlind: 2, grosserBlind: 4 } },
-    ]);
+  it('die Karte nennt, was die Spielart an BroJetons kostet', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
-    fireEvent.click(screen.getByRole('button', { name: /^Online spielen/ }));
-    await durchatmen();
-
-    expect(screen.getByRole('heading', { name: 'Online-Tisch' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Kiebitz/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Passenden Tisch suchen/ }));
-    await durchatmen();
-    expect(joinTable).toHaveBeenCalledWith('locker');
-    expect(createTable).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /^Hoch/ }).getAttribute('aria-describedby')).toBeTruthy();
+    expect(screen.getByText(/Kostet 2000 BroJetons/)).toBeInTheDocument();
   });
 
-  it('das Einsatzblatt stellt einen eigenen Einsatz ein', async () => {
+  it('Quick-Play sucht über die Schlange in der gewählten Spielart — ohne Tischliste', async () => {
     render(<EasyPoker onBack={() => {}} />);
     await durchatmen();
-    fireEvent.click(screen.getByRole('button', { name: /^Eigenen Einsatz/ }));
+    // 1000 BroJetons reichen nicht für „Hoch" (2000): Quick-Play bleibt zu.
+    fireEvent.click(screen.getByRole('button', { name: /^Hoch/ }));
+    expect(screen.getByRole('button', { name: /^Quick-Play/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /^Abend/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Quick-Play/ }));
+    await durchatmen();
+    expect(sucheStarten).toHaveBeenCalledWith('easypoker', ABEND);
+    expect(tables).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Mitspieler suchen' })).toBeInTheDocument();
+  });
+
+  it('„Mit Freunden" macht einen privaten Tisch für sechs auf', async () => {
+    render(<EasyPoker onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Mit Freunden' }));
+    await durchatmen();
+    expect(createTable).toHaveBeenCalledWith(
+      expect.objectContaining({ gameId: 'easypoker', seats: 6, visibility: 'on_request', config: LOCKER }),
+    );
+  });
+
+  it('„Eigene Regeln" stellt im Einsatzblatt einen eigenen Einsatz ein', async () => {
+    render(<EasyPoker onBack={() => {}} />);
+    await durchatmen();
+    fireEvent.click(screen.getByRole('button', { name: 'Eigene Regeln' }));
     const blatt = screen.getByRole('dialog', { name: 'Einsatz einstellen' });
     fireEvent.click(within(within(blatt).getByRole('group', { name: 'Mindest-Einsatz' })).getByRole('button', { name: '1000' }));
     fireEvent.click(within(blatt).getByRole('button', { name: /^So spielen/ }));
 
     expect(screen.queryByRole('dialog', { name: 'Einsatz einstellen' })).not.toBeInTheDocument();
     expect(screen.getByText('Mindest-Einsatz 1000 · Blinds 10/20')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Sofort spielen/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Gegen Bots/ }));
     await durchatmen();
     expect(createTable.mock.calls[0]?.[0]).toMatchObject({
       config: { startJetons: 1000, kleinerBlind: 10, grosserBlind: 20 },
@@ -165,11 +210,9 @@ describe('Poker im neuen Hub', () => {
       await durchatmen();
       fireEvent.click(screen.getByRole('button', { name: /^Evening/ }));
       expect(screen.getByText('You against the computer')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^Play now/ }));
+      fireEvent.click(screen.getByRole('button', { name: /^Against bots/ }));
       await durchatmen();
-      expect(createTable).toHaveBeenCalledWith(
-        expect.objectContaining({ config: { startJetons: 500, kleinerBlind: 5, grosserBlind: 10 } }),
-      );
+      expect(createTable).toHaveBeenCalledWith(expect.objectContaining({ config: ABEND }));
     } finally {
       setzeSprachwahl('auto');
     }

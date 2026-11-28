@@ -330,7 +330,50 @@ export interface GameMeta {
    * Fehlt das Feld, gilt die Zugzeit der Plattform. Das ist der Normalfall.
    */
   readonly zugzeitMs?: number;
+  /**
+   * Fertige Regelsaetze zur Auswahl, seit dem 28.11.2026 (Robin: „die
+   * Zwischenseiten wie bei Farbduell, Spielarten als Karten"). Die ERSTE ist
+   * die Vorgabe des Einstiegs. Fehlt das Feld, hat das Spiel keine Spielarten
+   * und der Einstieg zeigt eine einzige grosse Karte.
+   *
+   * Warum im Modul und nicht im Client: Ein Regelsatz ist Wissen des Moduls.
+   * Stuende „Doppelkopf Hart" als Abschrift im Bildschirm, ueberstimmte sie
+   * beim Tischbau das Modul (CLAUDE.md, „Was das Modul weiss, schreibt der
+   * Client nicht ab") — und der Validator saehe sie erst, wenn jemand tippt.
+   * So prueft `spielarten.test.ts` je Modul jede einzelne beim Bauen.
+   *
+   * Jede `config` traegt `variante: <id>`: Die Suchschlange fuehrt je
+   * `config.variante` einen eigenen Topf (`schluessel` in
+   * server/src/suche/schlange.ts). Ohne das stuenden „Anfaenger" und „Hart"
+   * im selben Topf, und es galte der Regelsatz des ersten Suchenden.
+   * `validateConfig` muss den Zusatzschluessel deshalb dulden — `shapeProblems`
+   * tut das (es prueft nur, dass nichts FEHLT).
+   *
+   * Namen und Saetze stehen nicht hier, sondern im Woerterbuch des Clients
+   * (`spielart.<spiel>.<id>.name` und `.text`): Das Modul kennt keine Sprache.
+   */
+  readonly spielarten?: readonly Spielart[];
 }
+
+/**
+ * Ein fertiger Regelsatz mit Kennung — siehe `GameMeta.spielarten`.
+ *
+ * `runden` ist die Rundenzahl, die eine Suche in dieser Spielart nimmt, wenn
+ * sie nicht die erste aus `suggestedRounds` sein soll (Golf: ein Kurs hat
+ * sechs bis neun Bahnen, die erste Vorschlagszahl waere zwei Loecher). Fehlt
+ * es, rechnet die Vermittlung wie bisher.
+ */
+export interface Spielart {
+  readonly id: string;
+  readonly config: unknown;
+  readonly runden?: number;
+}
+
+/**
+ * Laengste Kennung einer Spielart. Dieselbe Grenze wie `spielartVon` in der
+ * Suchschlange — laenger, und sie fiele dort still in den Topf ohne Spielart.
+ */
+export const SPIELART_KENNUNG_MAX = 24;
 
 /** Obergrenze fuer `GameMeta.zugzeitMs`. */
 export const ZUGZEIT_HOECHST_MS = 10 * 60_000;
@@ -718,4 +761,4 @@ export interface GameRegistry {
 // Gemeinsame Adapter-Helfer
 // ---------------------------------------------------------------------------
 
-export { pruefeSnapshotVersion, shapeProblems, snapshotCodec } from './helfer.js';
+export { pruefeSnapshotVersion, shapeProblems, snapshotCodec, spielartAus } from './helfer.js';

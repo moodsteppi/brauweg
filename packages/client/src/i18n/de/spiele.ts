@@ -65,8 +65,9 @@ export default {
   'game.brobluff': 'Bro Bluff',
   'game.dreckbro': 'DreckBro',
   // Mehrkampf ueber mehrere Spiele. Kein Spielmodul, sondern ein Modus -
-  // deshalb steht er nicht in der Registrierung.
-  'modus.mehrkampf': 'Brauweg-Bock',
+  // deshalb steht er nicht in der Registrierung. Seit dem 28.11.2026
+  // spielbar und mit Robins Namen (Kennung bleibt `mehrkampf`, src/bock/).
+  'modus.mehrkampf': 'BroweG-Bock',
   'modus.prosubway': 'Pro-Subway',
   'modus.prosubway.hint': 'Alleine · Münzen fürs Hub',
 } satisfies Woerterbuch;

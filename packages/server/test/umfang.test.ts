@@ -464,6 +464,8 @@ test('die Spielsperre trifft genau diese Routen mit :gameId — eine neue muss h
     'GET /api/games/:gameId/aktiv',
     'GET /api/games/:gameId/bestleistungen/:inhaltId',
     'GET /api/games/:gameId/defaults',
+    // Die Spielarten eines ausgeblendeten Spiels braucht niemand.
+    'GET /api/games/:gameId/spielarten',
     'GET /api/me/bestleistungen/:gameId',
     'GET /api/rankings/:gameId',
     // Die Suche haengt ohnehin am Spiel (requireSpielbar). Das Abbrechen geht
@@ -499,8 +501,12 @@ test('ohne Profilbild bleiben die anderen Wege an /api/me offen — Konto loesch
 const RELEASE =
   'doppelkopf,skat,filler,brochess,kartenmanufaktur,browort,clanwort,lernpfad,abstimmung,mehrkampf,' +
   'schafkopf,romme,maumau,schwimmen,backgammon,bauernskat,phase10,dreckbro';
-/** Die angekuendigten Titel der Zeile — alle mit Stimme unter „Kommt bald". */
-const RELEASE_BALD = ['backgammon', 'bauernskat', 'maumau', 'mehrkampf', 'phase10', 'romme', 'schafkopf', 'schwimmen'];
+/**
+ * Die angekuendigten Titel der Zeile — alle mit Stimme unter „Kommt bald".
+ * Ohne `mehrkampf` seit dem 28.11.2026: Er ist als BroweG-Bock spielbar
+ * (src/bock/) und steht nicht mehr in der Spielliste.
+ */
+const RELEASE_BALD = ['backgammon', 'bauernskat', 'maumau', 'phase10', 'romme', 'schafkopf', 'schwimmen'];
 
 test('die Release-Zeile kennt der Start ganz — keine Kennung wird als unbekannt gemeldet', () => {
   /*
@@ -515,7 +521,7 @@ test('die Release-Zeile kennt der Start ganz — keine Kennung wird als unbekann
   assert.match(umfangZeile(lies('skat,mau-mau').umfang, ['mau-mau']), /; UMFANG unbekannt: mau-mau$/);
 });
 
-test('mit der Release-Zeile: fuenf Spiele spielbar, acht Titel mit Stimme — auf Webseite und App', async (t) => {
+test('mit der Release-Zeile: fuenf Spiele spielbar, sieben Titel mit Stimme — auf Webseite und App', async (t) => {
   const s = await setup(RELEASE);
   t.after(() => s.close());
 

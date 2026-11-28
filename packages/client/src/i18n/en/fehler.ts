@@ -204,4 +204,10 @@ export default {
   'error.flyingbroZuWenigMeilen': "You don't have enough flight miles yet.",
   'error.flyingbroSchonGekauft': 'You already have this.',
   'error.flyingbroBeschaeftigt': 'Things are busy right now - try again in a moment.',
+  // Quick-Play and favourites (28.11.2026, server/src/schnellspiel.ts).
+  'error.schnellspielLaufenderTisch': "You're still in a match. Finish it first.",
+  'error.schnellspielKeinSpiel': 'No game is selected for Quick Play here.',
+  'error.schnellspielLeer': 'Keep at least one game switched on for Quick Play.',
+  'error.spielUnbekannt': "This game doesn't exist.",
+  'error.favoritenVoll': "No more favourites fit in the row. Remove one first.",
 } satisfies Woerterbuch;

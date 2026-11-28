@@ -257,6 +257,19 @@ export class IceGateway {
     for (const [t, s] of r.schluessel) if (s === id) r.schluessel.delete(t);
     if (r.host === id) r.host = r.spiel.spieler.find((p) => !p.bot)?.id ?? "";
   }
+  /**
+   * Wie viele Menschen gerade in einer offenen Online-Lobby warten — fuer
+   * Quick-Play (seit dem 28.11.2026). Dieselbe Bedingung wie die Raumwahl bei
+   * `online` oben; gezaehlt werden verbundene Menschen, keine Bots.
+   */
+  wartendeOnline(): number {
+    let zahl = 0;
+    for (const r of this.raeume.values()) {
+      if (!r.offen || r.spiel.phase !== "lobby" || r.spiel.spieler.length >= 4) continue;
+      zahl += r.spiel.spieler.filter((p) => !p.bot && r.leitungen.has(p.id)).length;
+    }
+    return zahl;
+  }
   async close() {
     clearInterval(this.takt);
     this.server.off("upgrade", this.upgrade);

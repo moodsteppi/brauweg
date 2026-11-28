@@ -5,14 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * Golf im neuen Hub (Spieleinstieg-Baukasten, 26.09.2026).
  *
  * Geprüft wird, dass der neue Look dieselben Wege hat wie das alte Menü:
- * „Online spielen" sucht eine Gruppe, „Gegen Bots" öffnet eine eigene Ansicht
+ * Quick-Play sucht im gewählten Kurs (seit dem 28.11.2026; bis dahin
+ * „Online spielen" über die Tischliste), „Gegen Bots" öffnet eine eigene Ansicht
  * und „Los" legt den Bot-Tisch mit denselben Zahlen an, der Zurück-Knopf
  * führt aus ihr ins Menü statt aus dem Spiel. Die Verdrahtung im Einzelnen
  * (Regelsatz, Bahnwahl, Farben) steht in Golf.lobby.test.tsx und
  * Golf.bahnauswahl.test.tsx.
  */
 
-const { createTable, joinTable, tables, leaveTable, me, startNow } = vi.hoisted(() => ({
+const { createTable, joinTable, tables, leaveTable, me, startNow, sucheStarten } = vi.hoisted(() => ({
+  sucheStarten: vi.fn(),
   createTable: vi.fn(),
   joinTable: vi.fn(),
   tables: vi.fn(),
@@ -21,8 +23,14 @@ const { createTable, joinTable, tables, leaveTable, me, startNow } = vi.hoisted(
   startNow: vi.fn(),
 }));
 
+const { spielartenListe } = vi.hoisted(() => ({
+  spielartenListe: vi.fn(() => Promise.resolve({ spielarten: [] as unknown[] })),
+}));
+
 vi.mock('../api', () => ({
-  api: { createTable, joinTable, tables, leaveTable, me },
+  api: { createTable, joinTable, tables, leaveTable, me, sucheStarten, sucheStand: () => new Promise(() => {}), sucheAbbrechen: () => Promise.resolve({ ok: true }) },
+  // Die Kurse als Spielarten (seit dem 28.11.2026); hier ohne, ausser wo eigens geprueft.
+  spielartenApi: { liste: () => spielartenListe() },
 }));
 
 let tischStand: unknown = null;
@@ -53,7 +61,7 @@ async function durchatmen(): Promise<void> {
 }
 
 beforeEach(() => {
-  for (const f of [createTable, joinTable, tables, leaveTable, me, startNow]) f.mockReset();
+  for (const f of [createTable, joinTable, tables, leaveTable, me, startNow, sucheStarten]) f.mockReset();
   createTable.mockResolvedValue({ id: 'neu-1', joinCode: null });
   joinTable.mockResolvedValue({ ok: true });
   tables.mockResolvedValue([]);
@@ -64,16 +72,22 @@ beforeEach(() => {
 });
 
 describe('Golf im neuen Hub', () => {
-  it('zeigt das Menü im Spielrahmen und sucht mit „Online spielen" eine Gruppe', async () => {
+  it('zeigt die Kurse als Karten und sucht mit Quick-Play im gewählten Kurs', async () => {
+    spielartenListe.mockResolvedValueOnce({
+      spielarten: [{ id: 'anfaengerrunde', runden: 6, config: { kurs: 'anfaengerrunde', variante: 'anfaengerrunde' } }, { id: 'eiszeit', runden: 8, config: { kurs: 'eiszeit', variante: 'eiszeit' } }],
+    });
+    sucheStarten.mockResolvedValue({ sucht: true, suchende: 1, restMs: 30_000, tischId: null });
     render(<Golf onBack={() => {}} />);
     await durchatmen();
     expect(screen.getByRole('heading', { name: 'Golf' })).toBeInTheDocument();
     expect(document.querySelector('.spe')).not.toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Online spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eiszeit' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Quick-Play/ }));
     await durchatmen();
-    expect(tables).toHaveBeenCalledWith('golf');
-    expect(createTable).toHaveBeenCalledWith({ gameId: 'golf', seats: 8, rounds: 9, visibility: 'public' });
+    expect(sucheStarten).toHaveBeenCalledWith('golf', { kurs: 'eiszeit', variante: 'eiszeit' });
+    expect(tables).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Mitspieler suchen' })).toBeInTheDocument();
   });
 
   it('„Gegen Bots" öffnet eine eigene Ansicht, „Los" legt den Bot-Tisch an', async () => {

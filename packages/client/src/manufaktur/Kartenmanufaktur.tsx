@@ -40,6 +40,7 @@ import { type Verkauf, Verkaeufe, useGeaendert, useZaehler } from './effekte';
 import type { Leitung } from './steuerung';
 import { useManufaktur } from './useManufaktur';
 import { kurz } from './zahlen';
+import { useZuletztMelden } from '../zuletzt';
 import './manufaktur.css';
 
 export { KARTENARTEN, MANUFAKTUREN } from './namen';
@@ -100,6 +101,9 @@ export function Kartenmanufaktur({
   leitung?: Leitung;
 }): React.JSX.Element {
   useEscape(onClose);
+  // „Zuletzt gespielt" (seit dem 28.11.2026) — nicht aus der Probe mit
+  // nachgestelltem Server, dort spielt niemand.
+  useZuletztMelden('kartenmanufaktur', leitung === undefined);
   const m = useManufaktur(onGeaendert, leitung);
   const [, setTakt] = useState(0);
   const [blatt, setBlatt] = useState<Blatt | null>(null);

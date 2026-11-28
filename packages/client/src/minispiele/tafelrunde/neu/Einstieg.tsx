@@ -235,23 +235,22 @@ export function BeitretenSeite({
   code,
   codeFertig,
   vorschau,
-  offeneTische,
   startet,
   fehler,
   onCode,
   onPerCode,
-  onTisch,
   onZurueck,
 }: {
   code: string;
   codeFertig: boolean;
   vorschau: TischVorschau | null;
-  offeneTische: TableRow[];
+  /** Seit dem 28.11.2026 nicht mehr gezeigt (siehe unten); bleibt fuer den Aufrufer. */
+  offeneTische?: TableRow[];
   startet: boolean;
   fehler: string | null;
   onCode: (code: string) => void;
   onPerCode: () => void;
-  onTisch: (id: string) => void;
+  onTisch?: (id: string) => void;
   onZurueck: () => void;
 }): React.JSX.Element {
   return (
@@ -294,28 +293,9 @@ export function BeitretenSeite({
           {fehler}
         </p>
       )}
-      <Abschnitt titel={tz('beitreten.offeneTische')} zusatz={offeneTische.length > 0 ? offeneTische.length : undefined}>
-        {offeneTische.length === 0 ? (
-          <p className={stil.leer}>{tz('beitreten.keinTisch')}</p>
-        ) : (
-          <div className={stil.liste}>
-            {offeneTische.map((zeile) => (
-              <button
-                key={zeile.id}
-                type="button"
-                className={stil.zeile}
-                onClick={() => onTisch(zeile.id)}
-                disabled={startet}
-              >
-                <strong>{zeile.host ? tz('tischVon', { name: zeile.host }) : tz('offenerTisch')}</strong>
-                <span aria-label={tz('plaetzeBesetzt', { belegt: zeile.occupied, plaetze: zeile.seats })}>
-                  {zeile.occupied}/{zeile.seats}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </Abschnitt>
+      {/* Bis zum 28.11.2026 stand hier die Liste offener Tische. Robin:
+          Tischlisten verwirren — wer mitspielen soll, bekommt den Code;
+          wer irgendwen sucht, nimmt Quick-Play. */}
     </Seite>
   );
 }

@@ -59,6 +59,7 @@ import {
   type GolfRegeln,
   type Zug,
 } from './regeln.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /*
  * Bleibt 1, obwohl `GolfPartie` am 22.09.2026 das Feld `bahnen` bekam: Ein
@@ -102,10 +103,17 @@ export interface GolfView {
 }
 
 const meta: GameMeta = {
+  // Die Kurse — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'golf',
   nameKey: 'game.golf',
   availability: 'playable',
   seatCounts: [1, 2, 3, 4, 5, 6, 7, 8],
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Achtertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Jedes Loch wartet auf alle,
+  // sieben Bots um einen Suchenden machen die Runde nur laenger. Acht bleiben
+  // fuer den verabredeten Tisch.
+  suchSitze: 4,
   /** Golf kennt keine Geberrotation — jedes Loch spielen alle gleichzeitig. */
   rotationSize: () => 1,
   suggestedRounds: () =>

@@ -73,12 +73,6 @@
   object-fit: contain;
   filter: drop-shadow(0 3px 5px #0005);
 }
-.hb .start-rewards {
-  align-items: flex-end;
-  text-align: right;
-  background:
-    radial-gradient(ellipse at 100% 100%, #755331, transparent 85%), #302b21;
-}
 .hb .start-lernen,
 .hb .start-browort {
   flex-direction: column-reverse;
@@ -105,94 +99,6 @@
   background: #162d20ee;
   color: #ffe296;
   font: 800 10px/1.4 var(--hb-txt);
-}
-.hb .start-rewards .start-kachel-badge {
-  left: auto;
-  right: 10px;
-}
-.hb .start-play-kreis {
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 144px;
-  height: 144px;
-  border-radius: 50%;
-  background: #193e31;
-  box-shadow:
-    0 0 0 5px #101f29,
-    0 8px 20px #0008;
-  color: #ffe5a3;
-  cursor: pointer;
-  transition:
-    transform 180ms ease,
-    filter 180ms ease,
-    box-shadow 180ms ease;
-}
-.hb .start-play-kreis img {
-  position: absolute;
-  inset: -5%;
-  width: 110%;
-  height: 110%;
-  object-fit: contain;
-  pointer-events: none;
-}
-.hb .start-play-kreis:focus-visible {
-  outline: 3px solid #fff0c7;
-  outline-offset: 6px;
-}
-@media (hover: hover) and (pointer: fine) {
-  .hb .start-play-kreis:hover {
-    transform: translate(-50%, -50%) scale(1.055);
-    filter: brightness(1.12);
-    box-shadow:
-      0 0 0 5px #101f29,
-      0 0 25px #f6c34d80,
-      0 10px 24px #0008;
-  }
-}
-.hb .start-play-kreis:active {
-  transform: translate(-50%, -50%) scale(0.97);
-  filter: brightness(1.15);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hb .start-play-kreis {
-    transition: none;
-  }
-  .hb .start-play-kreis:hover,
-  .hb .start-play-kreis:active {
-    transform: translate(-50%, -50%);
-  }
-}
-.hb .start-favoriten {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-.hb .start-favoriten .hb-sk {
-  width: auto;
-  min-width: 0;
-  border-width: 3px;
-  border-radius: 16px;
-}
-.hb .start-favoriten .hb-sk::after {
-  border-radius: 12px;
-}
-.hb .start-favoriten .hb-sk-bild {
-  height: auto;
-  aspect-ratio: 1;
-}
-.hb .start-favoriten .hb-sk > strong {
-  font-size: clamp(12px, 3.5vw, 16px);
-  padding: 8px 6px 2px;
-  overflow-wrap: anywhere;
-}
-.hb .start-favoriten .hb-pk {
-  padding: 2px 6px 9px;
-}
-.hb .start-favoriten .hb-leer {
-  grid-column: 1 / -1;
 }
 .hb .start-rahmen-ecken {
   position: absolute;
@@ -298,10 +204,6 @@
     padding: 14px 10px;
     height: 176px;
   }
-  .hb .start-play-kreis {
-    width: 126px;
-    height: 126px;
-  }
   .hb .start-kachel > img {
     height: 78px;
   }
@@ -338,13 +240,537 @@
   object-fit: contain;
   object-position: center;
 }
-.hb .hb-weiter.start-holzrahmen {
-  min-height: 92px;
-  padding: 13px 12px;
-  border: 5px solid #624024;
-  border-radius: 23px;
-  background: linear-gradient(120deg, #294738, #142e27);
+
+/* ---------- Startseiten-Umbau (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md) ---------- */
+
+/* Quick-Play: Kachel und Zahnrad liegen nebeneinander in einer Hülle, damit
+   das Zahnrad eine eigene Tippfläche hat und die Kachel nicht auslöst. */
+.hb .start-kachel-huelle {
+  position: relative;
+  min-width: 0;
 }
-.hb .hb-weiter.start-holzrahmen .hb-label {
-  color: #eed290;
+.hb .start-quickplay > img {
+  width: 92px;
+  height: 92px;
+}
+.hb .start-quickplay .start-kachel-text strong {
+  /* Rechts oben sitzt das Zahnrad; die Unterzeile läuft darunter durch. */
+  padding-right: 34px;
+}
+.hb .start-zahnrad {
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease;
+}
+.hb .start-zahnrad img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px #0008);
+  pointer-events: none;
+}
+.hb .start-zahnrad:active {
+  transform: scale(0.92);
+}
+.hb .start-zahnrad:focus-visible {
+  outline: 3px solid #ffe09a;
+  outline-offset: 0;
+}
+
+/* BroweG-Bock: Rechts oben schweben die Seitensymbole, links unten liegt das
+   Schild — Text und Marke halten sich deshalb davon fern. */
+.hb .start-bock {
+  background:
+    radial-gradient(ellipse at 100% 100%, #755331, transparent 85%), #302b21;
+}
+.hb .start-bock {
+  justify-content: flex-start;
+}
+.hb .start-bock .start-kachel-text small {
+  /* Neben der Unterzeile schweben die Seitensymbole. */
+  padding-right: 34px;
+}
+.hb .start-bock > img {
+  /* Unten rechts, aber ein Stück vor den Seitensymbolen, die über den
+     rechten Rand der Kachel ragen. */
+  align-self: flex-end;
+  margin-top: auto;
+  margin-right: 12px;
+  width: 80px;
+  height: 80px;
+}
+.hb .start-bock .start-bald {
+  position: static;
+  margin-top: 8px;
+  background: #4a2f6bee;
+  border-color: #c9a7ff80;
+  color: #f1e6ff;
+}
+
+/* Tagesaufgaben und Belohnungen: breite Knöpfe wie TikTok/Instagram über dem
+   Mosaik (Robin, 28.11.2026 abends; vorher schwebende Seitensymbole). */
+.hb .start-heute .start-heute-knopf {
+  position: relative;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Etwas flacher als TikTok/Instagram: Die Reihe steht zusätzlich über dem
+   Mosaik, und der Start soll ohne Rollen auskommen. */
+.hb .start-heute .hb-social-link {
+  min-height: 58px;
+}
+/* Die Zahl sitzt oben am Symbol wie bei einem App-Icon: rechts in der Ecke
+   verdeckte sie die Schrift, und über den Rahmen hinaus schneidet ihn der
+   Holzrahmen ab. */
+.hb .start-heute .start-symbol-zahl {
+  top: 6px;
+  left: 30px;
+  right: auto;
+}
+.hb .start-heute .hb-social-logo {
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px #0008);
+}
+.hb .start-heute-knopf:active {
+  transform: scale(0.97);
+}
+.hb .start-heute-knopf:focus-visible {
+  outline: 3px solid #ffe09a;
+  outline-offset: 3px;
+}
+.hb .start-symbol-zahl {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  z-index: 2;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #142524;
+  border-radius: 11px;
+  background: var(--hb-badge);
+  color: #fff;
+  font: 800 11px/1 var(--hb-txt);
+}
+
+/* ---------- Weiterspielen: großes Pop-up ---------- */
+.hb .start-weiter-grund {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--hb-oben, 0px) + 20px) 20px
+    calc(max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)) + 20px);
+  background: #040c0ad0;
+  animation: start-grund-auf 180ms ease-out;
+}
+.hb .start-weiter-gross {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 10px;
+  background: linear-gradient(180deg, #294738, #142e27);
+  text-align: center;
+  cursor: default;
+  animation: start-karte-auf 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.hb .start-weiter-gross:active {
+  filter: none;
+}
+.hb .start-weiter-banner {
+  display: block;
+  height: 168px;
+  margin: 0 -16px;
+  background-size: cover;
+  background-position: center 35%;
+  box-shadow: inset 0 -40px 30px -10px #142e27;
+}
+.hb .start-weiter-gross-text h2 {
+  margin: 0 0 6px;
+  font: 400 25px/1.1 var(--hb-anz);
+  color: #ffe5a3;
+}
+.hb .start-weiter-gross-text p {
+  margin: 0;
+  font: 700 15px/1.4 var(--hb-txt);
+  color: #e6efe1;
+}
+@keyframes start-grund-auf {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes start-karte-auf {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+/* ---------- Weiterspielen: kleines Pop-up über der Reiterleiste ---------- */
+.hb .start-weiter-klein {
+  position: absolute;
+  z-index: 30;
+  left: 12px;
+  right: 8px;
+  /* Über dem erhöhten Start-Knopf der Reiterleiste (12 px über der Leiste). */
+  bottom: calc(76px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  animation: start-klein-auf 220ms ease-out;
+}
+/* Der ganze Streifen ist der Zurück-Knopf; das X steht außen daneben. */
+.hb .start-weiter-klein-knopf {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px 7px 7px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  border: 4px solid #624024;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #2c4c3b, #142e27);
+  box-shadow:
+    0 0 0 1px #b18b4d,
+    inset 0 0 0 1px #e5bf72,
+    0 10px 24px #000b;
+  color: #fff7df;
+}
+.hb .start-weiter-klein-knopf:active {
+  transform: scale(0.98);
+}
+.hb .start-weiter-klein-knopf:focus-visible {
+  outline: 3px solid #ffe09a;
+  outline-offset: 2px;
+}
+.hb .start-weiter-klein-pfeil {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(#f6d27a, #d89a2c);
+  color: #3b2412;
+  font: 400 26px/1 var(--hb-anz);
+  box-shadow: inset 0 -2px 0 #0003;
+}
+.hb .start-weiter-klein > .start-weiter-fehler {
+  order: 3;
+  flex-basis: 100%;
+  padding: 0 8px;
+  font: 700 12px/1.3 var(--hb-txt);
+}
+.hb .start-weiter-klein-bild {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid #cda76270;
+  background-size: cover;
+  background-position: center;
+}
+.hb .start-weiter-klein-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hb .start-weiter-klein-text strong {
+  font: 400 17px/1.1 var(--hb-anz);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb .start-weiter-klein-text small {
+  font: 700 12px/1.3 var(--hb-txt);
+  color: #c9d8c6;
+}
+.hb .start-weiter-klein-text .start-weiter-fehler {
+  color: #ffc5b3;
+}
+/* Verlassen: nur ein rotes X (Robin, 28.11.2026) — sichtbar 32 px, getroffen 44. */
+.hb .start-weiter-x {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb .start-weiter-x svg {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #e0565d, #a3262f);
+  box-shadow:
+    0 0 0 2px #5a1a1f,
+    0 3px 6px #0009;
+  color: #fff;
+}
+.hb .start-weiter-x:active svg {
+  transform: scale(0.92);
+}
+.hb .start-weiter-x:focus-visible {
+  outline: 3px solid #ffe09a;
+  outline-offset: -2px;
+  border-radius: 50%;
+}
+@keyframes start-klein-auf {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Rückfrage vor dem Verlassen: mit dem Bro. */
+.hb .start-verlassen {
+  text-align: center;
+}
+.hb .start-verlassen-bro {
+  display: block;
+  width: 118px;
+  height: auto;
+  margin: 0 auto 2px;
+  filter: drop-shadow(0 6px 10px #0009);
+}
+.hb .hb-text.start-verlassen-strafe {
+  color: #ffc5b3;
+  font-weight: 800;
+}
+/* Robin: „Ja, verlassen" rot. Die Zierwerk-Platte legt sonst ihr Grün über
+   die Gefahrfarbe (hub-zierwerk.css), deshalb hier mit eigenem Verlauf. */
+.hb.hb .start-verlassen .hb-kn.is-gefahr {
+  background:
+    linear-gradient(#c8464fdd, #7a1d26f0),
+    var(--zier-holz) center / auto 100%;
+  color: #fff3ef;
+}
+
+/* ---------- Quick-Play: Such-Blatt ---------- */
+.hb .start-suche-inhalt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.hb .start-suche-banner {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border-radius: 16px;
+  border: 1px solid #cda76270;
+  background-size: cover;
+  background-position: center 35%;
+}
+.hb .start-suche-sucht {
+  margin: 4px 0 0;
+  font: 400 20px/1.1 var(--hb-anz);
+}
+.hb .start-suche-uhr {
+  margin: 0;
+  font: 400 46px/1 var(--hb-anz);
+  font-variant-numeric: tabular-nums;
+  color: var(--hb-gold);
+}
+.hb .start-suche-wartende ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.hb .start-suche-wartende li {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font: 700 12px/1.2 var(--hb-txt);
+  animation: start-klein-auf 260ms ease-out;
+}
+.hb .start-suche-wartende li > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hb .start-gesicht {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #cda762;
+  object-fit: cover;
+}
+.hb .start-gesicht.is-ersatz {
+  display: grid;
+  place-items: center;
+  background: #35624a;
+  font: 400 22px/1 var(--hb-anz);
+}
+
+/* ---------- Quick-Play: Zahnrad-Blatt ---------- */
+.hb .start-wahl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hb .start-wahl-schnell {
+  display: flex;
+  gap: 8px;
+}
+.hb .start-wahl-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hb .start-wahl-zeile {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 14px;
+  border: 1px solid #cda76250;
+  background: #142e27cc;
+  text-align: left;
+}
+.hb .start-wahl-zeile.is-an {
+  border-color: #cda762;
+  background: #24473a;
+}
+.hb .start-wahl-bild {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+}
+.hb .start-wahl-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hb .start-wahl-name strong {
+  font: 400 17px/1.1 var(--hb-anz);
+}
+.hb .start-wahl-name small {
+  font: 700 12px var(--hb-txt);
+  color: #9fe3b2;
+}
+.hb .start-wahl-schalter {
+  flex: none;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: #0b1a15;
+  border: 2px solid #cda76280;
+  transition: background 160ms ease;
+}
+.hb .start-wahl-schalter::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c9c2ac;
+  transition: transform 160ms ease;
+}
+.hb .start-wahl-zeile.is-an .start-wahl-schalter {
+  background: #3f9a5a;
+  border-color: #cda762;
+}
+.hb .start-wahl-zeile.is-an .start-wahl-schalter::after {
+  transform: translateX(20px);
+  background: #fff3cf;
+}
+.hb .start-wahl-hinweis {
+  color: #ffc5b3;
+}
+
+/* Mittelknopf „Zu den Spielen“ (Robin, 28.11.2026: Controller-Medaillon statt
+   Pfeilschild). Sitzt wie früher der Play-Kreis mittig über dem Mosaik. */
+.hb .start-mitte {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: 132px;
+  height: 132px;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  filter: drop-shadow(0 8px 14px #000b);
+  transition: transform 140ms ease-out, filter 140ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb .start-mitte img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hb .start-mitte:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+.hb .start-mitte:focus-visible {
+  outline: 3px solid #fff0c7;
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hb .start-mitte:hover {
+    transform: translate(-50%, -50%) scale(1.055);
+    filter: brightness(1.1) drop-shadow(0 0 16px #f6c34d90);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb .start-mitte {
+    transition: none;
+  }
+}
+@media (max-width: 350px) {
+  .hb .start-mitte {
+    width: 118px;
+    height: 118px;
+  }
 }

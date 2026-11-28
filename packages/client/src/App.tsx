@@ -94,6 +94,10 @@ const BroCooked = lazy(() =>
   import('./screens/BroCooked').then((m) => ({ default: m.BroCooked })),
 );
 const Mememory = lazy(() => import('./screens/Mememory').then((m) => ({ default: m.Mememory })));
+/* BroweG-Bock (src/bock/): der Bildschirm zwischen den Stationen und das
+   Band über dem Stationstisch. */
+const BockBildschirm = lazy(() => import('./bock/BockBildschirm').then((m) => ({ default: m.BockBildschirm })));
+const BockBand = lazy(() => import('./bock/BockBand').then((m) => ({ default: m.BockBand })));
 const Partykiste = lazy(() =>
   import('./screens/Partykiste').then((m) => ({ default: m.Partykiste })),
 );
@@ -166,6 +170,12 @@ type Screen =
   | { name: 'anfrage'; gameId: string; tableId: string; host: string | null }
   /** Solo-Endless-Runner aus der Spielauswahl. */
   | { name: 'prosubway' }
+  /**
+   * BroweG-Bock: Einstieg, Lobby, Zwischenstand, Siegerehrung. `vonTisch`
+   * ist der Stationstisch, von dem man kommt — dorthin springt der
+   * Bildschirm nicht von selbst zurueck (siehe `bekannterTisch`).
+   */
+  | { name: 'bock'; vonTisch?: string | null }
   /**
    * `vorher` merkt sich den Absprungpunkt: Wer vom Spieltisch aus ein Profil
    * oeffnet, muss an den Tisch zurueck - nicht auf die Startseite. Die
@@ -261,6 +271,28 @@ export function App(): React.JSX.Element {
    * `joinTable` im Server einen schon Sitzenden unveraendert zurueckgibt.
    */
   const kontoId = me?.id ?? null;
+
+  /**
+   * Der BroweG-Bock, in dem dieses Konto steckt. Haelt App und nicht der
+   * Bock-Bildschirm, weil das Band (BockBand) ueber den Stationstischen
+   * liegt, also gerade dann, wenn der Bildschirm nicht zu sehen ist. Beim
+   * Anmelden einmal nachgefragt, damit ein Neuladen mitten im Bock nicht aus
+   * ihm herausfuehrt.
+   */
+  const [bockId, setBockId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!kontoId || !imUmfang('mehrkampf')) return;
+    let lebt = true;
+    void import('./bock/api')
+      .then(({ bockApi }) => bockApi.aktiv())
+      .then(({ bockId: aktiv }) => {
+        if (lebt) setBockId(aktiv);
+      })
+      .catch(() => undefined);
+    return () => {
+      lebt = false;
+    };
+  }, [kontoId]);
 
   /*
    * Sprache. Die Wurzel haelt sie als Zustand, damit ein Umschalten den
@@ -469,6 +501,18 @@ export function App(): React.JSX.Element {
   const bildschirm = (): React.JSX.Element => {
     if (screen.name === 'profil') {
       return <Profile accountId={screen.accountId} onBack={() => setScreen(screen.vorher)} />;
+    }
+
+    if (screen.name === 'bock') {
+      return (
+        <BockBildschirm
+          bockId={bockId}
+          bekannterTisch={screen.vonTisch ?? null}
+          onBock={setBockId}
+          onTisch={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
+          onZurueck={zurueckZuDenSpielen}
+        />
+      );
     }
 
     if (screen.name === 'prosubway') {
@@ -890,6 +934,9 @@ export function App(): React.JSX.Element {
           if (modusId === 'prosubway' && !inApp && imUmfang('prosubway')) setScreen({ name: 'prosubway' });
         }}
         onResume={(gameId, tableId) => setScreen({ name: 'table', gameId, tableId })}
+        // Die Bock-Kachel der Startseite. Ohne `mehrkampf` im Umfang gibt es
+        // den Bock nicht — dann bleibt die Kachel ohne Ziel.
+        onBock={imUmfang('mehrkampf') ? () => setScreen({ name: 'bock' }) : undefined}
         onShowProfile={zeigeProfil}
         // Erst umschalten, dann speichern: Das Blatt wechselt ohne Wartezeit,
         // und schlaegt das Speichern fehl, holt reload() den echten Stand zurueck.
@@ -912,6 +959,17 @@ export function App(): React.JSX.Element {
   return (
     <>
       <Suspense fallback={<AppLaedt />}>{bildschirm()}</Suspense>
+      {/* Das Band des Bocks liegt ueber jedem anderen Bildschirm, vor allem
+          ueber den Stationstischen — die muessen so nichts vom Bock wissen. */}
+      {bockId && screen.name !== 'bock' && (
+        <Suspense fallback={null}>
+          <BockBand
+            bockId={bockId}
+            onOeffnen={(vonTisch) => setScreen({ name: 'bock', vonTisch })}
+            onVorbei={() => setBockId(null)}
+          />
+        </Suspense>
+      )}
       {/* Eigene Grenze: Waehrend der Begleiter nachlaedt, soll der Bildschirm
           nicht auf das Ladebild zurueckfallen. */}
       {inApp && (

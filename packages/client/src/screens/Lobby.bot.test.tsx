@@ -4,11 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /*
  * BroChess allein gegen den Bot (Emile, 13.10.2026).
  *
- * Geprüft wird der Weg aus der Lobby: „Gegen Bot spielen", Stärke wählen,
+ * Geprüft wird der Weg aus der Lobby: „Gegen Bots", Stärke wählen,
  * „Partie starten" — und dass der Tisch dabei so aufgemacht wird, wie es der
  * Server für einen Bot-Tisch braucht: freier Platz sofort mit Bot besetzt,
- * nicht in der öffentlichen Liste, mit der gewählten Stärke. Andere Spiele
- * bekommen den Knopf nicht.
+ * nicht in der öffentlichen Liste, mit der gewählten Stärke.
+ *
+ * Seit dem 28.11.2026 hat JEDES Lobby-Spiel „Gegen Bots" (Robin: Quick-Play,
+ * Gegen Bots, Mit Freunden). Bis dahin stand hier „bietet den Weg nur bei
+ * BroChess an"; jetzt steht dort, dass Spiele ohne Stärkewahl sofort einen
+ * Bot-Tisch bekommen.
  */
 
 const { createTable } = vi.hoisted(() => ({
@@ -30,6 +34,7 @@ vi.mock('../api', async () => {
         ),
       createTable,
     },
+    spielartenApi: { liste: () => Promise.resolve({ spielarten: [] }) },
   };
 });
 
@@ -50,7 +55,7 @@ describe('BroChess gegen den Bot', () => {
 
   it('startet eine Partie gegen den Bot mit der gewählten Stärke', async () => {
     const { onEnter } = await zeige('brochess');
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     fireEvent.click(screen.getByRole('button', { name: /^Anfänger/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Partie starten' }));
     await act(async () => {});
@@ -67,8 +72,13 @@ describe('BroChess gegen den Bot', () => {
     expect(onEnter).toHaveBeenCalledWith('bot-1');
   });
 
-  it('bietet den Weg nur bei BroChess an', async () => {
-    await zeige('doppelkopf');
-    expect(screen.queryByRole('button', { name: 'Gegen Bot spielen' })).toBeNull();
+  it('ein Spiel ohne Stärkewahl setzt sich sofort an einen Bot-Tisch', async () => {
+    const { onEnter } = await zeige('skat');
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
+    await act(async () => {});
+    expect(createTable).toHaveBeenCalledWith(
+      expect.objectContaining({ gameId: 'skat', fillWithBots: true, visibility: 'on_request' }),
+    );
+    expect(onEnter).toHaveBeenCalledWith('bot-1');
   });
 });

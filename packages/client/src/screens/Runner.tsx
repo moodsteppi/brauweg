@@ -25,6 +25,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 
 import { api } from '../api';
 import { spiele } from '../klang';
+import { useZuletztMelden } from '../zuletzt';
 
 /**
  * Pro-Subway — der Endlos-Lauf (`/?dev=runner` und Spielauswahl → Alleine).
@@ -2285,6 +2286,9 @@ export function Runner({
 
   const spielstand = useRef<Spielstand>(frischerStand('menu'));
   const kacheln = useKacheln();
+  // „Zuletzt gespielt" (seit dem 28.11.2026) als Pro-Subway — nur aus dem
+  // Hub, wo ein Konto dahintersteht und der Modus so heisst.
+  useZuletztMelden('prosubway', hubMode);
 
   useEffect(() => {
     ladeRunnerModelle();

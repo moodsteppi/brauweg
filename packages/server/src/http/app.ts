@@ -69,6 +69,8 @@ import { gastkontoZaehlen } from '../herkunft.js';
 import { zaehle } from '../statistik.js';
 import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
+import { bockRouten } from './bock-routen.js';
+import type { BockDienst } from '../bock/dienst.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
@@ -205,6 +207,9 @@ import {
 import type { Vermittlung } from '../suche/vermittlung.js';
 import type { Suchstand } from '../suche/schlange.js';
 import type { PartyRuntime } from '../runtime/party.js';
+import { schnellspielRouten } from './schnellspiel-routen.js';
+import { type ArenaWartende, sichtbarImUmfang, vorliebenFuer } from '../schnellspiel.js';
+import { zuletztFuer } from '../zuletzt.js';
 
 export const SESSION_COOKIE = 'brauweg_session';
 
@@ -337,6 +342,16 @@ export interface AppDeps {
    * sie nicht aufbauen.
    */
   readonly vermittlung?: Vermittlung;
+  /**
+   * Quick-Play (src/schnellspiel.ts): wie viele Menschen in den Online-Lobbys
+   * der Arenen warten. Die Gateways entstehen erst nach `listen`, deshalb ein
+   * Rueckruf statt der Objekte (index.ts). Fehlt er, zaehlen die Arenen null.
+   */
+  readonly arenaWartende?: ArenaWartende;
+  /** Nur Tests: fester Zufall fuer Quick-Play (Schritt 4 und Gleichstaende). */
+  readonly schnellspielZufall?: (n: number) => number;
+  /** BroweG-Bock; fehlt er, baut `bockRouten` ihn selbst (Proben setzen eigene Fristen). */
+  readonly bock?: BockDienst;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
@@ -1045,6 +1060,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // BroweG-Bock: Serie aus mehreren Stationstischen — siehe src/bock/dienst.ts.
+  bockRouten(app, { db: deps.db, runtime: deps.runtime, bock: deps.bock, vermittlung: deps.vermittlung, umfang, requireAccount, plattform: plattformVon, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
   tanksRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
   buildingRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
 
@@ -1282,6 +1299,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       lernserieKurz(deps.db, accountId),
       browortKurz(deps.db, accountId),
     ]);
+    // Startseiten-Umbau (28.11.2026): Favoriten, Quick-Play-Auswahl und
+    // „zuletzt gespielt" — nur, was diese Ausgabe anbietet (wie `stats`).
+    const sichtbar = (spiel: string) => sichtbarImUmfang(umfang, spiel);
+    const [vorlieben, zuletzt] = await Promise.all([
+      vorliebenFuer(deps.db, accountId),
+      zuletztFuer(deps.db, accountId, sichtbar),
+    ]);
     return reply.send({
       ...rest,
       /**
@@ -1349,6 +1373,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       stats: stats.filter((zeile) => imUmfang(umfang, zeile.gameId)),
       clubs,
       activeTable,
+      /**
+       * Favoriten (Reihenfolge des Hinzufuegens) und Quick-Play-Auswahl
+       * (null = alle Kandidaten; src/schnellspiel.ts). Die Auswahl geht
+       * ungefiltert hinaus — sie gilt fuer alle Geraete, das Zahnrad-Blatt
+       * schneidet sie mit den Kandidaten seiner Plattform.
+       */
+      vorlieben: { favoriten: vorlieben.favoriten.filter(sichtbar), schnellspiel: vorlieben.schnellspiel },
+      /** Zuletzt gespielt, neueste zuerst, hoechstens acht (src/zuletzt.ts). */
+      zuletzt,
       /** Darf dieses Konto sich am Tisch verdeckt vom Bot vertreten lassen (admin.ts)? */
       adminVertretung: (await deps.admins?.istAdmin(account.id)) ?? false,
     });
@@ -2142,6 +2175,30 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
+  /**
+   * Die Spielarten eines Spiels (seit dem 28.11.2026): fertige Regelsaetze mit
+   * Kennung, die erste ist die Vorgabe. Unbesehen aus dem Modul
+   * (`GameMeta.spielarten`) — der Client zeichnet die Karten und schickt die
+   * `config` der gewaehlten an Suche oder Tischbau, ohne sie abzuschreiben.
+   *
+   * Eigene Route und kein Feld in `/defaults`: Der Einstieg braucht die
+   * Spielarten sofort beim Oeffnen, die Vorgabe erst beim Regeleditor; und
+   * ein Spiel ohne Spielarten antwortet mit einer leeren Liste statt mit
+   * einem Feld, das jeder Leser auf `undefined` pruefen muss.
+   */
+  app.get('/api/games/:gameId/spielarten', async (request, reply) => {
+    const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
+    const module = requireModule(gameId as GameId);
+    if (module.meta.nurIos) requireSpielbar(gameId, plattformVon(request), umfang);
+    return reply.send({
+      spielarten: (module.meta.spielarten ?? []).map((art) => ({
+        id: art.id,
+        config: art.config,
+        ...(art.runden !== undefined ? { runden: art.runden } : {}),
+      })),
+    });
+  });
+
   // -------------------------------------------------------------------------
   // Clans (Plan 9.3)
   // -------------------------------------------------------------------------
@@ -2752,6 +2809,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const { gameId } = z.object({ gameId: gameIdSchema }).parse(request.params);
     sucheVermittlung().verlaesst(gameId, accountId);
     return reply.send({ ok: true });
+  });
+
+  // Quick-Play, Favoriten, „zuletzt gespielt" (Startseiten-Umbau, 28.11.2026).
+  schnellspielRouten(app, {
+    db: deps.db,
+    requireAccount,
+    plattform: plattformVon,
+    umfang,
+    vermittlung: deps.vermittlung,
+    arenaWartende: deps.arenaWartende,
+    notify: (tableId) => deps.runtime.notify(tableId),
+    pruefeAppTisch,
+    mitWartenden,
+    zufall: deps.schnellspielZufall,
+    limitSchreiben: LIMIT_SCHREIBEN,
+    limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
   // -------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { Schliessen, useEscape } from '../screens/HbBlatt';
 import type { Belohnung, BrowortAnsicht } from './sicht';
 import { BrowortFlamme, Raster, Tastatur, schnittText, useWortEingabe, type WortEingabe } from './Spielfeld';
 import { tz, zeigeSprachhinweis } from './text';
+import { useZuletztMelden } from '../zuletzt';
 
 /**
  * Browort (Emile, 23.10.2026): ein deutsches Wort am Tag, fuenf Buchstaben,
@@ -24,6 +25,8 @@ export function Browort({
   onGeaendert: () => void;
 }): React.JSX.Element {
   useEscape(onClose);
+  // „Zuletzt gespielt" (seit dem 28.11.2026): Solo-Spiele melden sich selbst.
+  useZuletztMelden('browort');
   const [runde, setRunde] = useState<BrowortAnsicht | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [belohnung, setBelohnung] = useState<Belohnung | null>(null);

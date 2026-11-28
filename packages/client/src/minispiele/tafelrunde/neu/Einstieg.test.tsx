@@ -28,7 +28,7 @@ function einstieg(teil: Partial<Parameters<typeof EinstiegSeite>[0]> = {}) {
 describe('Einstieg', () => {
   it('jeder Knopf ruft seinen Weg', () => {
     const rufe = einstieg();
-    fireEvent.click(screen.getByRole('button', { name: 'Schnellsuche' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quick-Play' }));
     fireEvent.click(screen.getByRole('button', { name: /Tisch erstellen/ }));
     fireEvent.click(screen.getByRole('button', { name: /Tisch beitreten/ }));
     fireEvent.click(screen.getByRole('button', { name: /Gegen Bots spielen/ }));

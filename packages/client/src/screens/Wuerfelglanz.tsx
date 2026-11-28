@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { Aktion, Kategorie, Sicht } from '@brauweg/game-wuerfelglanz';
-import { api, ApiError, type TableRow, type GameDefaults } from '../api';
+import { api, ApiError, type GameDefaults } from '../api';
+import { SuchWarten } from '../spielarten/SpielartKarten';
+import { useSchnellsuche } from '../spielarten/useSchnellsuche';
 import { t } from '../i18n';
 import { spiele } from '../klang';
 import { useTable } from '../useTable';
@@ -55,12 +57,13 @@ export function WuerfelglanzMenue({ onBack, onTisch }: { onBack: () => void; onT
   const [sitze, setSitze] = useState(0), [busy, setBusy] = useState(false);
   const [vorgabe, setVorgabe] = useState<GameDefaults | null>(null);
   const [fehler, setFehler] = useState<string | null>(null), [code, setCode] = useState('');
-  const [tische, setTische] = useState<TableRow[]>([]), [rekord, setRekord] = useState<number | null>(null);
-  const [listeFehler, setListeFehler] = useState(false);
+  const [rekord, setRekord] = useState<number | null>(null);
   const sperre = useRef(false);
-  const laden = useCallback(() => { void api.tables('wuerfelglanz').then(l => { setTische(l); setListeFehler(false); }).catch(() => setListeFehler(true)); }, []);
+  /* Seit dem 28.11.2026 Quick-Play ueber die Schlange statt der Liste offener
+     Tische (Robin: Tischlisten verwirren). Freie Plaetze fuellen Bots. */
+  const suche = useSchnellsuche('wuerfelglanz', onTisch);
   const holeVorgabe = useCallback(() => { void api.defaults('wuerfelglanz').then(d => { setVorgabe(d); setSitze(d.seatCounts.find(n => n > 1) ?? 0); setFehler(null); }).catch(() => setFehler('Würfelglanz ist gerade nicht erreichbar. Bitte versuche es erneut.')); }, []);
-  useEffect(() => { laden(); holeVorgabe(); const timer = setInterval(laden, 6000); void api.eigeneBestleistungen('wuerfelglanz').then(l => setRekord(l.find(e => e.inhaltId === 'klassisch')?.wert ?? null)).catch(() => {}); return () => clearInterval(timer); }, [laden, holeVorgabe]);
+  useEffect(() => { holeVorgabe(); void api.eigeneBestleistungen('wuerfelglanz').then(l => setRekord(l.find(e => e.inhaltId === 'klassisch')?.wert ?? null)).catch(() => {}); }, [holeVorgabe]);
   const aktion = async (f: () => Promise<string>) => {
     if (sperre.current) return; sperre.current = true; setBusy(true); setFehler(null);
     try { onTisch(await f()); } catch (e) { setFehler(e instanceof ApiError ? t(e.messageKey) : 'Der Tisch ließ sich nicht öffnen. Bitte versuche es erneut.'); }
@@ -71,6 +74,7 @@ export function WuerfelglanzMenue({ onBack, onTisch }: { onBack: () => void; onT
     if (runden === undefined || !vorgabe?.seatCounts.includes(anzahl)) throw new Error('Spielvorgabe fehlt');
     return (await api.createTable({ gameId: 'wuerfelglanz', seats: anzahl, rounds: runden, visibility: anzahl === 1 ? 'on_request' : 'public' })).id;
   });
+  if (suche.suchstand) return <SuchWarten gameId="wuerfelglanz" stand={suche.suchstand} unter="Würfelglanz" onAbbrechen={suche.brichAb} />;
   return <main className="spe wg wg-menue"><Kopf onBack={onBack} /><div className="wg-rolle">
     <section className="wg-held"><img src="/hub/banner-wuerfelglanz.webp" alt="Zwei Pinguine würfeln an einem gemütlichen Spieltisch" /><div><span className="wg-etikett">DEINE NÄCHSTE GLÜCKSSERIE</span><h2>Fünf Würfel.<br />Dein großer Moment.</h2><p>Würfel halten, Chancen nutzen, deinen Bogen füllen.</p></div></section>
     <div className="wg-fakten"><span><b>5</b> Würfel</span><span><b>3</b> Würfe je Zug</span><span><b>13</b> Wertungen</span></div>
@@ -78,7 +82,7 @@ export function WuerfelglanzMenue({ onBack, onTisch }: { onBack: () => void; onT
     <section className="wg-modus"><div><small>DEIN PERSÖNLICHER REKORD</small><h2>Nur du und die Würfel</h2><p>{rekord === null ? 'Spiele deinen ersten vollständigen Bogen.' : `Deine Bestleistung: ${rekord} Punkte`}</p></div><button className="wg-gold" disabled={busy || !vorgabe?.seatCounts.includes(1)} onClick={() => erstellen(1)}>{busy ? 'Tisch wird vorbereitet…' : 'Allein spielen'}</button></section>
     <section className="wg-modus wg-freunde"><small>GEMEINSAM WIRD’S SPANNEND</small><h2>Eine Runde mit Freunden</h2><p>Online gegeneinander. Jeder mit eigenem Bogen und denselben Chancen.</p><div className="wg-sitzwahl" role="group" aria-label="Spielerzahl">{(vorgabe?.seatCounts.filter(n => n > 1) ?? []).map(n => <button key={n} aria-pressed={sitze === n} onClick={() => setSitze(n)}>{n}</button>)}</div><button className="wg-gold" disabled={busy || !vorgabe || sitze === 0} onClick={() => erstellen(sitze)}>Offenen Tisch für {sitze} erstellen</button><small>Teile danach den Tischcode mit deinen Freunden.</small></section>
     <form className="wg-code" onSubmit={e => { e.preventDefault(); void aktion(async () => { const v = await api.tischPerCode(code.trim().toUpperCase()); if (v.gameId !== 'wuerfelglanz') throw new Error('Anderes Spiel'); const res = await api.beitretenPerCode(code.trim().toUpperCase()); if (res.angefragt) throw new Error('Tisch wartet auf Zusage'); return res.tableId; }); }}><label htmlFor="wg-code">Du hast einen Tischcode?</label><div><input id="wg-code" value={code} onChange={e => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoCorrect="off" placeholder="Tischcode" maxLength={10} /><button disabled={busy || code.trim().length < 4}>Beitreten</button></div></form>
-    <section className="wg-offen"><h2>Offene Würfeltische <button onClick={laden} aria-label="Tische aktualisieren">↻</button></h2>{listeFehler ? <p role="status">Die Tischliste ist gerade nicht erreichbar.</p> : tische.length === 0 ? <p>Noch kein Tisch offen. Eröffne die erste Runde.</p> : tische.map(tisch => <button className="wg-tischzeile" key={tisch.id} disabled={busy} onClick={() => void aktion(async () => { await api.joinTable(tisch.id); return tisch.id; })}><strong>{tisch.host ?? 'Würfeltisch'}</strong><span>{tisch.occupied}/{tisch.seats} Spieler · Beitreten ›</span></button>)}</section>
+    <section className="wg-modus"><div><small>MITSPIELER FINDEN</small><h2>{t('einstieg.quickplay')}</h2><p>{t('einstieg.text.ohneSpielart')}</p></div>{suche.fehler && <p className="wg-fehler" role="alert">{t(suche.fehler)}</p>}<button className="wg-gold" data-einstieg="quickplay" disabled={busy || suche.startet} onClick={() => void suche.starte(undefined)}>{t('einstieg.quickplay')}</button></section>
     <details className="wg-regeln"><summary>So spielst du Würfelglanz</summary><p>Du hast pro Zug höchstens drei Würfe. Tippe auf Würfel, die du behalten möchtest. Mit einem weiteren Tipp gibst du sie wieder frei.</p><p>Trage danach genau ein freies Feld ein. Auch null Punkte sind erlaubt, ein belegtes Feld bleibt fest. Nach 13 Einträgen ist dein Bogen fertig.</p><p>Ab 63 Punkten bei Einsern bis Sechsern erhältst du 35 Bonuspunkte. Die meisten Gesamtpunkte gewinnen. Ein Fünferglanz bringt 50 Punkte; zusätzliche Joker- oder Wiederholungsboni gibt es in dieser Spielart nicht.</p><p>Solo spielst du um deine Bestleistung. Online würfelt ihr reihum; gleiche Punktzahlen teilen sich den Platz.</p></details>
   </div></main>;
 }

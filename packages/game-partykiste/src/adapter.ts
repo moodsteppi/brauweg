@@ -77,14 +77,22 @@ import {
 import { sichtFuer, type PartykisteSicht } from './sicht.js';
 import { ohneVertreten } from './weiter-warten.js';
 import { TISCHOEFFNER, wechselbareSitze } from './modi.js';
+import { SPIELARTEN } from './spielarten.js';
 
 const SNAPSHOT_VERSION = 1;
 
 const meta: GameMeta = {
+  // Die vier Modi — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'partykiste',
   nameKey: 'game.partykiste',
   availability: 'playable',
   seatCounts: [...SITZE],
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Zwoelfertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Elf Bots um einen
+  // Suchenden waeren keine Party. Vier ist zugleich die kleinste Runde, die
+  // die Kiste zulaesst; mehr bleibt der Lobby.
+  suchSitze: 4,
   /** Keine Geberrotation — es gibt kein Blatt und niemanden, der gibt. */
   rotationSize: () => 1,
   suggestedRounds: () =>

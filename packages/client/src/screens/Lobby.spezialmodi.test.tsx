@@ -43,6 +43,7 @@ vi.mock('../api', async () => {
       defaults: () => Promise.resolve({ seatCounts: [2], rounds: { '2': [1] }, config: {} }),
       createTable,
     },
+    spielartenApi: { liste: () => Promise.resolve({ spielarten: [] }) },
   };
 });
 
@@ -84,19 +85,23 @@ describe.each([
   });
   afterEach(() => setzeUmfang(null));
 
-  it('der Knopf steht in der Liste, unter „Gegen Bot spielen" und unter „Tisch erstellen"', async () => {
+  /*
+   * Seit dem 28.11.2026 steht der Knopf nicht mehr auf der ersten Seite: Dort
+   * stehen die Spielarten, und Quick-Play sucht in genau einer — ein Modus
+   * daneben spaltete den Topf der Suche. „Spezial" ist dort die Karte.
+   */
+  it('der Knopf steht unter „Gegen Bots" und unter „Mit Freunden"', async () => {
     await zeige();
-    expect(modiKnopf()).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     expect(modiKnopf()).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Zurück/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Tisch erstellen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mit Freunden' }));
     expect(modiKnopf()).toBeTruthy();
   });
 
   it('gegen den Bot geht die Wahl als Regelsatz an den Tisch', async () => {
     await zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     waehleSecretDameB();
     expect(modiKnopf().textContent).toContain('Secret Dame');
     fireEvent.click(screen.getByRole('button', { name: 'Partie starten' }));
@@ -112,7 +117,7 @@ describe.each([
 
   it('ohne Wahl entsteht derselbe Tisch wie vorher — kein Modus im Regelsatz', async () => {
     await zeige();
-    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bot spielen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gegen Bots' }));
     fireEvent.click(screen.getByRole('button', { name: 'Partie starten' }));
     await act(async () => {});
     const config = (createTable.mock.calls[0] as unknown as [{ config: Record<string, unknown> }])[0].config;

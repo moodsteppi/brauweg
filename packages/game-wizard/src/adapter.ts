@@ -41,6 +41,7 @@ import { DEFAULT_RULESET, type RuleSet, SEAT_COUNTS, rotationSize, suggestedRoun
 import { validateRuleSet } from './validator.js';
 import { type PlayerView, spectatorView as roundSpectatorView, viewFor as roundViewFor } from './view.js';
 import { botAction as engineBotAction } from './bot.js';
+import { SPIELARTEN } from './spielarten.js';
 
 /**
  * Format des Partie-Snapshots. Steigt, sobald sich der gespeicherte Aufbau
@@ -69,10 +70,17 @@ export interface WizardView {
 }
 
 const meta: GameMeta = {
+  // Normal, Profi, Chaos — siehe spielarten.ts.
+  spielarten: SPIELARTEN,
   id: 'wizard',
   nameKey: 'game.wizard',
   availability: 'playable',
   seatCounts: SEAT_COUNTS,
+  // Die Mitspielersuche (Quick-Play) baut Vierertische, nicht Sechsertische
+  // (28.11.2026, docs/STARTSEITE-UMBAU-PLAN.md): Wer allein sucht, saesse
+  // sonst nach 30 s mit fuenf Bots am Tisch, und jede Runde dauerte laenger.
+  // Sechs bleiben fuer den verabredeten Tisch.
+  suchSitze: 4,
   // Bewusst 1: Die kanonische Rundenzahl (60/Spieler) geht durch keine
   // Sitzzahl auf. Die ausfuehrliche Begruendung steht in ruleset.ts.
   rotationSize: () => rotationSize(),

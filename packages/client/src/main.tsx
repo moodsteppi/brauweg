@@ -122,6 +122,9 @@ const ProbeWuerfelglanz = lazy(() => import('./proben/wuerfelglanz/ProbeWuerfelg
 const devHub = import.meta.env.DEV && isDevFlag('hub');
 /** Der Startbildschirm (Logo, Ladebild, Leiste) zum Ansehen — nur im Dev-Server. */
 const devStart = import.meta.env.DEV && isDevFlag('start');
+/** BroweG-Bock mit festen Staenden: `/?dev=bock&fall=einstieg|suche|lobby|gast|zwischenstand|station|ende|band`. */
+const devBock = import.meta.env.DEV && isDevFlag('bock');
+const ProbeBock = lazy(() => import('./bock/ProbeBock').then((m) => ({ default: m.ProbeBock })));
 
 if (
   (devAvatar || devChest || devWerkstatt || devRunner || devTruhe) &&
@@ -190,7 +193,7 @@ const ProbeTafelrundeNeu = lazy(() =>
 const IceClash = lazy(() => import('./ice-clash/IceClash'));
 const BroRemote = lazy(() => import('./broremote/BroRemote').then(m => ({ default: m.BroRemote })));
 
-const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devStart ? (
+const werkzeug = devWuerfelglanz ? <ProbeWuerfelglanz /> : devBock ? <ProbeBock /> : devStart ? (
   <ProbeStart />
 ) : devHub ? (
   <ProbeHub />
