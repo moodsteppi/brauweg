@@ -82,7 +82,7 @@ describe('TafelrundeNeu', () => {
     });
     render(<TafelrundeNeu onBack={() => {}} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Schnellsuche' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Quick-Play' }));
     });
     expect(screen.getByRole('timer')).toHaveTextContent('30');
     expect(screen.getByText('Robin')).toBeInTheDocument();

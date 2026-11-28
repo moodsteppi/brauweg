@@ -215,7 +215,7 @@ export default {
   'tafelrunde.ui.neu.zuschauen.zurueck': 'Zurück zu deinem Ergebnis',
   'tafelrunde.ui.neu.marke.einmal': 'Jede Einheit zählt für eine Marke nur einmal.',
   'tafelrunde.ui.neu.marke.zaehlt': 'zählt',
-  'tafelrunde.ui.neu.schnellsuche': 'Schnellsuche',
+  'tafelrunde.ui.neu.schnellsuche': 'Quick-Play',
   'tafelrunde.ui.neu.erstellenUnter': 'Mit Code für Freunde',
   'tafelrunde.ui.neu.beitretenUnter': 'Code eintippen oder offenen Tisch wählen',
   'tafelrunde.ui.neu.botsUnter': 'Sofort los, vier Plätze',

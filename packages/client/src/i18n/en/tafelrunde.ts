@@ -200,7 +200,7 @@ export default {
   'tafelrunde.ui.neu.zuschauen.zurueck': 'Back to your result',
   'tafelrunde.ui.neu.marke.einmal': 'Each unit counts only once for a trait.',
   'tafelrunde.ui.neu.marke.zaehlt': 'counts',
-  'tafelrunde.ui.neu.schnellsuche': 'Quick match',
+  'tafelrunde.ui.neu.schnellsuche': 'Quick Play',
   'tafelrunde.ui.neu.erstellenUnter': 'With a code for friends',
   'tafelrunde.ui.neu.beitretenUnter': 'Enter a code or pick an open table',
   'tafelrunde.ui.neu.botsUnter': 'Start right away, four seats',
