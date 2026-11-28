@@ -134,6 +134,21 @@ export function effektBild(name: string): string | null {
   return VORHANDEN.has(`effekte/${name}`) ? `${GRAFIK_NEU_WURZEL}/effekte/effekt-${name}.webp` : null;
 }
 
+/**
+ * Die Holz-und-Messing-Teile der Anzeigen (seit dem 28.11.2026, Robin nach dem
+ * Test am iPhone: Bank, Uhr, Namen und Lebensanzeigen sahen „noch so
+ * KI-generiert flau" aus). Freigestellt, ohne Text — Zahlen und Namen legt der
+ * Bildschirm darueber:
+ * `spielerschild` (Namensschild im Kopfband), `timer` (Medaille der Restzeit),
+ * `bank` (Brett unter der Bank), `balken` (Rahmen der Lebensbalken, innen
+ * leer), `plakette` (Gold und Feld ueber dem Laden), `knopf-rund` (Bereit),
+ * `wimpel` und `wimpel-blau` (Seitennamen in der Arena: Gegner, eigen).
+ * Null, solange es das Teil nicht gibt.
+ */
+export function uiBild(name: string): string | null {
+  return VORHANDEN.has(`ui/${name}`) ? `${GRAFIK_NEU_WURZEL}/ui/${name}.webp` : null;
+}
+
 /** Das Titelbild des Einstiegs, oder null. */
 export function titelBild(): string | null {
   return VORHANDEN.has('titel') ? `${GRAFIK_NEU_WURZEL}/titel.webp` : null;
@@ -157,6 +172,10 @@ const VORHANDEN: ReadonlySet<string> = new Set<string>([
     (m) => `zeichen/marke-${m}`,
   ),
   'titel',
+  // 28.11.2026: Anzeigen im Holz-und-Messing-Stil der Startseite.
+  ...['spielerschild', 'timer', 'bank', 'balken', 'plakette', 'knopf-rund', 'wimpel', 'wimpel-blau'].map(
+    (n) => `ui/${n}`,
+  ),
   'zeichen/stern',
   'zeichen/gold',
   'zeichen/leben',

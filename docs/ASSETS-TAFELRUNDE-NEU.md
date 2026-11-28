@@ -257,6 +257,44 @@ an der Dorfwache liegt unter 0,13 m.
 `aufbereiten.mjs` beschneidet und verkleinert. Die Zielgrößen stehen im Skript.
 Danach kommt das gewohnte `wandeln.mjs`.
 
+### Arenen und eigene Oberfläche (28.11.2026)
+
+Robin nach dem Test: Die vier Schauplätze wirkten im Spiel wie „gar keine
+Arena“, und Bank, Timer, Namen und Lebensanzeigen „noch so KI-generiert
+flau“. Die erste Bestellung hatte ausdrücklich eine ruhige, fast leere Mitte
+verlangt. Auf dem schmalen Handy, bildschirmfüllend gestreckt, fielen dann
+auch die Ränder weg.
+
+**Arenen** (`werkzeug/arenen_prompts.py`, Stilvorlage der Ritter-Pinguin):
+
+- Sechs Stück: Burghof, Dorfplatz, Herbstwald, Vulkan, Hafen, Kristall.
+- Jede Arena hat Mauern bzw. einen Rand rundum, Tore oben und unten, einen
+  Boden mit Struktur und eine Mittellinie mit Zeichen.
+- Bestellmaß: Kampffläche **70 % der Breite und 75 % der Höhe**, Bild 2:3.
+  Daran hängt der Einbau, deshalb muss eine Nachbestellung dieses Maß halten.
+- Eingebaut über `Arenabild` (Feld.tsx), passgenau hinter dem Wabenfeld: im
+  Kampf beide Hälften, in der Rüstphase nur die eigene, mit der Mittellinie an
+  der Oberkante des Bretts. Das Feld steht dafür auf 84 % der Breite, damit
+  die Seitenmauern sichtbar bleiben.
+- Der Tischgrund ist dasselbe Bild, unscharf und dunkel, nur als Kulisse.
+- Auslieferung 768 × 1152, `szene`, 140–240 kB. Je Partie wird eine geladen.
+
+**Oberfläche** (`werkzeug/ui_prompts.py`): Als Stilvorlage dienen die Holz-
+und Messing-Teile der Startseite (`stilprobe/ui/vorlage-ui.png`), damit
+Tafelrunde zur App passt. Acht freigestellte Teile, `wappen`, zusammen
+120 kB, unter `public/tafelrunde/neu/ui/`:
+
+- Spielerschild
+- Timer-Medaille
+- Bank-Brett
+- Lebensbalken-Rahmen
+- Plakette
+- runder Knopf
+- Wimpel in Rot und Blau
+
+Originale und Bildzeilen liegen im Archiv auf dem Zweig
+`tafelrunde-neu-originale`.
+
 ### Klänge — Bestellliste für später (am Mac, mit dem Klangwerkzeug)
 
 Auf diesem Rechner gibt es das Klangwerkzeug nicht (`CLAUDE.md`, Regel 4).

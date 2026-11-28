@@ -44,7 +44,7 @@ import {
 } from './abspielen';
 import type { Schauplatz } from '../../../figuren3d/grafik-neu';
 import { Arenabild, Raster } from './Feld';
-import { Effektbild, Figur, RolleZeichen, Sterne } from './grafik';
+import { Effektbild, Figur, RolleZeichen, Sterne, uiHintergrund } from './grafik';
 import stil from './neu.module.css';
 
 /** Wie lange nach dem letzten Ereignis die Uhr noch laeuft (Ausblenden, Effekte). */
@@ -73,7 +73,15 @@ function bildSchieben(el: HTMLImageElement, stand: Bildstand): void {
   }
 }
 
-/** Lebensbalken mit Schildanteil — beides als Anteil am hoechsten Leben. */
+/**
+ * Lebensbalken mit Schildanteil — beides als Anteil am hoechsten Leben.
+ *
+ * Seit dem 28.11.2026 in einem gemalten Messingrahmen (`uiBild('balken')`),
+ * als `border-image` UEBER der Fuellung (Stylesheet, `::after`): So bleiben
+ * die runden Kappen bei 40 px Breite rund, und die Fuellung laeuft bis unter
+ * die Kappen statt eine Kappenbreite davor zu enden. Die Fuellung steckt
+ * deshalb in einem eigenen Innenteil, das sie an die Rundung schneidet.
+ */
 export function Lebensbalken({
   leben,
   hoechstes,
@@ -90,11 +98,13 @@ export function Lebensbalken({
   // ein Schild ueber das volle Leben hinaus ist trotzdem sichtbar, nur voll.
   const schildAnteil = hoechstes > 0 ? Math.max(0, Math.min(1 - anteil, schild / hoechstes)) : 0;
   return (
-    <span className={stil.lebensbalken} data-seite={seite} aria-hidden="true">
-      <i className={stil.leben} style={{ width: `${anteil * 100}%` }} />
-      {schildAnteil > 0 && (
-        <i className={stil.schildanteil} style={{ left: `${anteil * 100}%`, width: `${schildAnteil * 100}%` }} />
-      )}
+    <span className={stil.lebensbalken} data-seite={seite} aria-hidden="true" {...uiHintergrund('balken', '--tn-balken')}>
+      <span className={stil.lebensInnen}>
+        <i className={stil.leben} style={{ width: `${anteil * 100}%` }} />
+        {schildAnteil > 0 && (
+          <i className={stil.schildanteil} style={{ left: `${anteil * 100}%`, width: `${schildAnteil * 100}%` }} />
+        )}
+      </span>
     </span>
   );
 }
@@ -229,6 +239,10 @@ export function Kampf({
   const stehende = (s: Seite): number => anzeige.stand.figuren.filter((f) => f.seite === s && !f.tot).length;
   const gesamt = (s: Seite): number => bericht.start.filter((f) => f.seite === s).length;
   const oben: Seite = unten === 0 ? 1 : 0;
+  // Die Seitennamen auf Wimpeln: oben der Gegner rot, unten die eigene Seite
+  // blau. Ohne Bild bleibt der Name als farbige Schrift (Stylesheet).
+  const wimpelOben = uiHintergrund('wimpel', '--tn-wimpel');
+  const wimpelUnten = uiHintergrund('wimpel-blau', '--tn-wimpel');
 
   return (
     <section
@@ -238,7 +252,7 @@ export function Kampf({
       aria-label={tz('kampf.titel')}
     >
       <p className={stil.kampfSeite} data-lage="oben">
-        <strong>{beschriftung(oben)}</strong>
+        <strong {...wimpelOben}>{beschriftung(oben)}</strong>
         <span>{tz('kampf.stehen', { stehen: stehende(oben), gesamt: gesamt(oben) })}</span>
       </p>
       <div className={stil.arenaRahmen}>
@@ -273,7 +287,7 @@ export function Kampf({
         </div>
       </div>
       <p className={stil.kampfSeite} data-lage="unten">
-        <strong>{beschriftung(unten)}</strong>
+        <strong {...wimpelUnten}>{beschriftung(unten)}</strong>
         <span>{tz('kampf.stehen', { stehen: stehende(unten), gesamt: gesamt(unten) })}</span>
       </p>
       {anzeige.stand.ende &&
