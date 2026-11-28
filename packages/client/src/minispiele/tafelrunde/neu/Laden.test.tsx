@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Laden, Shopleiste } from './Laden';
+import { Bereitknopf, Laden, Shopleiste } from './Laden';
 import { KATALOG, ruestsicht } from './testdaten';
 
 /*
@@ -11,7 +11,7 @@ import { KATALOG, ruestsicht } from './testdaten';
  */
 
 function laden(teil: Partial<Parameters<typeof Laden>[0]> = {}) {
-  const rufe = { onKauf: vi.fn(), onBlatt: vi.fn(), onBereit: vi.fn() };
+  const rufe = { onKauf: vi.fn(), onBlatt: vi.fn() };
   const { container } = render(
     <Laden
       eigenes={ruestsicht().eigenes!}
@@ -59,62 +59,59 @@ describe('Laden', () => {
     expect(container.querySelectorAll('[data-trifft]').length).toBeGreaterThan(0);
   });
 
-  it('der Info-Griff oeffnet das Blatt; unten steht nur noch „Bereit"', () => {
+  it('der Info-Griff oeffnet das Blatt; kein Wuerfeln, kein Rang', () => {
     const { rufe } = laden();
     fireEvent.click(screen.getByRole('button', { name: 'Kaiserkrieger ansehen' }));
     expect(rufe.onBlatt).toHaveBeenCalledWith(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Bereit' }));
-    expect(rufe.onBereit).toHaveBeenCalled();
     // Seit dem 27.11.2026 abends gibt es beides nicht mehr (Robin).
     expect(screen.queryByRole('button', { name: /Neu würfeln/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Rang steigern/ })).not.toBeInTheDocument();
   });
 
   /*
-   * Seit dem 28.11.2026 ist „Bereit" ein kleiner runder Haken (Robin): Die
-   * Beschriftung „Wartet…" gibt es nicht mehr, der Zustand steht in der
-   * Fuellung, in `aria-pressed` und im Vorlesenamen.
+   * Seit dem 28.11.2026 (Robin: „brauchen wir doch beides nicht") hat der
+   * Laden in der Ruestphase keine Kopfzeile mehr: Gold steht oben rechts am
+   * Tisch, „Feld 6/6" im Kopfband, der Bereit-Knopf ueber der Bank.
    */
-  it('nach „Bereit" ist alles gesperrt, der Haken ist gefuellt', () => {
-    const eigenes = { ...ruestsicht().eigenes!, bereit: true };
-    laden({ eigenes, darfHandeln: false });
-    const haken = screen.getByRole('button', { name: 'Bereit - wartet auf die anderen' });
-    expect(haken).toBeDisabled();
-    expect(haken).toHaveAttribute('data-bereit');
-    expect(haken).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /Pinguinwache, Wache/ })).toBeDisabled();
+  it('in der Ruestphase keine Kopfzeile: kein Bereit, kein Gold, kein Feld', () => {
+    laden();
+    expect(screen.queryByRole('button', { name: 'Bereit' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^\d+ Gold$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Feld \d/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/nächste Runde/)).not.toBeInTheDocument();
   });
 
-  it('der Bereit-Haken sitzt oben neben dem Gold, nicht als Knopf unter den Karten', () => {
-    const { container } = laden();
-    const haken = screen.getByRole('button', { name: 'Bereit' });
-    expect(haken).toHaveAttribute('aria-pressed', 'false');
-    expect(haken).not.toHaveAttribute('data-bereit');
-    // Im Kopf des Ladens, vor der Kartenliste.
-    expect(container.querySelector('section > div')).toContainElement(haken);
-  });
-
-  it('im Kampf: ohne Bereit, mit Griff zum Zuklappen', () => {
+  it('im Kampf aufgeklappt: Gold oben, Griff zum Zuklappen, kein Bereit', () => {
     const onZuklappen = vi.fn();
-    laden({ onBereit: undefined, onZuklappen });
+    laden({ onZuklappen });
+    expect(screen.getByLabelText('5 Gold')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bereit' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Laden zuklappen' }));
     expect(onZuklappen).toHaveBeenCalled();
   });
 
-  it('Gold und Feldplaetze ueber den Karten, kein Rang mehr; das naechste Feld aus der Sicht', () => {
-    const eigenes = { ...ruestsicht().eigenes!, feldplaetzeNaechsteRunde: 4 };
-    laden({ eigenes });
-    expect(screen.getByLabelText('5 Gold, nächste Runde +6')).toBeInTheDocument();
-    expect(screen.getByText('Feld 2/3')).toBeInTheDocument();
-    expect(screen.getByText('nächste Runde 4')).toBeInTheDocument();
-    expect(screen.queryByText(/Rang/)).not.toBeInTheDocument();
+  /*
+   * „Bereit" ist ein kleiner runder Haken (Robin, 28.11.2026): Der Zustand
+   * steht in der Fuellung, in `aria-pressed` und im Vorlesenamen.
+   */
+  it('der Bereit-Haken meldet bereit und ist danach gefuellt und gesperrt', () => {
+    const onBereit = vi.fn();
+    const { rerender } = render(<Bereitknopf bereit={false} darf onBereit={onBereit} />);
+    const haken = screen.getByRole('button', { name: 'Bereit' });
+    expect(haken).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(haken);
+    expect(onBereit).toHaveBeenCalled();
+    rerender(<Bereitknopf bereit darf={false} onBereit={onBereit} />);
+    const gemeldet = screen.getByRole('button', { name: 'Bereit - wartet auf die anderen' });
+    expect(gemeldet).toBeDisabled();
+    expect(gemeldet).toHaveAttribute('data-bereit');
+    expect(gemeldet).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('am Ende des Wachstums steht keine Ankuendigung', () => {
-    const eigenes = { ...ruestsicht().eigenes!, feldplaetze: 7, feldplaetzeNaechsteRunde: 7 };
-    laden({ eigenes });
-    expect(screen.queryByText(/nächste Runde \d/)).not.toBeInTheDocument();
+  it('nach „Bereit" sind die Karten gesperrt', () => {
+    const eigenes = { ...ruestsicht().eigenes!, bereit: true };
+    laden({ eigenes, darfHandeln: false });
+    expect(screen.getByRole('button', { name: /Pinguinwache, Wache/ })).toBeDisabled();
   });
 
   it('die Shopleiste im Kampf: fuenf kleine Karten mit Preis, ein Tipp klappt auf', () => {

@@ -127,7 +127,12 @@ describe('Kopfband', () => {
       />,
     );
     expect(screen.getByText('Runde 3')).toBeInTheDocument();
-    expect(screen.getByText(/1 von 2 bereit/)).toBeInTheDocument();
+    // Seit dem 28.11.2026 steht unter der Runde das Feld statt „1 von 2
+    // bereit" (Robin); wer bereit ist, zeigt der Haken am Schild.
+    expect(screen.getByText('Feld 2/3')).toBeInTheDocument();
+    expect(screen.queryByText(/von 2 bereit/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tom, 9 Leben' })).toHaveAttribute('data-bereit');
+    expect(screen.getByRole('button', { name: 'Du, 12 Leben' })).not.toHaveAttribute('data-bereit');
     fireEvent.click(screen.getByRole('button', { name: 'Tom, 9 Leben' }));
     expect(onWahl).toHaveBeenCalledWith(1);
     expect(screen.getByRole('button', { name: 'Du, 12 Leben' })).toHaveAttribute('data-ich');

@@ -166,6 +166,46 @@ export function Portraetkarte({
   );
 }
 
+/** Muenze und Goldzahl — im aufgeklappten Laden und oben rechts am Tisch. */
+export function Goldstand({ gold }: { gold: number }): React.JSX.Element {
+  return (
+    <span className={stil.goldstand} aria-label={tz('neu.goldNur', { n: gold })}>
+      <Muenze />
+      <strong>{gold}</strong>
+    </span>
+  );
+}
+
+/**
+ * Der runde Bereit-Knopf. Seit dem 28.11.2026 nicht mehr im Laden, sondern
+ * rechts ueber der Bank (Robin: „Bereit-Knopf einfach hoeher ... dann haette
+ * man unten nochmal Platz gespart").
+ */
+export function Bereitknopf({
+  bereit,
+  darf,
+  onBereit,
+}: {
+  bereit: boolean;
+  darf: boolean;
+  onBereit: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      className={stil.bereitknopf}
+      data-bereit={bereit ? '' : undefined}
+      aria-pressed={bereit}
+      aria-label={tz(bereit ? 'laden.bereitGemeldet' : 'laden.bereit')}
+      disabled={bereit || !darf}
+      onClick={onBereit}
+      {...uiHintergrund('knopf-rund', '--tn-knopf')}
+    >
+      <Haken />
+    </button>
+  );
+}
+
 /** Ein Haken, gezeichnet — kein Bild, das fehlen koennte (CLAUDE.md). */
 function Haken(): React.JSX.Element {
   return (
@@ -185,7 +225,6 @@ export function Laden({
   trifft,
   onKauf,
   onBlatt,
-  onBereit,
   onZuklappen,
 }: {
   eigenes: EigeneSicht;
@@ -198,16 +237,10 @@ export function Laden({
   trifft: (marke: string, einheitId?: string) => boolean;
   onKauf: (platz: number) => void;
   onBlatt: (platz: number) => void;
-  /** Fehlt im Kampf: Dort meldet niemand bereit. */
-  onBereit?: () => void;
   /** Nur im Kampf, aufgeklappt: zurueck zur schmalen Leiste. */
   onZuklappen?: () => void;
 }): React.JSX.Element {
   const bankVoll = !eigenes.bank.includes(null);
-  /* Waechst das Feld zur naechsten Runde? Das sagt die Sicht, nicht die Runde
-     hier: Gleich heisst „am Ende", dann steht nichts da. */
-  const naechste = eigenes.feldplaetzeNaechsteRunde;
-  const waechst = naechste !== undefined && naechste > eigenes.feldplaetze;
   return (
     <section className={stil.laden} aria-label={tz('laden.titel')} data-aufgeklappt={onZuklappen ? '' : undefined}>
       {onZuklappen && (
@@ -215,36 +248,18 @@ export function Laden({
           <i aria-hidden="true" />
         </button>
       )}
-      <div className={stil.ladenKopf}>
-        {/* Gold und Feld zusammen auf der Plakette, der Knopf daneben: Auf
-            dem Holz waere der runde Knopf ein Fremdkoerper. */}
-        <div className={stil.ladenPlakette} {...uiHintergrund('plakette', '--tn-plakette')}>
-          <span className={stil.goldstand} aria-label={tz('neu.goldstand', { n: eigenes.gold, plus: eigenes.einkommen })}>
-            <Muenze />
-            <strong>{eigenes.gold}</strong>
-            {/* Was die naechste Runde bringt — Zins und Serie wirken sonst wie Zufall. */}
-            <em>+{eigenes.einkommen}</em>
-          </span>
-          <span className={stil.feldstand}>
-            {tz('neu.feld', { belegt: eigenes.belegt, plaetze: eigenes.feldplaetze })}
-            {waechst && <small>{tz('neu.feldNaechste', { n: naechste })}</small>}
-          </span>
+      {/* Seit dem 28.11.2026 keine Kopfzeile mehr in der Ruestphase (Robin:
+          „brauchen wir doch beides nicht"): Gold steht oben rechts, „Feld 6/6"
+          im Kopfband, der Bereit-Knopf ueber der Bank (Spieltisch.tsx). Nur
+          der im Kampf aufgeklappte Laden zeigt das Gold, weil der Rand dort
+          der Arena gehoert. */}
+      {onZuklappen && (
+        <div className={stil.ladenKopf}>
+          <div className={stil.ladenPlakette} {...uiHintergrund('plakette', '--tn-plakette')}>
+            <Goldstand gold={eigenes.gold} />
+          </div>
         </div>
-        {onBereit && (
-          <button
-            type="button"
-            className={stil.bereitknopf}
-            data-bereit={eigenes.bereit ? '' : undefined}
-            aria-pressed={eigenes.bereit}
-            aria-label={tz(eigenes.bereit ? 'laden.bereitGemeldet' : 'laden.bereit')}
-            disabled={eigenes.bereit || !darfHandeln}
-            onClick={onBereit}
-            {...uiHintergrund('knopf-rund', '--tn-knopf')}
-          >
-            <Haken />
-          </button>
-        )}
-      </div>
+      )}
       <ol className={stil.karten} style={{ '--ladenplaetze': plaetze } as React.CSSProperties}>
         {Array.from({ length: plaetze }, (_, platz) => {
           const id = eigenes.laden[platz] ?? null;

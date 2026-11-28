@@ -52,10 +52,10 @@ import { Abschluss } from './Abschluss';
 import { Bank } from './Bank';
 import { Einheitenblatt } from './Einheitenblatt';
 import { Feld, Hexbrett, Schauplatzgrund, aufBrett } from './Feld';
-import { Figur, Muenze, Sterne } from './grafik';
+import { Figur, Muenze, Sterne, uiHintergrund } from './grafik';
 import { Kampf } from './Kampf';
 import { Kopfband, type Sitzzeile, sitzName } from './Kopfband';
-import { Laden, Shopleiste } from './Laden';
+import { Bereitknopf, Goldstand, Laden, Shopleiste } from './Laden';
 import { Markenleiste, Markenpopup } from './Markenleiste';
 import stil from './neu.module.css';
 import { Regelblatt } from './Regelblatt';
@@ -648,7 +648,20 @@ export function Spieltisch({
 
           {eigenes && eigenes.ausRunde === null && !sicht.fertig && (
             <>
-              {bank}
+              {/* Gold oben rechts, gegenueber den Marken (Robin, 28.11.2026). */}
+              <div className={stil.goldRand} {...uiHintergrund('plakette', '--tn-plakette')}>
+                <Goldstand gold={eigenes.gold} />
+              </div>
+              {/* Der Bereit-Knopf rechts ueber der Bank statt in einer eigenen
+                  Zeile ueber dem Laden — die Zeile ist weg, der Laden hat Platz. */}
+              <div className={stil.bankZeile}>
+                {bank}
+                <Bereitknopf
+                  bereit={eigenes.bereit}
+                  darf={darfHandeln}
+                  onBereit={() => schicke({ typ: 'bereit' })}
+                />
+              </div>
               {auswahlband ?? (
                 <Laden
                   eigenes={eigenes}
@@ -660,8 +673,6 @@ export function Spieltisch({
                   trifft={trifft}
                   onKauf={(platz) => schicke({ typ: 'kaufen', platz })}
                   onBlatt={setLadenBlatt}
-                  /* Bereit meldet man nur in der Ruestphase. */
-                  onBereit={imKampf ? undefined : () => schicke({ typ: 'bereit' })}
                 />
               )}
             </>
