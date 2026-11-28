@@ -366,11 +366,11 @@ interface Fundstelle {
 }
 
 /**
- * Drei gleiche derselben Stufe werden eine der naechsten — und zwar so lange,
- * bis nichts mehr passt.
+ * `VERSCHMELZ_ZAHL` gleiche derselben Stufe (seit dem 28.11.2026 zwei)
+ * werden eine der naechsten — und zwar so lange, bis nichts mehr passt.
  *
- * Die Kettenreaktion ist keine Zugabe, sondern der Fall, der zaehlt: Wer neun
- * Kopien sammelt, bekommt EINE Einheit der Stufe 3, nicht drei der Stufe 2.
+ * Die Kettenreaktion ist keine Zugabe, sondern der Fall, der zaehlt: Wer vier
+ * Kopien sammelt, bekommt EINE Einheit der Stufe 3, nicht zwei der Stufe 2.
  * Deshalb die Schleife und keine einmalige Pruefung.
  *
  * Gezaehlt wird ueber BANK UND BRETT hinweg. Sonst haenge das Verschmelzen
@@ -378,11 +378,11 @@ interface Fundstelle {
  * aufraeumen.
  *
  * Die Reihenfolge — erst Brett, dann Bank, jeweils aufsteigend — ist die
- * ganze Bestimmtheit dieser Funktion: Sie entscheidet, WELCHE drei von vieren
+ * ganze Bestimmtheit dieser Funktion: Sie entscheidet, WELCHE zwei von dreien
  * verschmelzen und wo das Ergebnis landet. Waere sie zufaellig, waere der
  * Zustand nach einem Kauf nicht mehr nachrechenbar (Grundsatz 1).
  *
- * Das Ergebnis landet bevorzugt auf dem BRETT, wenn eine der drei dort stand:
+ * Das Ergebnis landet bevorzugt auf dem BRETT, wenn eine der beiden dort stand:
  * Wer eine Einheit aufgestellt hat, will sie nach dem Verschmelzen nicht auf
  * der Bank wiederfinden und von Hand zurueckstellen muessen.
  */
@@ -545,6 +545,22 @@ export function darfHandeln(partie: TafelrundePartie, sitz: number): boolean {
 }
 
 /**
+ * Darf dieser Sitz WAEHREND DES KAMPFES an Laden und Bank? (Robin,
+ * 28.11.2026: "man kann waehrend der Kampfphase Truppen auf der Bank kaufen
+ * und verkaufen", dazu umsortieren und verschmelzen.)
+ *
+ * Das Feld bleibt gesperrt: Die Kaempfe sind beim Uebergang schon fertig
+ * gerechnet (`beginneKampf`), ein Brett, das sich jetzt noch aendert, stuende
+ * im Widerspruch zu dem, was gerade abgespielt wird. Ausgeschieden wird erst
+ * beim Abrechnen, im Kampf leben also alle, die angetreten sind.
+ */
+export function darfImKampfHandeln(partie: TafelrundePartie, sitz: number): boolean {
+  if (partie.fertig || partie.phase !== 'kampf') return false;
+  const heer = partie.heere[sitz];
+  return heer !== undefined && lebt(heer);
+}
+
+/**
  * Ein Sitz fuer die Plattform, damit Zugzeit, Bot-Uebernahme und die
  * Verlassen-Regel greifen — dieselbe Kruecke wie bei Eiland.
  *
@@ -634,7 +650,7 @@ function passeBankAn(
  * (dann tu es). Zweimal geschrieben liefen sie irgendwann auseinander, und
  * der Client zeigte einen Knopf, den der Server abweist.
  */
-function rechneKauf(heer: Heer, plaetze: number, id: EinheitId): Heer | null {
+function rechneKauf(heer: Heer, plaetze: number, id: EinheitId, imKampf = false): Heer | null {
   const kosten = einheit(id).preis;
   if (heer.gold < kosten) return null;
 
@@ -644,11 +660,45 @@ function rechneKauf(heer: Heer, plaetze: number, id: EinheitId): Heer | null {
       ? heer.bank.map((k, i) => (i === frei ? { id, stufe: 1 as Stufe } : k))
       : [...heer.bank, { id, stufe: 1 as Stufe }];
 
-  const { brett, bank } = verschmelze(heer.brett, bankRoh);
+  /*
+   * Im Kampf verschmilzt nur die Bank unter sich. Eine Kopie, die gerade auf
+   * dem Feld kaempft, bleibt stehen, wo sie ist; das Paar mit ihr fuegt
+   * `naechsteRunde` nach dem Kampf zusammen (Robin: "nach dem Kampf").
+   */
+  const { brett, bank } = imKampf
+    ? { brett: heer.brett, bank: verschmelze(heer.brett.map(() => null), bankRoh).bank }
+    : verschmelze(heer.brett, bankRoh);
   const angepasst = passeBankAn(bank, plaetze);
   if (angepasst === null) return null;
 
-  return { ...heer, gold: heer.gold - kosten, brett, bank: angepasst };
+  return { ...heer, gold: heer.gold - kosten, brett: [...brett], bank: angepasst };
+}
+
+/**
+ * Die Zuege, die ein Sitz WAEHREND DES KAMPFES hat: kaufen und von der Bank
+ * verkaufen. Umsortieren auf der Bank geht auch, steht aber wie immer nicht in
+ * der Liste (siehe unten bei `erlaubteZuege`).
+ *
+ * Bewusst NICHT `legalActions`: Die Plattform laesst in einer Schaupause jeden
+ * Botsitz handeln, der dort Zuege hat, und plant die Pause erst, wenn keiner
+ * mehr welche hat (`scheduleInterlude` in server/src/runtime/party.ts).
+ * Verkaufen geht aber immer — die Bots handelten den ganzen Kampf ueber, und
+ * die Runde ginge nie zu Ende. Deshalb steht diese Liste in der eigenen Sicht
+ * (`EigeneSicht.kampfZuege`), `legalActions` bleibt im Kampf leer.
+ */
+export function kampfZuege(partie: TafelrundePartie, sitz: number): TafelrundeAktion[] {
+  if (!darfImKampfHandeln(partie, sitz)) return [];
+  const heer = heerVon(partie, sitz);
+  const zuege: TafelrundeAktion[] = [];
+  heer.laden.forEach((id, platz) => {
+    if (id !== null && rechneKauf(heer, partie.regeln.bankPlaetze, id, true) !== null) {
+      zuege.push({ typ: 'kaufen', platz });
+    }
+  });
+  heer.bank.forEach((k, platz) => {
+    if (k) zuege.push({ typ: 'verkaufen', ort: { bereich: 'bank', platz } });
+  });
+  return zuege;
 }
 
 export function erlaubteZuege(
@@ -694,11 +744,52 @@ export function fuehreAus(
   aktion: TafelrundeAktion,
 ): TafelrundePartie {
   if (partie.fertig) throw new Error('Partie ist zu Ende');
+  if (partie.phase === 'kampf') return fuehreImKampfAus(partie, sitz, aktion);
   if (partie.phase !== 'vorbereitung') throw new Error('Gerade wird nicht geruestet');
   const heer = heerVon(partie, sitz);
   if (!lebt(heer)) throw new Error('Sitz ist ausgeschieden');
   if (heer.bereit) throw new Error('Sitz hat seine Vorbereitung beendet');
 
+  return fuehreRuestzugAus(partie, sitz, heer, aktion, false);
+}
+
+/**
+ * Ein Zug waehrend des Kampfes (siehe `darfImKampfHandeln`): kaufen, von der
+ * Bank verkaufen, auf der Bank umsortieren. Alles, was das Feld beruehrt, und
+ * `bereit` sind abgewiesen. Der Rest laeuft ueber dieselbe Rechnung wie in der
+ * Vorbereitung, damit Preis, Erloes und Vorrat nicht zweimal stehen.
+ */
+function fuehreImKampfAus(
+  partie: TafelrundePartie,
+  sitz: number,
+  aktion: TafelrundeAktion,
+): TafelrundePartie {
+  if (!darfImKampfHandeln(partie, sitz)) throw new Error('Sitz ist ausgeschieden');
+  const heer = heerVon(partie, sitz);
+  switch (aktion.typ) {
+    case 'kaufen':
+      break;
+    case 'verkaufen':
+      if (aktion.ort?.bereich !== 'bank') throw new Error('Im Kampf bleibt das Feld, wie es ist');
+      break;
+    case 'verschieben':
+      if (aktion.von?.bereich !== 'bank' || aktion.nach?.bereich !== 'bank') {
+        throw new Error('Im Kampf bleibt das Feld, wie es ist');
+      }
+      break;
+    default:
+      throw new Error('Diesen Zug gibt es im Kampf nicht');
+  }
+  return fuehreRuestzugAus(partie, sitz, heer, aktion, true);
+}
+
+function fuehreRuestzugAus(
+  partie: TafelrundePartie,
+  sitz: number,
+  heer: Heer,
+  aktion: TafelrundeAktion,
+  imKampf: boolean,
+): TafelrundePartie {
   const { regeln } = partie;
 
   switch (aktion.typ) {
@@ -709,7 +800,7 @@ export function fuehreAus(
       }
       const id = heer.laden[platz];
       if (!id) throw new Error('Der Ladenplatz ist leer');
-      const gekauft = rechneKauf(heer, regeln.bankPlaetze, id);
+      const gekauft = rechneKauf(heer, regeln.bankPlaetze, id, imKampf);
       if (!gekauft) throw new Error('Kein Gold oder kein Platz');
       /*
        * DER GANZE LADEN WIRD NEU GEZOGEN, nicht nur der gekaufte Platz (Robin,
@@ -1109,8 +1200,14 @@ function naechsteRunde(partie: TafelrundePartie): TafelrundePartie {
       heere[sitz] = { ...heer, bereit: true };
       continue;
     }
+    // Was im Kampf gekauft wurde und mit einer kaempfenden Kopie ein Paar
+    // ergibt, verschmilzt jetzt (siehe `rechneKauf`). Ohne Paar aendert das
+    // nichts.
+    const { brett, bank } = verschmelze(heer.brett, heer.bank);
     heere[sitz] = {
       ...heer,
+      brett,
+      bank,
       gold: heer.gold + einkommen(heer, partie.regeln),
       // Die Feldplaetze folgen der Runde (regeln.ts, `levelFuerRunde`).
       level: levelFuerRunde(partie.runde + 1),

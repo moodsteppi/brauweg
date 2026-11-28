@@ -33,11 +33,7 @@ export class TanksOnlineRaum {
   host = '';
   partie: TanksPartie | null = null;
   private fehltSeit = new Map<string, number>();
-  private botPlan: {
-    zug: number;
-    seit: number;
-    schuss: BotSchuss | null;
-  } | null = null;
+  private botPlaene = new Map<string, { zug: number; seit: number; schuss: BotSchuss | null }>();
   constructor(
     readonly code: string,
     readonly seed: number,
@@ -123,7 +119,7 @@ export class TanksOnlineRaum {
       modus: 'einzel',
       serie: 1,
       karte: this.seed % 5,
-    });
+    }, 1, true);
     return true;
   }
   eingabe(id: string, zug: number, aktion: TanksEingabe): void {
@@ -134,7 +130,7 @@ export class TanksOnlineRaum {
       this.partie!.eingabe(id, aktion);
       return;
     }
-    if (zug !== s.zug || s.amZug !== id || s.phase !== 'zielen') return;
+    if (zug !== s.zug || s.phase !== 'zielen') return;
     if (
       (aktion.art === 'zielen' || aktion.art === 'feuer') &&
       !ONLINE_WAFFEN.includes(aktion.waffe as 0 | 1 | 2)
@@ -161,31 +157,21 @@ export class TanksOnlineRaum {
     if (!p) return;
     for (let i = 0; i < 3; i++) p.schritt();
     const s = p.sicht();
-    if (
-      s.phase !== 'zielen' ||
-      !this.spieler.find((p) => p.id === s.amZug)?.bot
-    )
-      return;
-    if (this.botPlan?.zug !== s.zug) {
-      // Kompakte Auswahl auch für Bots; die begrenzte Suche läuft einmal je Zug.
-      const sicht = {
-        ...s,
-        bros: s.bros.map((b) => ({
-          ...b,
-          munition: b.munition.map((n, i) => (i < 3 ? n : 0)),
-        })),
-      };
-      this.botPlan = {
-        zug: s.zug,
-        seit: jetzt,
-        schuss: botSchuss(sicht, 'leicht'),
-      };
-      if (this.botPlan.schuss)
-        p.eingabe(s.amZug, { art: 'zielen', ...this.botPlan.schuss });
-    } else if (jetzt - this.botPlan.seit >= 1500 && this.botPlan.schuss) {
-      p.eingabe(s.amZug, { art: 'feuer', zug: s.zug, ...this.botPlan.schuss });
+    if (s.phase !== 'zielen') return;
+    for (const b of s.bros.filter(b => !b.raus && this.spieler.find(p => p.id === b.id)?.bot)) {
+      if (s.bereit?.includes(b.id)) continue;
+      let plan = this.botPlaene.get(b.id);
+      if (plan?.zug !== s.zug) {
+        const sicht = { ...s, amZug: b.id, bros: s.bros.map(b => ({ ...b, munition: b.munition.map((n, i) => i < 3 ? n : 0) })) };
+        plan = { zug: s.zug, seit: jetzt, schuss: botSchuss(sicht, 'leicht') };
+        this.botPlaene.set(b.id, plan);
+        if (plan.schuss) p.eingabe(b.id, { art: 'zielen', ...plan.schuss });
+      } else if (jetzt - plan.seit >= 1500 && plan.schuss) {
+        p.eingabe(b.id, { art: 'feuer', zug: s.zug, ...plan.schuss });
+      }
     }
   }
+
   sicht(id: string, jetzt: number): OnlineStand {
     const s = this.partie?.sicht();
     return {

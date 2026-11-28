@@ -154,12 +154,13 @@ describe('Normierung gegen Bretter gleicher Kostensumme', () => {
   });
 
   it('rechnet den Brettwert mit Sternstufen', () => {
-    // Drei Dorfwachen ergeben eine auf Stufe 2 — und die hat dreimal ihren
-    // Preis gekostet, nicht einmal. Seit dem 27.11.2026 kostet die Dorfwache
-    // 2 Gold (Preis statt Kostenstufe, `PREIS_JE_KOSTEN`).
+    // Zwei Dorfwachen ergeben eine auf Stufe 2 — und die hat zweimal ihren
+    // Preis gekostet, nicht einmal; Stufe 3 viermal. (Seit dem 28.11.2026
+    // verschmelzen zwei, vorher drei: 6 und 18.) Seit dem 27.11.2026 kostet
+    // die Dorfwache 2 Gold (Preis statt Kostenstufe, `PREIS_JE_KOSTEN`).
     assert.equal(brettwert([{ id: 'dorfwache', stufe: 1 }, null]), 2);
-    assert.equal(brettwert([{ id: 'dorfwache', stufe: 2 }, null]), 6);
-    assert.equal(brettwert([{ id: 'dorfwache', stufe: 3 }, null]), 18);
+    assert.equal(brettwert([{ id: 'dorfwache', stufe: 2 }, null]), 4);
+    assert.equal(brettwert([{ id: 'dorfwache', stufe: 3 }, null]), 8);
     assert.equal(brettwert([null, null]), 0);
   });
 });

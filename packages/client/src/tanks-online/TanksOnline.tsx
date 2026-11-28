@@ -86,12 +86,11 @@ export default function TanksOnline() {
     </label>
   );
   if (partie && stand) {
-    const dran = partie.bros.find((b) => b.id === partie.amZug),
-      ich = partie.bros.find((b) => b.id === stand.ich),
+    const ich = partie.bros.find((b) => b.id === stand.ich),
       ende = partie.phase === 'ende';
     return (
       <main className="to-partie">
-        <OnlineLeinwand partie={partie} />
+        <OnlineLeinwand partie={partie} ich={stand.ich} />
         <header className="to-hud">
           <button onClick={netz.verlassen}>{wort('Verlassen', 'Leave')}</button>
           <b>
@@ -102,7 +101,7 @@ export default function TanksOnline() {
               ? wort('Verbinde erneut…', 'Reconnecting…')
               : ende
                 ? wort('Runde beendet', 'Round finished')
-                : `${dran?.name ?? '…'} · ${Math.ceil(partie.rest)}s`}
+                : `${wort('Runde', 'Round')} ${partie.runde} · ${Math.ceil(partie.rest)}s`}
           </span>
           <small>{netz.ping} ms</small>
         </header>
@@ -115,20 +114,24 @@ export default function TanksOnline() {
             >
               <b>{b.name}</b>
               <small>
-                {b.lp} ♥{b.schild ? ' ◈' : ''}
+                {b.lp} ♥{b.schild ? ' ◈' : ''}{!b.raus && partie.bereit?.includes(b.id) ? ' ✓' : ''}
               </small>
             </span>
           ))}
         </div>
         {!ende && (
           <div className="to-zughinweis">
-            {stand.privat?.amZug && partie.phase === 'zielen'
-              ? wort('Du bist am Zug', 'Your turn')
-              : partie.phase === 'countdown'
-                ? wort('Mach dich bereit!', 'Get ready!')
-                : ich?.raus
-                  ? wort('Du schaust zu', 'Spectating')
-                  : wort('Beobachte deinen Gegner', 'Watch your opponent')}
+            {ich?.raus ? wort('Du schaust zu', 'Spectating')
+              : partie.phase === 'zielen'
+                ? `${stand.privat?.bereit ? wort('Festgelegt', 'Locked in') : wort('Schuss einstellen und festlegen', 'Aim and lock in')} · ${partie.bros.filter(b => !b.raus && partie.bereit?.includes(b.id)).length}/${partie.bros.filter(b => !b.raus).length} ${wort('bereit', 'ready')}`
+                : partie.phase === 'countdown' ? wort('Mach dich bereit!', 'Get ready!')
+                : wort('Gemeinsame Salve', 'Simultaneous volley')}
+          </div>
+        )}
+        {verbunden && partie.phase === 'countdown' && (
+          <div className="to-countdown" role="status" aria-label={wort('Countdown', 'Countdown')}>
+            <strong key={`${partie.zug}-${Math.ceil(partie.rest)}`}>{Math.max(1, Math.ceil(partie.rest))}</strong>
+            <span>{partie.bereit?.length ? wort('Alle schießen gleich!', 'Everyone fires together!') : wort('Bereit zum Planen', 'Get ready to aim')}</span>
           </div>
         )}
         {!ende && stand.privat && (
@@ -266,8 +269,8 @@ export default function TanksOnline() {
             )}
             <p className="to-hinweis">
               {wort(
-                'Spiele im Querformat. Ziele mit Winkel und Kraft, fahre mit den Pfeilen und tippe auf Feuer. Jeder spielt auf seinem eigenen Gerät.',
-                'Play in landscape. Set angle and power, drive with the arrows, then fire. Everyone plays on their own device.',
+                'Spiele im Querformat. Du hast 30 Sekunden: Winkel und Kraft mit +/− einstellen und festlegen. Sobald alle bereit sind, startet der 3–2–1-Countdown und alle schießen gleichzeitig.',
+                'Play in landscape. You have 30 seconds: adjust angle and power with +/− and lock in. Once everyone is ready, a 3–2–1 countdown starts and all tanks fire together.',
               )}
             </p>
           </section>
