@@ -3856,6 +3856,9 @@
   left: auto;
   right: 16px;
 }
-:is(.hb, .spe) .hb-sp-herz.is-an {
+/* So spitz, weil das Zierwerk jeden .hb-rund cremefarben färbt und mit
+   `.hb.hb :is(… .clan-feld .lobby-chip …)` selbst auf vier Klassen kommt
+   (hub-zierwerk.css, später geladen). */
+.hb.hb .hb-sp-kopf .hb-sp-herz.is-an {
   color: #ff6b78;
 }

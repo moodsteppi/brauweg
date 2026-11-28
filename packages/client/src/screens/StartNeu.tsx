@@ -39,13 +39,13 @@ export function sicherAb(trophies: number): number {
 }
 
 /**
- * Bilder, die bestellt, aber noch nicht geliefert sind (Plan, Abschnitt 7).
- * Solange hier null steht, zeichnet die Kachel kein `<img>` — ein weißer
- * Kasten sähe nach Fehler aus (CLAUDE.md), das Schild bekommt einen
- * CSS-Holzgrund.
+ * Die beiden Bilder des Umbaus (docs/ASSETS-START-NEU.md). Als Konstanten mit
+ * null-Möglichkeit, weil sie erst nach dem Code kamen: Steht hier null, zeichnet
+ * die Kachel kein `<img>` — ein weißer Kasten sähe nach Fehler aus
+ * (CLAUDE.md) —, und das Schild fällt auf seinen CSS-Holzgrund zurück.
  */
-const BOCK_BILD: string | null = null;
-const SCHILD_BILD: string | null = null;
+const BOCK_BILD: string | null = '/hub/start-einstiege/bock.webp';
+const SCHILD_BILD: string | null = '/hub/start-einstiege/schild.webp';
 
 export function StartNeu({
   me,
@@ -114,8 +114,8 @@ export function StartNeu({
             <strong>{t('start.bock.titel')}</strong>
             <small>{t('start.bock.unter')}</small>
           </span>
-          {BOCK_BILD && <img src={BOCK_BILD} alt="" />}
           {bockBald && <b className="start-kachel-badge start-bald">{t('start.bock.bald')}</b>}
+          {BOCK_BILD && <img src={BOCK_BILD} alt="" />}
           <RahmenEcken />
         </button>
         <button

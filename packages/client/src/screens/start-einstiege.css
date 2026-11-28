@@ -208,6 +208,10 @@
     width: 172px;
     height: 80px;
   }
+  .hb .start-schild.mit-bild {
+    width: 184px;
+    height: 92px;
+  }
   .hb .start-kachel > img {
     height: 78px;
   }
@@ -304,7 +308,13 @@
   padding-right: 34px;
 }
 .hb .start-bock > img {
+  /* Unten rechts, aber ein Stück vor den Seitensymbolen, die über den
+     rechten Rand der Kachel ragen. */
   align-self: flex-end;
+  margin-top: auto;
+  margin-right: 12px;
+  width: 80px;
+  height: 80px;
 }
 .hb .start-bock .start-bald {
   position: static;
@@ -366,6 +376,12 @@
   right: 9px;
 }
 .hb .start-schild.mit-bild {
+  /* Das Bild ist ein Pfeil nach rechts (2:1, docs/ASSETS-START-NEU.md); die
+     Schrift sitzt auf dem Brett links der Spitze, nicht in der Bildmitte. */
+  width: 212px;
+  height: 106px;
+  /* In px: Prozent rechnen gegen die Breite des Mosaiks, nicht des Schilds. */
+  padding: 0 40px 4px 16px;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -375,8 +391,14 @@
   background-repeat: no-repeat;
   filter: drop-shadow(0 8px 12px #000a);
 }
+@media (hover: hover) and (pointer: fine) {
+  .hb .start-schild.mit-bild:hover {
+    box-shadow: none;
+    filter: brightness(1.12) drop-shadow(0 0 14px #f6c34d90);
+  }
+}
 .hb .start-schild > span {
-  font: 400 clamp(19px, 5.4vw, 23px) / 1.05 var(--hb-anz);
+  font: 400 clamp(17px, 5vw, 22px) / 1.05 var(--hb-anz);
   letter-spacing: 0.01em;
   text-align: center;
   text-shadow:
@@ -420,7 +442,7 @@
   /* Unter dem Bock-Titel, über dem Schild: Der Titel behält die volle
      Breite, und die rote Zahl ragt nicht über den Bildschirmrand. */
   top: 58px;
-  right: -9px;
+  right: -12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -459,7 +481,8 @@
 .hb .start-symbol-zahl {
   position: absolute;
   top: -5px;
-  right: -5px;
+  /* Nicht weiter nach rechts: Die Leiste steht 4 px vor dem Bildschirmrand. */
+  right: -3px;
   min-width: 21px;
   height: 21px;
   padding: 0 5px;
@@ -535,7 +558,8 @@
   z-index: 30;
   left: 12px;
   right: 12px;
-  bottom: calc(66px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
+  /* Über dem erhöhten Start-Knopf der Reiterleiste (12 px über der Leiste). */
+  bottom: calc(76px + max(env(safe-area-inset-bottom, 0px), var(--hb-probe-unten, 0px)));
   display: flex;
   align-items: center;
   gap: 10px;
