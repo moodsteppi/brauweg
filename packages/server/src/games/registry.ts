@@ -96,22 +96,25 @@ const byId = new Map<GameId, AnyGameModule>(
 /**
  * Angekündigte Modi bleiben außerhalb der Tisch-Registry: Sie haben kein Spielmodul.
  *
- * Der Mehrkampf ist auf beiden Plattformen angekündigt (bis zum 26.10.2026
- * nur in der App, die Webseite hatte dafür nur eine Marke ohne Stimme).
- * Pro-Subway dagegen nur in der App: Auf der Webseite läuft der Runner schon
+ * Pro-Subway nur in der App: Auf der Webseite läuft der Runner schon
  * (`/api/runner/lauf` sperrt nur die App), dort gibt es nichts abzustimmen.
+ *
+ * Der Mehrkampf stand hier bis zum 28.11.2026 auf beiden Plattformen zur
+ * Abstimmung. Seitdem ist er spielbar — als BroweG-Bock (src/bock/), eine
+ * Serie echter Tische ohne eigenes Modul — und steht deshalb weder hier
+ * noch in der Spielliste; den Einstieg macht der Hub selbst. Seine Kennung
+ * im Umfang bleibt (`umfangKennungen`): Sie schaltet den Bock frei.
  */
 export function abstimmModiFuer(plattform: Plattform, umfang: Umfang = ALLES): (Omit<GameMeta, 'id'> & { id: string })[] {
   if (!imUmfang(umfang, 'abstimmung')) return [];
   return [
     { id: 'prosubway', nameKey: 'modus.prosubway', seatCounts: [1] },
-    { id: 'mehrkampf', nameKey: 'modus.mehrkampf', seatCounts: [2, 3, 4, 5, 6, 7, 8] },
   ]
     // Jeder Modus braucht seine eigene Kennung im Umfang, wie jedes
     // Vorschau-Spiel auch: Bis zum 27.10.2026 kam der Mehrkampf allein mit
     // `abstimmung` mit — und `UMFANG=…,mehrkampf` meldete der Start als
     // unbekannt, obwohl die Zeile genau das Gewollte sagte.
-    .filter(m => imUmfang(umfang, m.id) && (m.id === 'mehrkampf' || plattform !== 'web'))
+    .filter(m => imUmfang(umfang, m.id) && plattform !== 'web')
     .map(m => ({
       ...m, availability: 'preview' as const,
       rotationSize: (sitze: number) => sitze, suggestedRounds: () => [],
@@ -128,6 +131,9 @@ export function umfangKennungen(): string[] {
   return [
     ...registry.all().map((meta) => meta.id as string),
     ...abstimmModiFuer('app').map((modus) => modus.id),
+    // Der BroweG-Bock (src/bock/) — kein Modul, kein angekündigter Modus mehr,
+    // aber weiter eine Kennung, die der Umfang freischaltet.
+    'mehrkampf',
   ];
 }
 

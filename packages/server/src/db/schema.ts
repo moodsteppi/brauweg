@@ -1834,3 +1834,98 @@ export const tanksRunde = pgTable('brotanks_runde', {
   ergebnis: jsonb().$type<import('@brauweg/broremote-kern').TanksErgebnis>(),
   muenzen: integer().notNull().default(0),
 }, t => [primaryKey({ columns: [t.accountId, t.partie] }), index('brotanks_runde_konto_tag_idx').on(t.accountId, t.tag)]);
+
+// ---------------------------------------------------------------------------
+// BroweG-Bock (Migration 0048, src/bock/)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ein Sitz im Bock — Mensch oder Bot, ueber alle Stationen derselbe.
+ *
+ * `plattform` ist die Herkunft des Menschen beim Eintritt (Webseite, App).
+ * Sie gehoert hierher und nicht in eine Anfrage, weil jede spaetere Station
+ * daran haengt: Gespielt wird nur, was auf ALLEN beteiligten Geraeten
+ * spielbar ist (`spielbarAuf` in games/registry.ts).
+ *
+ * Das Lebenszeichen (wer zuletzt nachgefragt hat) steht bewusst NICHT hier:
+ * Jeder Abruf setzt es, alle paar Sekunden je Spieler — als Spalte waere das
+ * ein Schreibzugriff je Abruf. Es lebt im Dienst (src/bock/dienst.ts).
+ */
+export interface BockSitz {
+  readonly kontoId: string | null;
+  readonly name: string;
+  readonly plattform: 'web' | 'app' | 'android' | null;
+  readonly bot: boolean;
+  /** Verlassen: Bot uebernimmt, im Endstand Letzter. */
+  readonly verlassen: boolean;
+}
+
+/** Je Sitz der Endwertung: Punkte, Stationssiege, Platz, Belohnung. */
+export interface BockErgebnisZeile {
+  readonly sitz: number;
+  readonly punkte: number;
+  readonly siege: number;
+  readonly platz: number;
+  readonly trophaeen: number;
+  readonly muenzen: number;
+}
+
+/** Platzierung eines Bock-Sitzes an einer Station. */
+export interface BockStationPlatz {
+  readonly sitz: number;
+  readonly platz: number;
+  readonly punkte: number;
+}
+
+export const bock = pgTable(
+  'bock',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** Beitrittscode fuer „Mit Freunden"; Bocks aus der Suche haben keinen. */
+    code: text(),
+    gastgeberId: uuid().references(() => account.id, { onDelete: 'set null' }),
+    art: text().$type<'suche' | 'freunde'>().notNull(),
+    zustand: text().$type<'wartet' | 'laeuft' | 'fertig'>().notNull().default('wartet'),
+    sitze: jsonb().$type<BockSitz[]>().notNull(),
+    /**
+     * Die Stationen, wie der Gastgeber sie gewaehlt hat: je Station ein Spiel
+     * oder `null` fuer „Zufaellig". Gezogen wird erst beim Start, weil erst
+     * dann feststeht, wie viele mitspielen und auf welchen Geraeten.
+     */
+    plan: jsonb().$type<(GameId | null)[]>().notNull(),
+    /** Laufende bzw. zuletzt gespielte Station, 0 = noch keine. */
+    station: integer().notNull().default(0),
+    /** Je Sitz die Summe der Stationspunkte (Gleichstand teilt, daher Bruch). */
+    punkte: jsonb().$type<number[]>().notNull().default([]),
+    ergebnis: jsonb().$type<BockErgebnisZeile[]>(),
+    /** Ende der Pause vor der naechsten Station (Zwischenstand). */
+    weiterAb: timestamp({ withTimezone: true }),
+    erstelltAm: createdAt(),
+    aktualisiertAm: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('bock_code_idx').on(t.code),
+    index('bock_zustand_idx').on(t.zustand, t.aktualisiertAm),
+  ],
+);
+
+export const bockStation = pgTable(
+  'bock_station',
+  {
+    bockId: uuid()
+      .notNull()
+      .references(() => bock.id, { onDelete: 'cascade' }),
+    nr: integer().notNull(),
+    gameId: gameId(),
+    tableId: uuid().references(() => gameTable.id, { onDelete: 'set null' }),
+    /** Je Bock-Sitz der Platz am Tisch (`table_seat.seat_index`). */
+    sitzplaetze: jsonb().$type<number[]>().notNull(),
+    /** Gesetzt, sobald die Station gewertet ist — und nur einmal. */
+    platzierung: jsonb().$type<BockStationPlatz[]>(),
+    erstelltAm: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.bockId, t.nr] }),
+    index('bock_station_tisch_idx').on(t.tableId),
+  ],
+);

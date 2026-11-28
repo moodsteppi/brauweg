@@ -152,7 +152,7 @@ export async function listRuleSets(db: Db, accountId: string, gameId: GameId) {
  * gelesen wird der Code als Grossbuchstabe, verglichen ebenso
  * (`codeNormalisieren`).
  */
-const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const CODE_ZEICHEN = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 /** Sechs Zeichen aus 31 sind rund 900 Millionen Moeglichkeiten. */
 export const CODE_LAENGE = 6;

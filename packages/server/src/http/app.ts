@@ -69,6 +69,8 @@ import { gastkontoZaehlen } from '../herkunft.js';
 import { zaehle } from '../statistik.js';
 import { lernserieKurz } from '../lernpfad.js';
 import { pushRouten } from './push-routen.js';
+import { bockRouten } from './bock-routen.js';
+import type { BockDienst } from '../bock/dienst.js';
 import type { PushAnlaesse } from '../push/anlaesse.js';
 import { verifyPassword } from '../auth/secrets.js';
 import {
@@ -337,6 +339,8 @@ export interface AppDeps {
    * sie nicht aufbauen.
    */
   readonly vermittlung?: Vermittlung;
+  /** BroweG-Bock; fehlt er, baut `bockRouten` ihn selbst (Proben setzen eigene Fristen). */
+  readonly bock?: BockDienst;
   readonly cookieSecure: boolean;
   readonly sessionTtlDays: number;
   /** Verzeichnis des gebauten Clients. Fehlt es, liefert der Server nur die API. */
@@ -1045,6 +1049,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     limitAllgemein: LIMIT_ALLGEMEIN,
   });
 
+  // BroweG-Bock: Serie aus mehreren Stationstischen — siehe src/bock/dienst.ts.
+  bockRouten(app, { db: deps.db, runtime: deps.runtime, bock: deps.bock, vermittlung: deps.vermittlung, umfang, requireAccount, plattform: plattformVon, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
   tanksRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
   buildingRouten(app, { db: deps.db, requireAccount, limitSchreiben: LIMIT_SCHREIBEN, limitAllgemein: LIMIT_ALLGEMEIN });
 
