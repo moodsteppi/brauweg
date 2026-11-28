@@ -26,6 +26,7 @@ export function OnlineSteuerung({
     arti.amZug &&
     arti.phase === 'zielen' &&
     !arti.raus &&
+    !arti.bereit &&
     !abgeschickt;
   useEffect(() => {
     setZiel({ winkel: arti.winkel, staerke: arti.staerke, waffe: arti.waffe });
@@ -117,32 +118,20 @@ export function OnlineSteuerung({
         </small>
       </div>
       <div className="to-zielen">
-        <label>
-          {wort('Winkel', 'Angle')} <b>{ziel.winkel}°</b>
-          <input
-            type="range"
-            min="0"
-            max="180"
-            value={ziel.winkel}
-            disabled={!aktiv}
-            onChange={(e) =>
-              setZiel((z) => ({ ...z, winkel: +e.target.value }))
-            }
-          />
-        </label>
-        <label>
-          {wort('Kraft', 'Power')} <b>{ziel.staerke}%</b>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={ziel.staerke}
-            disabled={!aktiv}
-            onChange={(e) =>
-              setZiel((z) => ({ ...z, staerke: +e.target.value }))
-            }
-          />
-        </label>
+        {(['winkel', 'staerke'] as const).map((feld) => {
+          const name = feld === 'winkel' ? wort('Winkel', 'Angle') : wort('Kraft', 'Power');
+          const maximum = feld === 'winkel' ? 180 : 100;
+          return <div className="to-feinregler" role="group" aria-label={name} key={feld}>
+            <span>{name} <b>{ziel[feld]}{feld === 'winkel' ? '°' : '%'}</b></span>
+            <div>
+              <button aria-label={`${name} −1`} disabled={!aktiv || ziel[feld] <= 0}
+                onClick={() => setZiel(z => ({ ...z, [feld]: Math.max(0, z[feld] - 1) }))}>−</button>
+              <output aria-label={name}>{ziel[feld]}</output>
+              <button aria-label={`${name} +1`} disabled={!aktiv || ziel[feld] >= maximum}
+                onClick={() => setZiel(z => ({ ...z, [feld]: Math.min(maximum, z[feld] + 1) }))}>+</button>
+            </div>
+          </div>;
+        })}
       </div>
       <div
         className="to-waffen"
@@ -194,7 +183,7 @@ export function OnlineSteuerung({
         }}
       >
         <img src="/broremote/knoepfe/start.webp" alt="" />
-        <strong>{wort('Feuer!', 'Fire!')}</strong>
+        <strong>{arti.bereit || abgeschickt ? wort('Festgelegt ✓', 'Locked in ✓') : wort('Festlegen', 'Lock in')}</strong>
       </button>
     </div>
   );

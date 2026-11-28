@@ -8,10 +8,17 @@ import type { TanksSicht } from './partie';
  * Eingaben nach, mit denen TanksPartie.feuern() sie rechnet. abspiel.test.ts hält beide Bahnen gleich.
  */
 export function flugNachrechnen(s: TanksSicht): Flugbahn | null {
-  const b = s.bros.find(x => x.id === s.amZug);
-  if (s.phase !== 'flug' || !b) return null;
-  const ziele = s.bros.filter(o => !o.raus).map(o => ({ x: o.x, y: o.y, schuetze: o.id === b.id }));
-  return flugBerechnen({ x: b.x, y: b.y }, b.winkel, b.staerke, s.wind, b.waffe, new Float32Array(s.gelaende), ziele);
+  if (s.phase !== 'flug') return null;
+  const ids = s.gleichzeitig ? s.salve ?? [] : [s.amZug];
+  const bahnen = ids.flatMap(id => {
+    const b = s.bros.find(x => x.id === id);
+    if (!b) return [];
+    const ziele = s.bros.filter(o => !o.raus).map(o => ({ x: o.x, y: o.y, schuetze: o.id === b.id }));
+    return [flugBerechnen(b, b.winkel, b.staerke, s.wind, b.waffe, new Float32Array(s.gelaende), ziele)];
+  });
+  if (!bahnen.length) return null;
+  return { dauer: Math.max(...bahnen.map(b => b.dauer)), teile: bahnen.flatMap(b => b.teile),
+    einschlaege: bahnen.flatMap(b => b.einschlaege).sort((a, b) => a.t - b.t) };
 }
 
 /** Flugzeit in s, die zur Restzeit der Phase gehört. Lange Flüge laufen schneller (Entwurf, Abschnitt 4). */

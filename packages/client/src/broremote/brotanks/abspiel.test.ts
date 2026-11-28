@@ -30,3 +30,15 @@ it('die Abspielzeit läuft von 0 bis zur Flugdauer, lange Flüge schneller', () 
   expect(flugZeit(lang, 2.5)).toBeCloseTo(5);
   expect(flugZeit(lang, 0)).toBe(10);
 });
+
+it('Online-Salven zeigen alle Geschosse mit einer gemeinsamen Uhr und denselben Einschlägen', () => {
+  const p = new TanksPartie([{ id: 'a', name: 'A', farbe: '#fff' }, { id: 'b', name: 'B', farbe: '#000' }], 42, { modus: 'einzel', serie: 1 }, 1, true);
+  for (let i = 0; i < 180; i++) p.schritt();
+  for (const id of ['a', 'b']) p.eingabe(id, { art: 'feuer', zug: 1, winkel: 90, staerke: 0, waffe: 2 });
+  for (let i = 0; i < 180; i++) p.schritt();
+  const s = p.sicht(), bahn = flugNachrechnen(s)!;
+  expect(s.salve).toHaveLength(2);
+  expect(bahn.teile).toHaveLength(2);
+  expect(flugZeit(bahn, s.rest)).toBeCloseTo(0);
+  expect(bahn.einschlaege.length).toBeGreaterThanOrEqual(2);
+});
