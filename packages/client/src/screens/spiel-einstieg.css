@@ -118,6 +118,53 @@
   text-align: center;
   margin: 0;
 }
+/* Zugeklappter Abschnitt (Partykiste: Einstellungen und Themenpakete). Die
+   Kopfzeile sieht aus wie eine `spe-zeile` und sagt, was gerade gilt. */
+.spe .spe-klappe {
+  border-radius: 18px;
+  background: var(--hb-karte);
+  border: 1px solid var(--hb-kontur);
+}
+.spe .spe-klappe > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+.spe .spe-klappe > summary::-webkit-details-marker {
+  display: none;
+}
+.spe .spe-klappe > summary > span:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.spe .spe-klappe > summary strong {
+  font: 800 15px var(--hb-txt);
+}
+.spe .spe-klappe > summary small {
+  font: 700 12px var(--hb-txt);
+  color: var(--hb-leise);
+}
+.spe .spe-klappe > summary .hb-pf {
+  transition: transform 0.15s;
+}
+.spe .spe-klappe[open] > summary .hb-pf {
+  transform: rotate(90deg);
+}
+.spe .spe-klappe[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+.spe .spe-klappe[open] > :not(summary) {
+  margin-inline: 12px;
+}
 /* Nebenwege als Textlinks („Eigene Regeln", „Mit Code beitreten"), in einer
    Zeile unter den Knöpfen. Steht hier und nicht in spielarten.css, weil auch
    Einstiege ohne Spielartkarten (Partykiste) den Code-Link tragen. */

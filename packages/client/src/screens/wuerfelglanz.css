@@ -53,7 +53,9 @@
 .wg-held-kompakt>div { margin-top:-18px; padding:2px 16px 10px; }
 .wg-schnell { display:grid; gap:8px; margin:12px 0 0; }
 .wg-schnell>small { display:block; text-align:center; font-size:11px; color:#aabed0; }
-.wg .wg-zweit { display:block; width:100%; min-height:46px; padding:10px; border-radius:14px; border:1px solid #849ac799; background:#1c334f; color:#ffe6b4; font:900 14px/1.2 'Nunito Variable',sans-serif; }
+.wg .wg-zweit { display:block; width:100%; min-height:46px; padding:10px; border-radius:14px; border:1px solid #849ac799; background:#1c334f; color:#ffe6b4; font:900 14px/1.2 'Nunito Variable',sans-serif; text-align:center; }
+/* `.spe` setzt Knöpfe auf `text-align: inherit` — die Zahlen standen links in der Kachel. */
+.wg .wg-sitzwahl button { text-align:center; }
 .wg .wg-zweit:disabled { color:#9eb4bf; border-color:#415d6a; }
 .wg-menue .wg-modus { padding:12px 14px; margin:12px 0 4px; }
 .wg-menue .wg-modus h2 { font-size:19px; margin:0 0 8px; }

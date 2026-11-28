@@ -1767,7 +1767,9 @@ function Spielartwahl({
     <div className="fl-spielart">
       <AuswahlRaster
         label={t('filler.menue.spielart')}
-        spalten={2}
+        // Vier in einer Reihe (28.11.2026 abends): Zu zweit standen die Bretter
+        // in zwei Zeilen und schoben den Einstieg über den Bildschirm hinaus.
+        spalten={4}
         gewaehlt={wert}
         eintraege={SPIELARTEN.map((s) => ({
           kennung: s.kennung,

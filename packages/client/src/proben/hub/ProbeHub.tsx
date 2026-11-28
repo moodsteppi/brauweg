@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ApiError, api, SLOTS, WAPPEN, type ActiveTable, type Kauftruhe, type Me, type Schnellspielstand, type Slot, type Suchstand, type WarView, type WegGrad, type WegStufe } from '../../api';
 import { GameSelect, type Tab } from '../../screens/GameSelect';
+import { EinstiegKontext, type EinstiegUmfeld } from '../../screens/EinstiegEcke';
+import { ProbeEinstieg } from './ProbeEinstieg';
 import { useSprache } from '../../i18n/useSprache';
 import { probeKonto } from '../../screens/probe-konto';
 import MARKT_PROBE from './markt-probe.json';
@@ -399,6 +401,7 @@ api.setSprache = async () => ({ ok: true });
  *   &schnell=suche|tisch|arena|keins|fehler  was Quick-Play antwortet
  *   &neu                                     Konto ohne Favoriten und Verlauf
  *   &bock                                    Bock-Kachel verdrahtet (sonst „Bald")
+ *   &einstieg=doppelkopf|golf|…              gleich im Spieleinstieg (ProbeEinstieg.tsx)
  *
  * Der Stand liegt hier statt im Konto der Probe, weil `api.me` ihn frisch
  * liefern muss — so prüft die Probe auch das Auffrischen vor dem Pop-up.
@@ -541,6 +544,17 @@ export function ProbeHub(): React.JSX.Element {
   const anfangsSpiel = suche.get('spiel') ?? undefined;
   const anfangsWeg = suche.has('weg');
   const anfangsHeute = suche.has('heute');
+  /*
+   * Der Spieleinstieg hinter einem Tipp auf ein Spiel (`&einstieg=golf` öffnet
+   * ihn gleich). Zurück geht es wie in App.tsx in den Reiter „Spiele".
+   */
+  const [einstieg, setEinstieg] = useState<string | null>(() => suche.get('einstieg'));
+  const [ausEinstieg, setAusEinstieg] = useState(false);
+  const umfeld: EinstiegUmfeld = {
+    me,
+    onKontoNeu: neuLaden,
+    onSammlung: () => setEinstieg(null),
+  };
   // Im Browser gibt es keine Safe Area. Mit ?iphone stellt die Probe die eines
   // iPhone 14 (47 pt oben, 34 pt unten) nach, damit sie zum Bauplan passt.
   if (new URLSearchParams(window.location.search).has('iphone')) {
@@ -560,11 +574,26 @@ export function ProbeHub(): React.JSX.Element {
   // Rahmen ueber die volle Breite: Das Hub ist fest positioniert und auf dem
   // Desktop schmal — ohne ihn findet die Sichtprobe bei 1400 px kein Objekt
   // mit voller Breite (wie bei ProbeBroChess).
+  if (einstieg) {
+    return (
+      <div data-probe-seite style={{ width: '100%', minHeight: '100vh' }}>
+        <EinstiegKontext.Provider value={umfeld}>
+          <ProbeEinstieg
+            gameId={einstieg}
+            onBack={() => {
+              setAusEinstieg(true);
+              setEinstieg(null);
+            }}
+          />
+        </EinstiegKontext.Provider>
+      </div>
+    );
+  }
   return (
     <div data-probe-seite style={{ width: '100%', minHeight: '100vh' }}>
     <GameSelect
       me={me}
-      onPick={nichts}
+      onPick={setEinstieg}
       onSolo={nichts}
       onResume={nichts}
       onThemeChange={(spiel, teil) => setMe(alt => ({ ...alt, themes: { ...alt.themes, [spiel]: { ...(alt.themes[spiel] ?? { cardDeck: 'text', tableScene: 'stube', cardBack: 'standard' }), ...teil } } }))}
@@ -573,7 +602,7 @@ export function ProbeHub(): React.JSX.Element {
       onShowProfile={nichts}
       onSignOut={nichts}
       onDeleted={nichts}
-      anfangsTab={anfangsTab}
+      anfangsTab={ausEinstieg ? 'spiele' : anfangsTab}
       anfangsSpiel={anfangsSpiel}
       anfangsWeg={anfangsWeg}
       anfangsHeute={anfangsHeute}

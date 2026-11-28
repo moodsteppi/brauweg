@@ -41,7 +41,10 @@
 }
 
 .hb .start-kachel {
-  height: 184px;
+  /* Mit der Höhe des Bildschirms (28.11.2026 abends): 184 px ab etwa 780 px
+     Höhe, auf 375 × 667 rund 157 px — sonst rollte der Start dort, und
+     TikTok/Instagram lagen unter der Reiterleiste. */
+  height: clamp(150px, 23.5dvh, 184px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -202,7 +205,7 @@
   }
   .hb .start-kachel {
     padding: 14px 10px;
-    height: 176px;
+    height: clamp(146px, 23dvh, 176px);
   }
   .hb .start-kachel > img {
     height: 78px;
@@ -772,5 +775,23 @@
   .hb .start-mitte {
     width: 118px;
     height: 118px;
+  }
+}
+
+/* Kleine Handys (iPhone SE, 375 × 667): Aufgaben- und Social-Reihe flacher,
+   damit der Start ohne Rollen passt (Robin, 28.11.2026 abends). Die Knöpfe
+   bleiben über 44 pt hoch. Am Dateiende, weil die Grundregeln weiter oben
+   dieselbe Spezifität haben. */
+@media (max-height: 720px) {
+  /* Die Aufgaben-Reihe trägt auch `.start-social` — darum steht sie danach. */
+  .hb .start-social .hb-social-link {
+    min-height: 56px;
+  }
+  .hb .start-heute .hb-social-link {
+    min-height: 50px;
+    padding-block: 5px;
+  }
+  .hb .start-kachel > img {
+    height: 72px;
   }
 }

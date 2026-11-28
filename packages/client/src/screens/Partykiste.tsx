@@ -14,6 +14,7 @@ import { PasstNicht } from '../minispiele/partykiste/PasstNicht';
 import {
   MINISPIEL_NAME,
   ansageFuer,
+  haerteName,
   liesRegelsatz,
   type PartyAktion,
   type PartyLetzterWurf,
@@ -391,15 +392,32 @@ export function Partykiste({
               onAbbrechen={() => setAngebot(null)}
             />
           ) : (
-            <button
-              className="hb-kn is-gold is-haupt is-breit"
-              type="button"
-              data-pk-online=""
-              onClick={() => void spieleOnline()}
-              disabled={laedt}
-            >
-              Online spielen
-            </button>
+            <>
+              <button
+                className="hb-kn is-gold is-haupt is-breit"
+                type="button"
+                data-pk-online=""
+                onClick={() => void spieleOnline()}
+                disabled={laedt}
+              >
+                Online spielen
+              </button>
+              {/* „Gegen Bots" im Fuß wie in den anderen Einstiegen (28.11.2026
+                  abends): Vorher stand er als Abschnitt unter den
+                  Themenpaketen, also erst nach dem Rollen. */}
+              <button
+                className="hb-kn is-blau is-breit"
+                type="button"
+                data-pk-bots=""
+                aria-expanded={botsOffen}
+                onClick={() => setBotsOffen((an) => !an)}
+              >
+                Gegen Bots
+              </button>
+              <div className="spa-links">
+                <CodeBeitritt spiel="partykiste" onBeigetreten={setTischId} />
+              </div>
+            </>
           )
         }
       >
@@ -414,6 +432,23 @@ export function Partykiste({
           </p>
         )}
         {fehler ? <p className="hb-fehler">{fehler}</p> : null}
+        {/* Einstellungen und Themenpakete zugeklappt (28.11.2026 abends,
+            Robin: „möglichst wenig Klicks ins Spiel", ohne Rollen). Die
+            Kopfzeile sagt, was gerade gilt; wer etwas ändern will, klappt auf.
+            Ein <details> und kein Blatt: Der Inhalt bleibt im Baum, und die
+            Wahl gilt auch für „Online spielen", ohne dass jemand aufklappt. */}
+        <details className="spe-klappe">
+          <summary>
+            <span>
+              <strong>Einstellungen und Themenpakete</strong>
+              <small>
+                {trinkmodus ? 'Trinkspiel' : 'Alkoholfrei'} · {runden} Runden · {haerteName(haerte)}
+              </small>
+            </span>
+            <span className="hb-pf" aria-hidden="true">
+              ›
+            </span>
+          </summary>
         <Einstellungen
           neu
           runden={runden}
@@ -442,17 +477,9 @@ export function Partykiste({
           onWahl={auswahl.setWahl}
           paketSperre={(paket) => sperre('paket', paket)}
         />
-        <SpielAbschnitt titel="Gegen Bots">
-          <button
-            className="hb-kn is-blau is-breit"
-            type="button"
-            data-pk-bots=""
-            aria-expanded={botsOffen}
-            onClick={() => setBotsOffen((an) => !an)}
-          >
-            Gegen Bots
-          </button>
-          {botsOffen ? (
+        </details>
+        {botsOffen ? (
+          <SpielAbschnitt titel="Gegen Bots">
             <div className="spe-karte">
               <Regler
                 neu
@@ -484,11 +511,8 @@ export function Partykiste({
                 Los
               </button>
             </div>
-          ) : null}
-        </SpielAbschnitt>
-        <div className="spa-links">
-          <CodeBeitritt spiel="partykiste" onBeigetreten={setTischId} />
-        </div>
+          </SpielAbschnitt>
+        ) : null}
       </SpielRahmen>
     );
   }

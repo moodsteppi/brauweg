@@ -30,7 +30,12 @@
 }
 .spe .spa-karten .aw-titel {
   font: 800 13px/1.15 var(--hb-txt);
-  overflow-wrap: anywhere;
+  /* Trennen statt mitten im Wort umbrechen („Anfängerrund-e" sah kaputt aus). */
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+.spe .spa-karten.is-wisch .aw-titel {
+  font-size: 12px;
 }
 /* Nur noch der Sperrgrund steht in der Karte (der Satz steht darunter). */
 .spe .spa-karten .aw-text {
